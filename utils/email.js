@@ -18,7 +18,7 @@ export const sendWeeklyEmail = async (email, contents) =>
     {
         await transporter.sendMail(
         {
-            from: `"TickTick Extension" <${process.env.EMAIL_USER}>`,
+            from: `"TickTick Extension" no reply`,
             to: email,
             subject: `Your Weekly Digest — ${contents.length} Articles`,
             html: weeklyEmailTemplate(contents)

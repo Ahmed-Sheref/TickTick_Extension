@@ -6,7 +6,7 @@ import { sendWeeklyEmail } from './email.js';
 export const startWeeklyEmailCron = () =>
 {
 
-    cron.schedule('* * * * *', async () =>
+    cron.schedule('* * * 9 *', async () =>
     {
         console.log('Starting weekly email job...');
 
@@ -25,7 +25,7 @@ export const startWeeklyEmailCron = () =>
                 try
                 {
                     const oneWeekAgo = new Date();
-                    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                    oneWeekAgo.setFullYear(oneWeekAgo.getFullYear() - 1);
 
                     const contents = await Content.find(
                     {
