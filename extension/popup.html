@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TickTick Extension</title>
+<link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+<div class="shell">
+<div id="onboardingView" class="view active">
+<div class="hero-card glass">
+<div class="brand-row">
+<div class="brand-mark">TT</div>
+<div>
+<p class="eyebrow">Knowledge Workspace</p>
+<h1>TickTick Extension</h1>
+</div>
+</div>
+<div class="hero-copy">
+<h2>Connect TickTick first</h2>
+<p>
+ Link your TickTick account once, then save articles, organize
+them, and unlock your full workspace.
+</p>
+</div>
+<div class="hero-points">
+<div class="point">
+<span class="point-icon">✓</span>
+<span>One identity across browsers</span>
+</div>
+<div class="point">
+<span class="point-icon">✓</span>
+<span>Article saving with AI options</span>
+</div>
+<div class="point">
+<span class="point-icon">✓</span>
+<span>Telegram quiz and email settings</span>
+</div>
+</div>
+<button id="connectTickTickBtn" class="btn btn-primary btn-xl"
+type="button">
+ Connect with TickTick
+</button>
+<p class="hero-note">
+ After approval, the extension will finish setup automatically.
+</p>
+</div>
+</div>
+<div id="appView" class="view">
+<header class="app-header glass">
+<div>
+<p class="eyebrow">Technical Knowledge</p>
+<h1>TickTick Extension</h1>
+<p class="header-subtitle">Capture, enrich, and review your best
+articles.</p>
+</div>
+<div class="header-status">
+<div class="status-pill success"
+id="ticktickStatusPill">Connected</div>
+</div>
+</header>
+<nav class="tabs glass" aria-label="Main Tabs">
+<button id="tabSave" class="tab active" type="button">Save
+Article</button>
+<button id="tabSettings" class="tab" type="button">Settings</
+button>
+</nav>
+<main>
+<section id="panelSave" class="panel active">
+<div class="section-head">
+<div>
+<h2>Save Current Article</h2>
+<p>Capture the current page and enrich it with smart options
+before saving.</p>
+</div>
+<button id="refreshPageBtn" class="btn btn-ghost btn-sm"
+type="button">Refresh</button>
+</div>
+<div class="card glass save-card">
+<div class="field">
+<label for="title">Title</label>
+<input id="title" class="input input-title" type="text"
+placeholder="A clean readable title" />
+</div>
+<div class="field">
+<label for="url">URL</label>
+<input id="url" class="input" type="url"
+placeholder="https://example.com/article" />
+</div>
+<div class="field">
+<label for="rawText">Article Text</label>
+<textarea id="rawText" class="textarea" rows="9"
+placeholder="Selected text is preferred for best results"></textarea>
+<p class="hint">If nothing is selected on the page, the
+extension uses readable page text as a fallback.</p>
+</div>
+<div class="field">
+<label for="userInput">List & Tags</label>
+<input id="userInput" class="input" type="text"
+placeholder="~learning #nodejs #backend" />
+<p class="hint">Use <strong>~</strong> for one list and
+<strong>#</strong> for tags.</p>
+</div>
+<div class="option-grid">
+<label class="option-tile">
+<input id="useSummaryAi" type="checkbox" checked />
+<span>
+<strong>AI Summary</strong>
+<small>Generate a short summary</small>
+</span>
+</label>
+<label class="option-tile">
+<input id="useTagsAi" type="checkbox" checked />
+<span>
+<strong>AI Tags</strong>
+<small>Suggest extra tags</small>
+</span>
+</label>
+<label class="option-tile">
+<input id="useQuiz" type="checkbox" checked />
+<span>
+<strong>Quiz</strong>
+<small>Create one review question</small>
+</span>
+</label>
+<label class="option-tile">
+<input id="mergeWithUserText" type="checkbox" />
+<span>
+<strong>Merge Summary</strong>
+<small>Append the summary to saved text</small>
+</span>
+</label>
+</div>
+<button id="saveArticleBtn" class="btn btn-primary btn-xl"
+type="button">Save Article</button>
+</div>
+</section>
+<section id="panelSettings" class="panel">
+<div class="section-head compact">
+<div>
+<h2>Settings</h2>
+<p>Manage identity, email, Telegram, quiz preferences, and
+TickTick connection.</p>
+</div>
+</div>
+<div class="settings-grid">
+<section class="card glass">
+<div class="card-head">
+<h3>Identity</h3>
+</div>
+<div class="field">
+<label for="userId">User ID</label>
+<div class="inline-row">
+<input id="userId" class="input readonly-input"
+type="text" readonly />
+<button id="copyUserIdBtn" class="btn btn-secondary btnsm" type="button">Copy</button>
+</div>
+<p class="hint">This ID links your extension features and
+Telegram bot.</p>
+</div>
+</section>
+<section class="card glass">
+<div class="card-head">
+<h3>Email Preferences</h3>
+<div class="card-actions">
+<label class="toggle-switch">
+<input type="checkbox" id="weeklyEmailToggle" />
+<span class="toggle-slider"></span>
+</label>
+</div>
+</div>
+<div class="field">
+<label for="email">Email Address</label>
+<input id="email" class="input" type="email"
+placeholder="name@example.com" />
+</div>
+<p class="hint">Enable email notifications to receive weekly digests of your saved articles and quiz results.</p>
+<button id="saveEmailSettingsBtn" class="btn btn-primary
+btn-full" type="button">Save Email Settings</button>
+</section>
+<section class="card glass">
+<div class="card-head">
+<h3>Telegram & Quiz</h3>
+<div class="card-actions">
+<label class="toggle-switch">
+<input type="checkbox" id="telegramQuizToggle" />
+<span class="toggle-slider"></span>
+</label>
+</div>
+</div>
+<div class="telegram-options" id="telegramOptions">
+<p class="hint block-hint">
+Connect your bot flow to receive quiz questions and weekly learning prompts.
+</p>
+<div class="telegram-command-box">
+<span class="command-label">Start command</span>
+<code id="telegramCommand">/start</code>
+</div>
+<div class="inline-actions two-col">
+<button id="copyTelegramCommandBtn" class="btn btnsecondary" type="button">Copy Command</button>
+<button id="openTelegramBotBtn" class="btn btn-primary"
+type="button">Open Telegram Bot</button>
+</div>
+</div>
+<button id="saveQuizSettingsBtn" class="btn btn-primary btnfull" type="button">Save Quiz Preferences</button>
+</section>
+<section class="card glass">
+<div class="card-head">
+<h3>TickTick Connection</h3>
+</div>
+<div class="connection-box">
+<div>
+<span class="status-pill success"
+id="ticktickStatusSecondary">Connected</span>
+<p class="hint">Your TickTick account is used to prepare
+and restore your extension identity.</p>
+</div>
+</div>
+<button id="reconnectTickTickBtn" class="btn btn-ghost btnfull" type="button">Reconnect TickTick</button>
+</section>
+</div>
+</section>
+</main>
+</div>
+<div id="statusBar" class="status-bar info">Ready</div>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>

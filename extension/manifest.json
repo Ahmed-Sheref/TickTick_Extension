@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "TickTick Extension",
+  "version": "2.0.0",
+  "description": "Capture technical articles, organize them, and connect them to TickTick.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs",
+    "identity"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://ticktick.com/*",
+    "https://api.ticktick.com/*",
+    "https://t.me/*",
+    "https://telegram.me/*",
+    "<all_urls>"
+  ],
+  "oauth2": {
+    "client_id": "your_client_id_here",
+    "scopes": []
+  },
+  "action": {
+    "default_title": "TickTick Extension",
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon.png"
+  },
+  "icons": {
+    "16": "icons/icon.png",
+    "32": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

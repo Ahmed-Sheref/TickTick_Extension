@@ -24,7 +24,12 @@ const settingsSchema = new mongoose.Schema(
     {
         type: String
     },
-
+    tickTickTokenHash:
+    {
+        type: String,
+        unique: true,
+        sparse: true
+    },
     telegramQuiz:
     {
         type: Boolean,

@@ -15,13 +15,27 @@ const analyzeContent = async (text) =>
         Structure:
         {
           "summary": "bullet1. bullet2. bullet3." ,
-          "ai_tags": ["tag1", "tag2", "tag3"],
+          "ai_tags": ["tags..."],
           "quiz": {
             "question": "A challenge question based on the text",
             "options": ["A", "B", "C", "D"],
             "correctAnswer": "The correct option text"
           }
         }
+        
+        IMPORTANT TAGS RULES:
+        - Return ONLY 3-5 main technical tags maximum
+        - Focus on core technologies and concepts
+        - Avoid generic words like "tutorial", "guide", "learn"
+        - Use lowercase, single words, no spaces
+        - Examples: "react", "javascript", "nodejs", "mongodb", "api", "css", "html"
+        
+        LANGUAGE HANDLING:
+        - Support both English and Arabic text
+        - For Arabic content, generate English summary and quiz
+        - Tags should be in English regardless of content language
+        - Preserve original text encoding and meaning
+        
         Text to analyze: ${text}`;
 
         const result = await client.chat.completions.create(

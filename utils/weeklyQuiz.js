@@ -7,7 +7,7 @@ const quizPollMap = new Map();
 
 export const startWeeklyQuizCron = () =>
 {
-    cron.schedule('*/30 * * * * *', async () =>
+    cron.schedule('* * * * *', async () =>
     {
         console.log('🧠 Starting weekly quiz job...');
 

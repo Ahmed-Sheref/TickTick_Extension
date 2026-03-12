@@ -1,40 +1,35 @@
 import axios from 'axios';
-import dotenv from 'dotenv';
-
-dotenv.config({path: 'D:\\Programming\\Back_end\\ticktick_extension\\config.env'});
 
 const TICKTICK_AUTH_URL = 'https://ticktick.com/oauth/authorize';
 const TICKTICK_TOKEN_URL = 'https://ticktick.com/oauth/token';
 const TICKTICK_API_URL = 'https://api.ticktick.com/open/v1';
 
-export const getAuthUrl = (userId) =>
-{
-    try
-    {
-        const params = new URLSearchParams(
-        {
-            client_id: process.env.TICKTICK_CLIENT_ID,
-            redirect_uri: process.env.TICKTICK_REDIRECT_URI,
-            response_type: 'code',
-            scope: 'tasks:write tasks:read',
-            state: userId
-        });
 
-        return `${TICKTICK_AUTH_URL}?${params.toString()}`;
-    }
-    catch (error)
+// Build OAuth URL
+
+export const getAuthUrl = (state) =>
+{
+    const params = new URLSearchParams(
     {
-        throw new Error(`Failed to build auth URL: ${error.message}`);
-    }
+        client_id: process.env.TICKTICK_CLIENT_ID,
+        redirect_uri: process.env.TICKTICK_REDIRECT_URI,
+        response_type: 'code',
+        scope: 'tasks:write tasks:read',
+        state
+    });
+
+    return `${TICKTICK_AUTH_URL}?${params.toString()}`;
 };
+
+
+
+// Exchange code -> access token
 
 export const exchangeToken = async (code) =>
 {
     try
     {
-        const credentials = Buffer.from(
-            `${process.env.TICKTICK_CLIENT_ID}:${process.env.TICKTICK_CLIENT_SECRET}`
-        ).toString('base64');
+        const credentials = Buffer.from(`${process.env.TICKTICK_CLIENT_ID}:${process.env.TICKTICK_CLIENT_SECRET}`).toString('base64');
 
         const response = await axios.post(
             TICKTICK_TOKEN_URL,

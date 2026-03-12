@@ -4,9 +4,11 @@ import { weeklyEmailTemplate } from './emailTemplate.js';
 
 dotenv.config({path: 'D:\\Programming\\Back_end\\TickTick_EXTENSION\\config.env'});
 
-const transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransport(
+{
     service: 'gmail',
-    auth: {
+    auth: 
+    {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     }
