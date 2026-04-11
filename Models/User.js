@@ -1,49 +1,108 @@
 import mongoose from "mongoose";
 
-const settingsSchema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
 {
-    userId:
+    userId: 
     {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        trim: true
     },
 
-    email:
+    email: 
     {
-        type: String
+        type: String,
+        trim: true,
+        default: null
     },
 
-    weeklyEmail:
+    // Channels
+    weeklyEmailEnabled: 
     {
         type: Boolean,
         default: false
     },
 
-    telegramChatId:
+    telegramChatId: 
     {
-        type: String
+        type: String,
+        default: null
     },
-    tickTickTokenHash:
+
+    telegramConnected: 
+    {
+        type: Boolean,
+        default: false
+    },
+
+    // Preferences
+    receiveWeeklyEmail:
+    {
+        type: Boolean,
+        default: true
+    },
+
+    receiveTelegramQuiz:
+    {
+        type: Boolean,
+        default: true
+    },
+
+    useSummaryAi:
+    {
+        type: Boolean,
+        default: true
+    },
+
+    useTagsAi: 
+    {
+        type: Boolean,
+        default: true
+    },
+
+    useQuiz: 
+    {
+        type: Boolean,
+        default: true
+    },
+
+    mergeSummary: 
+    {
+        type: Boolean,
+        default: false
+    },
+
+    // TickTick
+    tickTickTokenHash: 
     {
         type: String,
         unique: true,
         sparse: true
     },
-    telegramQuiz:
+
+    tickTickAccessToken: 
+    {
+        type: String,
+        default: null
+    },
+
+    tickTickRefreshToken: 
+    {
+        type: String,
+        default: null
+    },
+
+    tickTickConnected: 
     {
         type: Boolean,
         default: false
-    },
-    tickTickAccessToken: { type: String },
-    tickTickRefreshToken: { type: String },
-    tickTickConnected: { type: Boolean, default: false }
-
+    }
 },
 {
     timestamps: true
 });
 
-const Settings = mongoose.model("User", settingsSchema);
+const User = mongoose.model("User", userSchema);
 
-export default Settings;
+export default User;
