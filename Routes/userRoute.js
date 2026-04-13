@@ -1,43 +1,56 @@
 import express from 'express';
 import Settings from '../Models/User.js';
+import { asyncHandler } from '../middleware/errorMiddleware.js';
 
 const router = express.Router();
 
-router.post('/email', async (req, res) =>
+const validateEmailInput = ({ userId, email, weeklyEmailEnabled }) =>
 {
-    try
+    if (!userId || typeof userId !== 'string' || userId.trim() === '')
     {
-        const { userId, email, weeklyEmail } = req.body;
-
-        if (!userId || !email)
-        {
-            return res.status(400).json(
-            {
-                status: 'error',
-                message: 'userId and email are required'
-            });
-        }
-
-        await Settings.findOneAndUpdate(
-            { userId },
-            { email, weeklyEmail },
-            { upsert: true, new: true }
-        );
-
-        res.json(
-        {
-            status: 'success',
-            message: 'Email settings updated!'
-        });
+        return 'userId is required and must be a non-empty string';
     }
-    catch (error)
+    
+    if (!email || typeof email !== 'string' || email.trim() === '')
     {
-        res.status(500).json(
-        {
-            status: 'error',
-            message: error.message
-        });
+        return 'email is required and must be a non-empty string';
     }
-});
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim()))
+    {
+        return 'email must be a valid email address';
+    }
+    
+    if (weeklyEmailEnabled !== undefined && typeof weeklyEmailEnabled !== 'boolean')
+    {
+        return 'weeklyEmailEnabled must be a boolean value';
+    }
+    
+    return null;
+};
+
+router.post('/email', asyncHandler(async (req, res) => {
+    const {userId, email, weeklyEmailEnabled} = req.body;
+
+    const validationError = validateEmailInput({ userId, email, weeklyEmailEnabled });
+    
+    if (validationError) {
+        const error = new Error(validationError);
+        error.status = 400;
+        throw error;
+    }
+
+    await Settings.findOneAndUpdate(
+        { userId },
+        { email, weeklyEmailEnabled },
+        { upsert: true, new: true }
+    );
+
+    res.json({
+        status: 'success',
+        message: 'Email settings updated!'
+    });
+}));
 
 export default router;
