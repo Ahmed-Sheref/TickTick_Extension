@@ -82,7 +82,7 @@ export async function createProject(accessToken)
             { headers: { 'Authorization': `Bearer ${accessToken}` } }
         );
 
-        console.log('Project created:', response.data.id);
+        console.log('[TICKTICK] Project created:', response.data.id);
         return response.data;
     }
     catch (error)
@@ -100,11 +100,11 @@ export async function projectExist(accessToken)
 
         if (existing)
         {
-            console.log('Project found:', existing.id);
+            console.log('[TICKTICK] Project found:', existing.id);
             return existing.id;
         }
 
-        console.log('Project not found, creating...');
+        console.log('[TICKTICK] Project not found, creating...');
         const newProject = await createProject(accessToken);
         return newProject.id;
     }
@@ -119,7 +119,7 @@ export const createTickTickTask = async (accessToken, { title, rawText, tags }) 
     try
     {
         const projectId = await projectExist(accessToken);
-        console.log('Using projectId:', projectId);
+        console.log('[TICKTICK] Using projectId:', projectId);
 
         const response = await axios.post(
             `${TICKTICK_API_URL}/task`,
@@ -135,7 +135,7 @@ export const createTickTickTask = async (accessToken, { title, rawText, tags }) 
             }
         );
 
-        console.log('Task created:', response.data.id);
+        console.log('[TICKTICK] Task created:', response.data.id);
         return response.data;
     }
     catch (error)

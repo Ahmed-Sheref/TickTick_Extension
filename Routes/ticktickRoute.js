@@ -86,8 +86,8 @@ router.get('/callback', async (req, res) =>
         const tokenData = await exchangeToken(code);
 
         console.log('Token exchange successful');
-        console.log('Access token received:', tokenData.access_token ? '✅' : '❌');
-        console.log('Refresh token received:', tokenData.refresh_token ? '✅' : '❌');
+        console.log('Access token received:', tokenData.access_token ? 'DONE' : 'ERROR');
+        console.log('Refresh token received:', tokenData.refresh_token ? 'DONE' : 'ERROR');
 
         const accessToken = tokenData.access_token;
         const refreshToken = tokenData.refresh_token;
@@ -109,7 +109,7 @@ router.get('/callback', async (req, res) =>
                 tickTickRefreshToken: refreshToken,
                 tickTickConnected: true
             });
-            console.log('✅ New user created with ID:', user.userId);
+            console.log('New user created with ID:', user.userId);
         }
         else
         {
@@ -118,7 +118,7 @@ router.get('/callback', async (req, res) =>
             user.tickTickRefreshToken = refreshToken;
             user.tickTickConnected = true;
             await user.save();
-            console.log('✅ User updated successfully');
+            console.log('User updated successfully');
         }
 
 
