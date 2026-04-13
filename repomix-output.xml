@@ -1,0 +1,3332 @@
+This file is a merged representation of a subset of the codebase, containing files not matching ignore patterns, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching these patterns are excluded: **/locales/**, **/assets/**, **/pnpm-lock.yaml, **/*.svg, **/*.png
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+.gitignore
+Controllers/contentControl.js
+extension/content.js
+extension/manifest.json
+extension/popup.css
+extension/popup.html
+extension/popup.js
+index.js
+Models/Content.js
+Models/QuizPoll.js
+Models/User.js
+package.json
+Routes/contentRoute.js
+Routes/telegramRoute.js
+Routes/ticktickRoute.js
+Routes/userRoute.js
+Server.js
+utils/createID.js
+utils/email.js
+utils/emailTemplate.js
+utils/generativeAI.js
+utils/normTags.js
+utils/parse.js
+utils/telegramBot.js
+utils/ticktick.js
+utils/weeklyEmail.js
+utils/weeklyQuiz.js
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="Models/QuizPoll.js">
+import mongoose from "mongoose";
+
+const quizPollSchema = new mongoose.Schema({
+    pollId: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    },
+    contentId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Content",
+        required: true
+    },
+    userId: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    chatId: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    isAnswered: {
+        type: Boolean,
+        default: false
+    },
+    sentAt: {
+        type: Date,
+        default: Date.now
+    },
+    answeredAt: {
+        type: Date,
+        default: null
+    }
+}, {
+    timestamps: true
+});
+
+// Indexes for performance
+quizPollSchema.index({ pollId: 1 });
+quizPollSchema.index({ contentId: 1 });
+quizPollSchema.index({ userId: 1, isAnswered: 1 });
+quizPollSchema.index({ chatId: 1 });
+
+const QuizPoll = mongoose.model("QuizPoll", quizPollSchema);
+
+export default QuizPoll;
+</file>
+
+<file path=".gitignore">
+config.env
+</file>
+
+<file path="extension/content.js">
+(() => {
+  const SELECTION_KEY = "ticktick_last_selection_cache";
+
+  function cleanTitle(rawTitle) {
+    if (!rawTitle) return "";
+
+    return rawTitle
+      .replace(/\s+[|\-—•]\s+[^|\-—•]+$/, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function extractBestTitle() {
+    const ogTitle = document.querySelector('meta[property="og:title"]')?.content?.trim();
+    const h1 = document.querySelector("h1")?.innerText?.trim();
+    const docTitle = document.title?.trim();
+
+    const candidates = [ogTitle, h1, docTitle].filter(Boolean);
+
+    for (const candidate of candidates) {
+      const cleaned = cleanTitle(candidate);
+      if (cleaned && cleaned.length >= 5) return cleaned;
+    }
+
+    return "Untitled Article";
+  }
+
+  function getSelectedTextSafe() {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return "";
+
+    const text = selection.toString().trim();
+    if (!text) return "";
+
+    try {
+      const container = document.createElement("div");
+
+      for (let i = 0; i < selection.rangeCount; i++) {
+        const fragment = selection.getRangeAt(i).cloneContents();
+        container.appendChild(fragment);
+      }
+
+      return (container.textContent || text).trim();
+    } catch {
+      return text;
+    }
+  }
+
+  function rememberSelection() {
+    const current = getSelectedTextSafe();
+    if (!current) return;
+
+    chrome.storage.local.set({ [SELECTION_KEY]: current });
+  }
+
+  function getReadableText() {
+    const target =
+      document.querySelector("article") ||
+      document.querySelector("main") ||
+      document.body;
+
+    if (!target) return "";
+
+    return (target.textContent || "")
+      .trim()
+      .slice(0, 15000);
+  }
+
+  document.addEventListener("mouseup", rememberSelection, true);
+  document.addEventListener("keyup", rememberSelection, true);
+  document.addEventListener("selectionchange", rememberSelection, true);
+
+  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+    if (message?.type !== "GET_PAGE_CONTEXT") return;
+
+    try {
+      const selectedText = getSelectedTextSafe();
+
+      sendResponse({
+        ok: true,
+        data: {
+          title: extractBestTitle(),
+          url: window.location.href,
+          selectedText,
+          pageText: getReadableText()
+        }
+      });
+    } catch (error) {
+      sendResponse({ ok: false, error: error.message });
+    }
+
+    return true;
+  });
+})();
+</file>
+
+<file path="extension/manifest.json">
+{
+  "manifest_version": 3,
+  "name": "TickTick Extension",
+  "version": "2.0.0",
+  "description": "Capture technical articles, organize them, and connect them to TickTick.",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting",
+    "tabs",
+    "identity"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://ticktick.com/*",
+    "https://api.ticktick.com/*",
+    "https://t.me/*",
+    "https://telegram.me/*",
+    "<all_urls>"
+  ],
+  "oauth2": {
+    "client_id": "your_client_id_here",
+    "scopes": []
+  },
+  "action": {
+    "default_title": "TickTick Extension",
+    "default_popup": "popup.html",
+    "default_icon": "icons/icon.png"
+  },
+  "icons": {
+    "16": "icons/icon.png",
+    "32": "icons/icon.png",
+    "48": "icons/icon.png",
+    "128": "icons/icon.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
+</file>
+
+<file path="extension/popup.css">
+:root {
+--bg-1: #07111f;
+--bg-2: #0d1830;
+--panel: rgba(14, 25, 46, 0.74);
+--panel-border: rgba(255, 255, 255, 0.08);
+--text: #f4f7ff;
+--muted: #9ca8c7;
+--primary: #7c5cff;
+--primary-2: #5b3ef0;
+--accent: #22c55e;
+--danger: #ef4444;
+--warning: #f59e0b;
+--shadow: 0 18px 46px rgba(0, 0, 0, 0.35);
+--radius-xl: 24px;
+--radius-lg: 18px;
+--radius-md: 14px;
+}
+* {
+box-sizing: border-box;
+}
+html, body {
+margin: 0;
+padding: 0;
+}
+body {
+width: 480px;
+min-height: 720px;
+color: var(--text);
+font-family: Inter, ui-sans-serif, system-ui, -apple-system,
+BlinkMacSystemFont, "Segoe UI", sans-serif;
+background:
+radial-gradient(circle at top left, rgba(124, 92, 255, 0.22),
+transparent 36%),
+radial-gradient(circle at top right, rgba(59, 130, 246, 0.16),
+transparent 32%),
+linear-gradient(180deg, var(--bg-2), var(--bg-1));
+}
+.shell {
+padding: 16px;
+}
+.view {
+display: none;
+}
+.view.active {
+display: block;
+}
+.glass {
+background: var(--panel);
+border: 1px solid var(--panel-border);
+box-shadow: var(--shadow);
+backdrop-filter: blur(18px);
+}
+.hero-card,
+.app-header,
+.tabs,
+.card {
+border-radius: var(--radius-xl);
+}
+.hero-card {
+padding: 24px;
+min-height: 640px;
+display: flex;
+flex-direction: column;
+justify-content: center;
+gap: 20px;
+}
+.brand-row {
+display: flex;
+align-items: center;
+gap: 14px;
+}
+.brand-mark {
+width: 54px;
+height: 54px;
+border-radius: 18px;
+display: grid;
+place-items: center;
+background: linear-gradient(135deg, var(--primary), #26b4ff);
+color: white;
+font-size: 19px;
+font-weight: 800;
+letter-spacing: 0.02em;
+}
+.eyebrow {
+margin: 0 0 4px;
+color: #b7c2e8;
+font-size: 11px;
+font-weight: 700;
+letter-spacing: 0.12em;
+text-transform: uppercase;
+}
+h1, h2, h3, p {
+margin: 0;
+}
+h1 {
+font-size: 26px;
+line-height: 1.1;
+}
+h2 {
+font-size: 20px;
+line-height: 1.2;
+}
+h3 {
+font-size: 16px;
+}
+.hero-copy {
+display: flex;
+flex-direction: column;
+gap: 10px;
+}
+.hero-copy p,
+.header-subtitle,
+.section-head p,
+.hint,
+.hero-note,
+.switch-row small,
+.option-tile small {
+color: var(--muted);
+line-height: 1.5;
+}
+.hero-points {
+display: grid;
+gap: 10px;
+}
+.point {
+display: flex;
+align-items: center;
+gap: 10px;
+padding: 12px 14px;
+border-radius: var(--radius-md);
+background: rgba(255, 255, 255, 0.04);
+border: 1px solid rgba(255, 255, 255, 0.06);
+}
+.point-icon {
+width: 24px;
+height: 24px;
+border-radius: 999px;
+display: grid;
+place-items: center;
+background: rgba(34, 197, 94, 0.16);
+color: #bff7d2;
+font-weight: 800;
+}
+.app-header {
+padding: 18px 20px;
+display: flex;
+justify-content: space-between;
+gap: 12px;
+align-items: flex-start;
+margin-bottom: 12px;
+}
+.header-status {
+display: flex;
+align-items: flex-start;
+}
+.tabs {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 8px;
+padding: 8px;
+margin-bottom: 14px;
+}
+.tab {
+border: 0;
+background: transparent;
+color: var(--muted);
+border-radius: 14px;
+padding: 12px 14px;
+font-size: 14px;
+font-weight: 700;
+cursor: pointer;
+transition: 0.2s ease;
+}
+.tab.active {
+background: linear-gradient(135deg, var(--primary), var(--primary-2));
+color: #fff;
+}
+.panel {
+display: none;
+}
+.panel.active {
+display: block;
+}
+.section-head {
+display: flex;
+justify-content: space-between;
+align-items: flex-start;
+gap: 12px;
+margin-bottom: 12px;
+}
+.section-head.compact {
+margin-bottom: 14px;
+}
+.card {
+padding: 16px;
+}
+.save-card {
+display: grid;
+gap: 14px;
+}
+.settings-grid {
+display: grid;
+gap: 12px;
+}
+.card-head {
+margin-bottom: 12px;
+}
+.field {
+display: flex;
+flex-direction: column;
+gap: 8px;
+}
+label {
+font-size: 13px;
+font-weight: 700;
+}
+.input,
+.textarea {
+width: 100%;
+background: rgba(6, 12, 24, 0.72);
+border: 1px solid rgba(255, 255, 255, 0.09);
+color: var(--text);
+border-radius: 16px;
+padding: 13px 14px;
+outline: none;
+transition: 0.18s ease;
+}
+.input:focus,
+.textarea:focus {
+border-color: rgba(124, 92, 255, 0.75);
+box-shadow: 0 0 0 3px rgba(124, 92, 255, 0.16);
+}
+.input-title {
+font-size: 16px;
+font-weight: 700;
+}
+.textarea {
+min-height: 190px;
+resize: vertical;
+}
+.readonly-input {
+color: #d9e3ff;
+font-weight: 700;
+}
+.hint strong {
+color: #dbe5ff;
+}
+.option-grid {
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 10px;
+}
+.option-tile {
+display: flex;
+gap: 10px;
+align-items: flex-start;
+padding: 14px;
+border-radius: 18px;
+background: rgba(255, 255, 255, 0.04);
+border: 1px solid rgba(255, 255, 255, 0.06);
+cursor: pointer;
+}
+.option-tile input {
+margin-top: 4px;
+}
+.option-tile span {
+display: flex;
+flex-direction: column;
+gap: 4px;
+}
+.btn {
+border: 0;
+border-radius: 16px;
+font-weight: 800;
+cursor: pointer;
+transition: 0.18s ease;
+}
+.btn:disabled {
+opacity: 0.65;
+cursor: not-allowed;
+}
+.btn-xl {
+padding: 15px 16px;
+font-size: 15px;
+}
+.btn-sm {
+padding: 10px 12px;
+font-size: 12px;
+}
+.btn-full {
+width: 100%;
+}
+.btn-primary {
+background: linear-gradient(135deg, var(--primary), var(--primary-2));
+color: white;
+}
+.btn-secondary {
+background: rgba(255, 255, 255, 0.08);
+color: var(--text);
+border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.btn-ghost {
+background: transparent;
+color: #d6e1ff;
+border: 1px solid rgba(255, 255, 255, 0.1);
+}
+.inline-row,
+.inline-actions {
+display: flex;
+gap: 10px;
+}
+.inline-row .input {
+flex: 1;
+}
+.two-col > * {
+flex: 1;
+}
+.switch-row {
+display: flex;
+justify-content: space-between;
+align-items: center;
+gap: 14px;
+padding: 12px 14px;
+border-radius: 18px;
+background: rgba(255, 255, 255, 0.04);
+border: 1px solid rgba(255, 255, 255, 0.06);
+margin-bottom: 12px;
+}
+.switch-row span {
+display: flex;
+flex-direction: column;
+gap: 4px;
+}
+.switch-row input {
+width: 18px;
+height: 18px;
+}
+.telegram-command-box {
+margin: 10px 0 12px;
+padding: 12px 14px;
+border-radius: 18px;
+background: rgba(9, 17, 32, 0.74);
+border: 1px dashed rgba(255, 255, 255, 0.12);
+display: flex;
+flex-direction: column;
+gap: 6px;
+}
+.command-label {
+font-size: 11px;
+color: var(--muted);
+letter-spacing: 0.08em;
+text-transform: uppercase;
+font-weight: 700;
+}
+code {
+font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+font-size: 13px;
+color: #dfe7ff;
+word-break: break-all;
+}
+.status-pill {
+display: inline-flex;
+align-items: center;
+gap: 8px;
+padding: 9px 12px;
+border-radius: 999px;
+font-size: 12px;
+font-weight: 800;
+}
+.status-pill.success {
+background: rgba(34, 197, 94, 0.15);
+color: #bbf7d0;
+border: 1px solid rgba(34, 197, 94, 0.22);
+}
+.status-pill.warning {
+background: rgba(245, 158, 11, 0.15);
+color: #fde68a;
+border: 1px solid rgba(245, 158, 11, 0.22);
+}
+.connection-box {
+margin-bottom: 12px;
+}
+.status-bar {
+margin-top: 14px;
+padding: 12px 14px;
+border-radius: 16px;
+font-size: 13px;
+font-weight: 700;
+border: 1px solid transparent;
+}
+.status-bar.info {
+background: rgba(255, 255, 255, 0.05);
+color: #d9e4ff;
+border-color: rgba(255, 255, 255, 0.08);
+}
+.status-bar.success {
+background: rgba(34, 197, 94, 0.12);
+color: #d1fae5;
+border-color: rgba(34, 197, 94, 0.2);
+}
+.status-bar.error {
+background: rgba(239, 68, 68, 0.12);
+color: #fee2e2;
+border-color: rgba(239, 68, 68, 0.2);
+}
+.block-hint {
+margin-bottom: 12px;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+position: relative;
+display: inline-block;
+width: 48px;
+height: 24px;
+}
+
+.toggle-switch input {
+opacity: 0;
+width: 0;
+height: 0;
+}
+
+.toggle-slider {
+position: absolute;
+cursor: pointer;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background-color: rgba(255, 255, 255, 0.2);
+transition: 0.3s;
+border-radius: 24px;
+}
+
+.toggle-slider:before {
+position: absolute;
+content: "";
+height: 18px;
+width: 18px;
+left: 3px;
+bottom: 3px;
+background-color: white;
+transition: 0.3s;
+border-radius: 50%;
+}
+
+input:checked + .toggle-slider {
+background-color: var(--primary);
+}
+
+input:checked + .toggle-slider:before {
+transform: translateX(24px);
+}
+
+/* Card Head with Actions */
+.card-head {
+display: flex;
+justify-content: space-between;
+align-items: center;
+margin-bottom: 20px;
+}
+
+.card-head h3 {
+margin: 0;
+font-size: 16px;
+font-weight: 600;
+color: var(--text);
+}
+
+.card-actions {
+display: flex;
+gap: 8px;
+align-items: center;
+}
+
+/* Improved hint styling */
+.hint {
+color: var(--muted);
+font-size: 13px;
+line-height: 1.4;
+margin: 8px 0;
+}
+
+.hint.block-hint {
+margin-bottom: 16px;
+padding: 12px;
+background: rgba(255, 255, 255, 0.03);
+border-radius: var(--radius-md);
+border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Options Container */
+.email-options,
+.telegram-options {
+margin-top: 12px;
+padding-top: 12px;
+border-top: 1px solid var(--panel-border);
+}
+
+.email-options.hidden,
+.telegram-options.hidden {
+display: none;
+}
+
+/* Improved Button Styles */
+.btn-primary.btn-full {
+width: 100%;
+justify-content: center;
+margin-top: 12px;
+}
+
+.btn-secondary.btn-full {
+width: 100%;
+justify-content: center;
+margin-top: 12px;
+}
+
+/* Better spacing for settings */
+.settings-grid {
+gap: 16px;
+}
+</file>
+
+<file path="extension/popup.html">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TickTick Extension</title>
+<link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+<div class="shell">
+<div id="onboardingView" class="view active">
+<div class="hero-card glass">
+<div class="brand-row">
+<div class="brand-mark">TT</div>
+<div>
+<p class="eyebrow">Knowledge Workspace</p>
+<h1>TickTick Extension</h1>
+</div>
+</div>
+<div class="hero-copy">
+<h2>Connect TickTick first</h2>
+<p>
+ Link your TickTick account once, then save articles, organize
+them, and unlock your full workspace.
+</p>
+</div>
+<div class="hero-points">
+<div class="point">
+<span class="point-icon">✓</span>
+<span>One identity across browsers</span>
+</div>
+<div class="point">
+<span class="point-icon">✓</span>
+<span>Article saving with AI options</span>
+</div>
+<div class="point">
+<span class="point-icon">✓</span>
+<span>Telegram quiz and email settings</span>
+</div>
+</div>
+<button id="connectTickTickBtn" class="btn btn-primary btn-xl"
+type="button">
+ Connect with TickTick
+</button>
+<p class="hero-note">
+ After approval, the extension will finish setup automatically.
+</p>
+</div>
+</div>
+<div id="appView" class="view">
+<header class="app-header glass">
+<div>
+<p class="eyebrow">Technical Knowledge</p>
+<h1>TickTick Extension</h1>
+<p class="header-subtitle">Capture, enrich, and review your best
+articles.</p>
+</div>
+<div class="header-status">
+<div class="status-pill success"
+id="ticktickStatusPill">Connected</div>
+</div>
+</header>
+<nav class="tabs glass" aria-label="Main Tabs">
+<button id="tabSave" class="tab active" type="button">Save
+Article</button>
+<button id="tabSettings" class="tab" type="button">Settings</
+button>
+</nav>
+<main>
+<section id="panelSave" class="panel active">
+<div class="section-head">
+<div>
+<h2>Save Current Article</h2>
+<p>Capture the current page and enrich it with smart options
+before saving.</p>
+</div>
+<button id="refreshPageBtn" class="btn btn-ghost btn-sm"
+type="button">Refresh</button>
+</div>
+<div class="card glass save-card">
+<div class="field">
+<label for="title">Title</label>
+<input id="title" class="input input-title" type="text"
+placeholder="A clean readable title" />
+</div>
+<div class="field">
+<label for="url">URL</label>
+<input id="url" class="input" type="url"
+placeholder="https://example.com/article" />
+</div>
+<div class="field">
+<label for="rawText">Article Text</label>
+<textarea id="rawText" class="textarea" rows="9"
+placeholder="Selected text is preferred for best results"></textarea>
+<p class="hint">If nothing is selected on the page, the
+extension uses readable page text as a fallback.</p>
+</div>
+<div class="field">
+<label for="userInput">List & Tags</label>
+<input id="userInput" class="input" type="text"
+placeholder="~learning #nodejs #backend" />
+<p class="hint">Use <strong>~</strong> for one list and
+<strong>#</strong> for tags.</p>
+</div>
+<div class="option-grid">
+<label class="option-tile">
+<input id="useSummaryAi" type="checkbox" checked />
+<span>
+<strong>AI Summary</strong>
+<small>Generate a short summary</small>
+</span>
+</label>
+<label class="option-tile">
+<input id="useTagsAi" type="checkbox" checked />
+<span>
+<strong>AI Tags</strong>
+<small>Suggest extra tags</small>
+</span>
+</label>
+<label class="option-tile">
+<input id="useQuiz" type="checkbox" checked />
+<span>
+<strong>Quiz</strong>
+<small>Create one review question</small>
+</span>
+</label>
+<label class="option-tile">
+<input id="mergeWithUserText" type="checkbox" />
+<span>
+<strong>Merge Summary</strong>
+<small>Append the summary to saved text</small>
+</span>
+</label>
+</div>
+<button id="saveArticleBtn" class="btn btn-primary btn-xl"
+type="button">Save Article</button>
+</div>
+</section>
+<section id="panelSettings" class="panel">
+<div class="section-head compact">
+<div>
+<h2>Settings</h2>
+<p>Manage identity, email, Telegram, quiz preferences, and
+TickTick connection.</p>
+</div>
+</div>
+<div class="settings-grid">
+<section class="card glass">
+<div class="card-head">
+<h3>Identity</h3>
+</div>
+<div class="field">
+<label for="userId">User ID</label>
+<div class="inline-row">
+<input id="userId" class="input readonly-input"
+type="text" readonly />
+<button id="copyUserIdBtn" class="btn btn-secondary btnsm" type="button">Copy</button>
+</div>
+<p class="hint">This ID links your extension features and
+Telegram bot.</p>
+</div>
+</section>
+<section class="card glass">
+<div class="card-head">
+<h3>Email Preferences</h3>
+<div class="card-actions">
+<label class="toggle-switch">
+<input type="checkbox" id="weeklyEmailToggle" />
+<span class="toggle-slider"></span>
+</label>
+</div>
+</div>
+<div class="field">
+<label for="email">Email Address</label>
+<input id="email" class="input" type="email"
+placeholder="name@example.com" />
+</div>
+<p class="hint">Enable email notifications to receive weekly digests of your saved articles and quiz results.</p>
+<button id="saveEmailSettingsBtn" class="btn btn-primary
+btn-full" type="button">Save Email Settings</button>
+</section>
+<section class="card glass">
+<div class="card-head">
+<h3>Telegram & Quiz</h3>
+<div class="card-actions">
+<label class="toggle-switch">
+<input type="checkbox" id="telegramQuizToggle" />
+<span class="toggle-slider"></span>
+</label>
+</div>
+</div>
+<div class="telegram-options" id="telegramOptions">
+<p class="hint block-hint">
+Connect your bot flow to receive quiz questions and weekly learning prompts.
+</p>
+<div class="telegram-command-box">
+<span class="command-label">Start command</span>
+<code id="telegramCommand">/start</code>
+</div>
+<div class="inline-actions two-col">
+<button id="copyTelegramCommandBtn" class="btn btnsecondary" type="button">Copy Command</button>
+<button id="openTelegramBotBtn" class="btn btn-primary"
+type="button">Open Telegram Bot</button>
+</div>
+</div>
+<button id="saveQuizSettingsBtn" class="btn btn-primary btnfull" type="button">Save Quiz Preferences</button>
+</section>
+<section class="card glass">
+<div class="card-head">
+<h3>TickTick Connection</h3>
+</div>
+<div class="connection-box">
+<div>
+<span class="status-pill success"
+id="ticktickStatusSecondary">Connected</span>
+<p class="hint">Your TickTick account is used to prepare
+and restore your extension identity.</p>
+</div>
+</div>
+<button id="reconnectTickTickBtn" class="btn btn-ghost btnfull" type="button">Reconnect TickTick</button>
+</section>
+</div>
+</section>
+</main>
+</div>
+<div id="statusBar" class="status-bar info">Ready</div>
+</div>
+<script src="popup.js"></script>
+</body>
+</html>
+</file>
+
+<file path="extension/popup.js">
+const API_BASE = "http://localhost:3000/api/v1";
+const TELEGRAM_BOT_USERNAME = "Tick_review_bot"; // ← غير هذا لاسم البوت الحقيقي
+const STORAGE_KEYS = {
+  userId: "ticktick_userId",
+  connected: "ticktick_connected",
+  email: "ticktick_email",
+  weeklyEmailToggle: "ticktick_weeklyEmailToggle",
+  telegramQuizToggle: "ticktick_telegramQuizToggle"
+};
+
+const el = {
+  onboardingView: document.getElementById("onboardingView"),
+  appView: document.getElementById("appView"),
+  statusBar: document.getElementById("statusBar"),
+  ticktickStatusPill: document.getElementById("ticktickStatusPill"),
+  ticktickStatusSecondary: document.getElementById("ticktickStatusSecondary"),
+  connectTickTickBtn: document.getElementById("connectTickTickBtn"),
+  reconnectTickTickBtn: document.getElementById("reconnectTickTickBtn"),
+  tabSave: document.getElementById("tabSave"),
+  tabSettings: document.getElementById("tabSettings"),
+  panelSave: document.getElementById("panelSave"),
+  panelSettings: document.getElementById("panelSettings"),
+  title: document.getElementById("title"),
+  url: document.getElementById("url"),
+  rawText: document.getElementById("rawText"),
+  userInput: document.getElementById("userInput"),
+  useSummaryAi: document.getElementById("useSummaryAi"),
+  useTagsAi: document.getElementById("useTagsAi"),
+  useQuiz: document.getElementById("useQuiz"),
+  mergeWithUserText: document.getElementById("mergeWithUserText"),
+  refreshPageBtn: document.getElementById("refreshPageBtn"),
+  saveArticleBtn: document.getElementById("saveArticleBtn"),
+  userId: document.getElementById("userId"),
+  copyUserIdBtn: document.getElementById("copyUserIdBtn"),
+  email: document.getElementById("email"),
+  weeklyEmailToggle: document.getElementById("weeklyEmailToggle"),
+  saveEmailSettingsBtn: document.getElementById("saveEmailSettingsBtn"),
+  telegramQuizToggle: document.getElementById("telegramQuizToggle"),
+  telegramCommand: document.getElementById("telegramCommand"),
+  copyTelegramCommandBtn: document.getElementById("copyTelegramCommandBtn"),
+  openTelegramBotBtn: document.getElementById("openTelegramBotBtn"),
+  saveQuizSettingsBtn: document.getElementById("saveQuizSettingsBtn"),
+  telegramOptions: document.getElementById("telegramOptions")
+};
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+
+function setStatus(message, type = "info") {
+  el.statusBar.textContent = message;
+  el.statusBar.className = `status-bar ${type}`;
+}
+
+function setButtonLoading(button, loading, loadingText) {
+  if (!button) return;
+  if (!button.dataset.defaultText) button.dataset.defaultText = button.textContent;
+  button.disabled = loading;
+  button.textContent = loading ? loadingText : button.dataset.defaultText;
+}
+
+function setConnectedState(connected) {
+  el.onboardingView.classList.toggle("active", !connected);
+  el.appView.classList.toggle("active", connected);
+  const classes = connected ? "status-pill success" : "status-pill warning";
+  const text = connected ? "Connected" : "Not Connected";
+  el.ticktickStatusPill.className = classes;
+  el.ticktickStatusPill.textContent = text;
+  el.ticktickStatusSecondary.className = classes;
+  el.ticktickStatusSecondary.textContent = text;
+}
+
+function switchTab(name) {
+  const saveActive = name === "save";
+  el.tabSave.classList.toggle("active", saveActive);
+  el.tabSettings.classList.toggle("active", !saveActive);
+  el.panelSave.classList.toggle("active", saveActive);
+  el.panelSettings.classList.toggle("active", !saveActive);
+  if (saveActive) loadPageContext();
+}
+
+function storageGet(keys) {
+  return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
+}
+
+function storageSet(data) {
+  return new Promise((resolve) => chrome.storage.local.set(data, resolve));
+}
+
+async function getActiveTab() {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  return tabs[0];
+}
+
+// ══════════════════════════════════════════
+// TELEGRAM — FIX المشكلة الثانية
+// ══════════════════════════════════════════
+
+async function openTelegramBot() {
+  const data = await storageGet([STORAGE_KEYS.userId]);
+  const userId = data[STORAGE_KEYS.userId];
+
+  if (!userId) {
+    setStatus("Connect TickTick first.", "error");
+    return;
+  }
+
+  // استخدم الـ userId الأصلي مش الـ safe version
+  const deepLink = `https://t.me/${TELEGRAM_BOT_USERNAME}?start=${encodeURIComponent(userId)}`;
+
+  console.log("📱 Opening Telegram deep link:", deepLink);
+  console.log("👤 Original userId:", userId);
+
+  try {
+    await chrome.tabs.create({
+      url: deepLink,
+      active: true
+    });
+
+    setStatus(`📱 Opening Telegram with /start ${userId}...`, "success");
+  } catch (error) {
+    console.error("❌ Failed to open Telegram:", error);
+
+    const botLink = `https://t.me/${TELEGRAM_BOT_USERNAME}`;
+    const command = `/start ${userId}`;
+
+    await chrome.tabs.create({ url: botLink, active: true });
+    await copyText(command, "📋 Command copied!");
+
+    setStatus(`❌ Auto-open failed. Paste this: ${command}`, "warning");
+  }
+}
+
+// ══════════════════════════════════════════
+// SELECTION — FIX المشكلة الأولى (ChatGPT)
+// ══════════════════════════════════════════
+
+// Listen for selection changes pushed from content script
+chrome.runtime.onMessage.addListener((message) => {
+  if (message?.type === "SELECTION_CHANGED" && message.selectedText) {
+    if (el.rawText) {
+      el.rawText.value = message.selectedText;
+      setStatus("📝 Selected text updated from page.", "success");
+    }
+  }
+});
+
+async function loadPageContext() {
+  const SELECTION_KEY = "ticktick_last_selection_cache";
+
+  try {
+    const activeTab = await getActiveTab();
+    if (!activeTab?.id) {
+      setStatus("Could not access the active tab.", "error");
+      return;
+    }
+
+    // Fill title & URL immediately from tab metadata
+    if (activeTab.title && !el.title.value.trim()) el.title.value = activeTab.title;
+    if (activeTab.url && !el.url.value.trim()) el.url.value = activeTab.url;
+
+    // Try content script first
+    let response = null;
+    try {
+      response = await chrome.tabs.sendMessage(activeTab.id, { type: "GET_PAGE_CONTEXT" });
+    } catch (_) {
+      // Content script not injected yet — try injecting it manually
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: activeTab.id },
+          files: ["content.js"]
+        });
+        // Small delay then retry
+        await new Promise(r => setTimeout(r, 300));
+        response = await chrome.tabs.sendMessage(activeTab.id, { type: "GET_PAGE_CONTEXT" });
+      } catch (_2) {
+        response = null;
+      }
+    }
+
+    // Load cached selection as fallback (important for ChatGPT)
+    const storageData = await storageGet([SELECTION_KEY]);
+    const cachedSelection = storageData[SELECTION_KEY] || "";
+
+    if (response?.ok) {
+      el.title.value = response.data.title || activeTab.title || el.title.value || "";
+      el.url.value = response.data.url || activeTab.url || el.url.value || "";
+
+      // Priority: live selection > cached selection > page text
+      if (response.data.selectedText) {
+        el.rawText.value = response.data.selectedText;
+        setStatus("✅ Selected text loaded from page.", "success");
+      } else if (cachedSelection) {
+        el.rawText.value = cachedSelection;
+        setStatus("📋 Last selection loaded from cache.", "info");
+      } else if (response.data.pageText) {
+        el.rawText.value = response.data.pageText;
+        setStatus("📄 Page content loaded.", "info");
+      } else {
+        setStatus("⚠️ No text found. Paste manually.", "error");
+      }
+    } else {
+      // Fallback when content script fails (restricted pages like chrome://)
+      if (cachedSelection) {
+        el.rawText.value = cachedSelection;
+        setStatus("📋 Loaded from cached selection.", "info");
+      } else {
+        setStatus("⚠️ Can't read this page. Paste text manually.", "error");
+      }
+    }
+  } catch (error) {
+    console.error("loadPageContext error:", error);
+    setStatus("⚠️ Error loading page. Paste text manually.", "error");
+  }
+}
+
+// ══════════════════════════════════════════
+// TICKTICK AUTH
+// ══════════════════════════════════════════
+
+async function startTickTickConnect() {
+  setButtonLoading(el.connectTickTickBtn, true, "Connecting...");
+  setButtonLoading(el.reconnectTickTickBtn, true, "Connecting...");
+  setStatus("Opening TickTick connection...", "info");
+
+  try {
+    const redirectUri = chrome.identity.getRedirectURL("ticktick");
+    const authUrl = `${API_BASE}/ticktick/auth?redirect_uri=${encodeURIComponent(redirectUri)}`;
+
+    const finalRedirectUrl = await chrome.identity.launchWebAuthFlow({
+      url: authUrl,
+      interactive: true
+    });
+
+    if (!finalRedirectUrl) throw new Error("No redirect received from TickTick.");
+
+    const url = new URL(finalRedirectUrl);
+    const userId = url.searchParams.get("userId");
+
+    if (!userId) throw new Error("Missing userId in TickTick callback redirect.");
+
+    await storageSet({
+      [STORAGE_KEYS.userId]: userId,
+      [STORAGE_KEYS.connected]: true
+    });
+
+    await applyStoredUser();
+    setConnectedState(true);
+    switchTab("save");
+    setStatus("✅ TickTick connected successfully.", "success");
+    await loadPageContext();
+
+  } catch (error) {
+    console.error("TickTick connection error:", error);
+    setStatus(`TickTick connection failed: ${error.message}`, "error");
+  } finally {
+    setButtonLoading(el.connectTickTickBtn, false);
+    setButtonLoading(el.reconnectTickTickBtn, false);
+  }
+}
+
+// ══════════════════════════════════════════
+// SETTINGS
+// ══════════════════════════════════════════
+
+async function applyStoredUser() {
+  const data = await storageGet([
+    STORAGE_KEYS.userId,
+    STORAGE_KEYS.email,
+    STORAGE_KEYS.weeklyEmailToggle,
+    STORAGE_KEYS.telegramQuizToggle,
+    STORAGE_KEYS.connected
+  ]);
+  const userId = data[STORAGE_KEYS.userId] || "";
+  el.userId.value = userId;
+  el.email.value = data[STORAGE_KEYS.email] || "";
+  el.weeklyEmailToggle.checked = Boolean(data[STORAGE_KEYS.weeklyEmailToggle]);
+  el.telegramQuizToggle.checked = Boolean(data[STORAGE_KEYS.telegramQuizToggle]);
+
+  // Show/hide telegram options based on toggle state
+  el.telegramOptions.classList.toggle("hidden", !el.telegramQuizToggle.checked);
+
+  // Show the full command with userId
+  el.telegramCommand.textContent = userId ? `/start ${userId}` : "/start <your_id>";
+  setConnectedState(Boolean(data[STORAGE_KEYS.connected] && userId));
+}
+
+async function copyText(value, successMessage) {
+  if (!value) { setStatus("Nothing to copy.", "error"); return; }
+  try {
+    await navigator.clipboard.writeText(value);
+    setStatus(successMessage, "success");
+  } catch {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = value;
+      ta.style.cssText = "position:fixed;left:-9999px;top:-9999px";
+      document.body.appendChild(ta);
+      ta.focus(); ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      setStatus(successMessage, "success");
+    } catch {
+      setStatus("Copy failed. Please copy manually.", "error");
+    }
+  }
+}
+
+async function saveEmailSettings() {
+  const data = await storageGet([STORAGE_KEYS.userId]);
+  const userId = data[STORAGE_KEYS.userId];
+  const email = el.email.value.trim();
+  const weeklyEmailToggle = el.weeklyEmailToggle.checked;
+
+  if (!userId) { setStatus("Connect TickTick first.", "error"); return; }
+  if (!email) { setStatus("Email is required.", "error"); return; }
+
+  setButtonLoading(el.saveEmailSettingsBtn, true, "Saving...");
+  try {
+    const response = await fetch(`${API_BASE}/User/email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, email, weeklyEmail: weeklyEmailToggle })
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result?.message || `HTTP ${response.status}`);
+
+    await storageSet({ 
+      [STORAGE_KEYS.email]: email, 
+      [STORAGE_KEYS.weeklyEmailToggle]: weeklyEmailToggle
+    });
+    setStatus("✅ Email settings saved.", "success");
+  } catch (error) {
+    setStatus(`Email settings failed: ${error.message}`, "error");
+  } finally {
+    setButtonLoading(el.saveEmailSettingsBtn, false);
+  }
+}
+
+async function saveQuizPreference() {
+  await storageSet({ 
+    [STORAGE_KEYS.telegramQuizToggle]: el.telegramQuizToggle.checked
+  });
+  setStatus("✅ Quiz preferences saved.", "success");
+}
+
+// ══════════════════════════════════════════
+// SAVE ARTICLE
+// ══════════════════════════════════════════
+
+async function saveArticle() {
+  const data = await storageGet([STORAGE_KEYS.userId]);
+  const userId = data[STORAGE_KEYS.userId];
+
+  if (!userId) { setStatus("Connect TickTick first.", "error"); return; }
+  if (!el.title.value.trim()) { setStatus("Title is required.", "error"); return; }
+  if (!el.rawText.value.trim()) { setStatus("Article text is required.", "error"); return; }
+
+  const payload = {
+    userId,
+    title: el.title.value.trim(),
+    url: el.url.value.trim(),
+    rawText: el.rawText.value.trim(),
+    user_input: el.userInput.value.trim() || "~inbox",
+    use_tagsAi: el.useTagsAi.checked,
+    use_summaryAi: el.useSummaryAi.checked,
+    use_quiz: el.useQuiz.checked,
+    mergeWithUserText: el.mergeWithUserText.checked
+  };
+
+  setButtonLoading(el.saveArticleBtn, true, "Saving...");
+  setStatus("Saving article...", "info");
+
+  try {
+    const response = await fetch(`${API_BASE}/content`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result?.message || `HTTP ${response.status}`);
+
+    setStatus("✅ Article saved successfully!", "success");
+    el.title.value = "";
+    el.rawText.value = "";
+    el.userInput.value = "";
+  } catch (error) {
+    setStatus(`Save failed: ${error.message}`, "error");
+  } finally {
+    setButtonLoading(el.saveArticleBtn, false);
+  }
+}
+
+// ══════════════════════════════════════════
+// BIND EVENTS
+// ══════════════════════════════════════════
+
+function bindEvents() {
+  el.connectTickTickBtn.addEventListener("click", startTickTickConnect);
+  el.reconnectTickTickBtn.addEventListener("click", startTickTickConnect);
+
+  el.refreshPageBtn?.addEventListener("click", async () => {
+    // Clear cached selection so we get fresh content
+    await chrome.storage.local.remove("ticktick_last_selection_cache");
+    el.title.value = "";
+    el.url.value = "";
+    setStatus("🔄 Refreshing page content...", "info");
+    await loadPageContext();
+  });
+
+  el.saveArticleBtn.addEventListener("click", saveArticle);
+  el.saveEmailSettingsBtn.addEventListener("click", saveEmailSettings);
+  el.saveQuizSettingsBtn.addEventListener("click", saveQuizPreference);
+
+  el.copyUserIdBtn?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    await copyText(el.userId.value, "✅ User ID copied!");
+  });
+
+  el.copyTelegramCommandBtn?.addEventListener("click", async (e) => {
+    e.preventDefault();
+    await copyText(el.telegramCommand.textContent, "✅ Telegram command copied!");
+  });
+
+  // ✅ المشكلة الثانية محلولة هنا
+  el.openTelegramBotBtn.addEventListener("click", openTelegramBot);
+
+  el.tabSave.addEventListener("click", () => switchTab("save"));
+  el.tabSettings.addEventListener("click", () => switchTab("settings"));
+
+  // Toggle event listeners
+  el.weeklyEmailToggle?.addEventListener("change", (e) => {
+    const isEnabled = e.target.checked;
+    // No need to hide/show options since we simplified the UI
+  });
+
+  el.telegramQuizToggle?.addEventListener("change", (e) => {
+    const isEnabled = e.target.checked;
+    el.telegramOptions.classList.toggle("hidden", !isEnabled);
+  });
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+
+async function init() {
+  bindEvents();
+  await applyStoredUser();
+
+  const data = await storageGet([STORAGE_KEYS.connected, STORAGE_KEYS.userId]);
+  if (data[STORAGE_KEYS.connected] && data[STORAGE_KEYS.userId]) {
+    await loadPageContext();
+  } else {
+    setStatus("Connect TickTick to unlock the workspace.", "info");
+  }
+}
+
+init();
+</file>
+
+<file path="Routes/telegramRoute.js">
+import express from 'express';
+import bot from '../utils/telegramBot.js';
+
+const router = express.Router();
+
+// User sends message
+// ↓
+// Telegram receives message
+// ↓
+// Telegram sends POST request to webhook
+// ↓
+// Express route receives it
+// ↓
+// bot.processUpdate()
+// ↓
+// bot.onText()
+// ↓
+// your code runs
+// ↓
+// bot.sendMessage()
+// ↓
+// Telegram sends reply to user
+
+router.post('/webhook', (req, res) =>
+{
+    try
+    {
+        bot.processUpdate(req.body);
+        res.sendStatus(200);
+    }
+    catch (error)
+    {
+        console.error('[TELEGRAM] Webhook error:', error.message);
+        res.sendStatus(500);
+    }
+});
+
+export default router;
+</file>
+
+<file path="Routes/userRoute.js">
+import express from 'express';
+import Settings from '../Models/User.js';
+
+const router = express.Router();
+
+const validateEmailInput = ({ userId, email, weeklyEmailEnabled }) =>
+{
+    if (!userId || typeof userId !== 'string' || userId.trim() === '')
+    {
+        return 'userId is required and must be a non-empty string';
+    }
+    
+    if (!email || typeof email !== 'string' || email.trim() === '')
+    {
+        return 'email is required and must be a non-empty string';
+    }
+    
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim()))
+    {
+        return 'email must be a valid email address';
+    }
+    
+    if (weeklyEmailEnabled !== undefined && typeof weeklyEmailEnabled !== 'boolean')
+    {
+        return 'weeklyEmailEnabled must be a boolean value';
+    }
+    
+    return null;
+};
+
+router.post('/email', async (req, res) =>
+{
+    try
+    {
+        const {userId, email, weeklyEmailEnabled} = req.body;
+
+        const validationError = validateEmailInput({ userId, email, weeklyEmailEnabled });
+        
+        if (validationError)
+        {
+            return res.status(400).json(
+            {
+                status: 'error',
+                message: validationError
+            });
+        }
+
+        await Settings.findOneAndUpdate(
+            { userId },
+            { email, weeklyEmailEnabled },
+            { upsert: true, new: true }
+        );
+
+        res.json(
+        {
+            status: 'success',
+            message: 'Email settings updated!'
+        });
+    }
+    catch (error)
+    {
+        res.status(500).json(
+        {
+            status: 'error',
+            message: error.message
+        });
+    }
+});
+
+export default router;
+</file>
+
+<file path="utils/createID.js">
+import crypto from "crypto";
+
+export const hashToken = (token) =>
+{
+    return crypto.createHash("sha256").update(token).digest("hex");
+};
+
+export const generateUserIdFromToken = (token) =>
+{
+    const hash = hashToken(token);
+    return `USER_${hash.slice(0, 16)}`;
+};
+</file>
+
+<file path="utils/emailTemplate.js">
+export const weeklyEmailTemplate = (contents) =>
+{
+    const articleCards = contents.map((c, index) => `
+        <tr>
+            <td style="padding: 20px 0;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff; border-radius:12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); overflow:hidden;">
+                    
+                    <!-- Article Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 16px 24px;">
+                            <table width="100%" cellpadding="0" cellspacing="0">
+                                <tr>
+                                    <td>
+                                        <span style="background:rgba(255,255,255,0.2); color:#ffffff; font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; text-transform:uppercase; letter-spacing:1px;">
+                                            Article ${index + 1}
+                                        </span>
+                                    </td>
+                                    <td align="right">
+                                        <span style="color:rgba(255,255,255,0.7); font-size:11px;">
+                                            ${new Date(c.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Article Body -->
+                    <tr>
+                        <td style="padding: 24px;">
+                            
+                            <!-- Title -->
+                            <h2 style="margin:0 0 8px 0; font-size:18px; font-weight:700; color:#1a1a2e; line-height:1.4;">
+                                ${c.title}
+                            </h2>
+
+                            <!-- URL -->
+                            <a href="${c.url}" style="color:#667eea; font-size:13px; text-decoration:none; display:block; margin-bottom:16px;">
+                                🔗 ${c.url}
+                            </a>
+
+                            <!-- Summary -->
+                            ${c.summary ? `
+                            <div style="background:#f8f9ff; border-left:4px solid #667eea; border-radius:0 8px 8px 0; padding:16px; margin-bottom:16px;">
+                                <p style="margin:0 0 8px 0; font-size:12px; font-weight:700; color:#667eea; text-transform:uppercase; letter-spacing:1px;">
+                                    📝 Summary
+                                </p>
+                                <p style="margin:0; font-size:14px; color:#444; line-height:1.7;">
+                                    ${c.summary}
+                                </p>
+                            </div>
+                            ` : ''}
+
+                            <!-- Tags -->
+                            ${c.tags && c.tags.length > 0 ? `
+                            <div style="margin-bottom:16px;">
+                                ${c.tags.map(tag => `
+                                    <span style="display:inline-block; background:#eef2ff; color:#667eea; font-size:11px; font-weight:600; padding:4px 10px; border-radius:20px; margin:2px 4px 2px 0;">
+                                        #${tag}
+                                    </span>
+                                `).join('')}
+                            </div>
+                            ` : ''}
+
+                            <!-- Quiz -->
+                            ${c.quiz ? `
+                            <div style="background:#fff8f0; border:1px solid #ffd4a3; border-radius:8px; padding:16px;">
+                                <p style="margin:0 0 10px 0; font-size:12px; font-weight:700; color:#f59e0b; text-transform:uppercase; letter-spacing:1px;">
+                                    🧠 Quiz
+                                </p>
+                                <p style="margin:0 0 10px 0; font-size:14px; font-weight:600; color:#1a1a2e;">
+                                    ${c.quiz.question}
+                                </p>
+                                <table cellpadding="0" cellspacing="0">
+                                    ${c.quiz.options.map((opt, i) => `
+                                        <tr>
+                                            <td style="padding:3px 0;">
+                                                <span style="
+                                                    display:inline-block;
+                                                    font-size:13px;
+                                                    color: ${opt === c.quiz.correctAnswer ? '#059669' : '#666'};
+                                                    font-weight: ${opt === c.quiz.correctAnswer ? '700' : '400'};
+                                                ">
+                                                    ${opt === c.quiz.correctAnswer ? '✅' : '⚪'} ${opt}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </table>
+                            </div>
+                            ` : ''}
+
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    `).join('');
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin:0; padding:0; background:#f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f5; padding: 40px 20px;">
+            <tr>
+                <td align="center">
+                    <table width="600" cellpadding="0" cellspacing="0">
+
+                        <!-- Header -->
+                        <tr>
+                            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:16px 16px 0 0; padding:40px; text-align:center;">
+                                <h1 style="margin:0 0 8px 0; font-size:28px; font-weight:800; color:#ffffff;">
+                                    📚 Weekly Digest
+                                </h1>
+                                <p style="margin:0; font-size:15px; color:rgba(255,255,255,0.8);">
+                                    Your saved articles from this week
+                                </p>
+                                <div style="margin-top:20px; background:rgba(255,255,255,0.15); border-radius:30px; display:inline-block; padding:8px 20px;">
+                                    <span style="color:#ffffff; font-size:14px; font-weight:600;">
+                                        ${contents.length} Article${contents.length > 1 ? 's' : ''} Saved
+                                    </span>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Articles -->
+                        <tr>
+                            <td style="background:#f0f2f5; padding:24px 0;">
+                                <table width="100%" cellpadding="0" cellspacing="0">
+                                    ${articleCards}
+                                </table>
+                            </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius:0 0 16px 16px; padding:30px; text-align:center;">
+                                <p style="margin:0 0 8px 0; color:#ffffff; font-size:15px; font-weight:600;">
+                                    Keep Learning! 🚀
+                                </p>
+                                <p style="margin:0; color:rgba(255,255,255,0.7); font-size:12px;">
+                                    TickTick Extension • Weekly Knowledge Digest
+                                </p>
+                            </td>
+                        </tr>
+
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+    </body>
+    </html>
+    `;
+};
+</file>
+
+<file path="utils/normTags.js">
+const normalizeTags = (tags) => 
+{
+    const normalized = tags.map(tag =>
+        tag.toLowerCase().replace(/[\s\-_\.]/g, "")
+    );
+    return [...new Set(normalized)];
+};
+export default normalizeTags;
+</file>
+
+<file path="utils/parse.js">
+// "~backend #node_js #express"
+const parseInput = (input) =>
+{
+    const listMatch = input.match(/~([^\s#]+)/);
+    const tagsMatch = input.match(/#([^\s#~]+)/g);
+
+    return {
+        listName: listMatch ? listMatch[1] : 'inbox',
+        tags: tagsMatch ? tagsMatch.map(tag => tag.replace('#', '')) : []
+    };
+};
+
+export default parseInput;
+</file>
+
+<file path="Controllers/contentControl.js">
+import mongoose from "mongoose";
+import Content from "../Models/Content.js";
+import User from "../Models/User.js";
+import parseInput from "../utils/parse.js";
+import analyzeContent from "../utils/generativeAI.js";
+import normalizeTags from "../utils/normTags.js";
+import * as TickTickFunctions from "../utils/ticktick.js";
+import { validate } from "node-cron";
+
+const getAllContents = async (req, res) =>
+{
+    try
+    {
+        const contents = await Content.find();
+
+        return res.status(200).json(
+        {
+            status: "success",
+            data: contents
+        });
+    }
+    catch (error)
+    {
+        return res.status(500).json(
+        {
+            status: "error",
+            message: error.message
+        });
+    }
+};
+
+const validateQuizObject = (quiz) =>
+{
+    if (!quiz || typeof quiz !== 'object')
+    {
+        return null; // Quiz is optional
+    }
+    
+    if (!quiz.question || typeof quiz.question !== 'string' || quiz.question.trim() === '')
+    {
+        return 'quiz.question is required and must be a non-empty string';
+    }
+    
+    if (!Array.isArray(quiz.options) || quiz.options.length < 2)
+    {
+        return 'quiz.options must be an array with at least 2 options';
+    }
+    
+    if (quiz.options.some(option => !option || typeof option !== 'string' || option.trim() === ''))
+    {
+        return 'all quiz.options must be non-empty strings';
+    }
+    
+    if (!quiz.correctAnswer || typeof quiz.correctAnswer !== 'string' || quiz.correctAnswer.trim() === '')
+    {
+        return 'quiz.correctAnswer is required and must be a non-empty string';
+    }
+    
+    if (!quiz.options.includes(quiz.correctAnswer))
+    {
+        return 'quiz.correctAnswer must exist in quiz.options';
+    }
+    
+    return null;
+};
+
+const validateContentInput = ({ userId, title, rawText }) =>
+{
+    if (!userId || typeof userId !== 'string' || userId.trim() === '')
+    {
+        return 'userId is required and must be a non-empty string';
+    }
+    
+    if (!title || typeof title !== 'string' || title.trim() === '')
+    {
+        return 'title is required and must be a non-empty string';
+    }
+    
+    if (!rawText || typeof rawText !== 'string' || rawText.trim() === '')
+    {
+        return 'rawText is required and must be a non-empty string';
+    }
+    
+    if (title.length > 500)
+    {
+        return 'title must be less than 500 characters';
+    }
+    
+    if (rawText.length > 100000)
+    {
+        return 'rawText must be less than 100,000 characters';
+    }
+    
+    return null;
+};
+
+const prepareContentIn = (userInput) =>
+{
+    const { listName, tags } = parseInput(userInput || "");
+
+    return {
+        listName: listName || "inbox",
+        tags: normalizeTags(tags || [])
+    };
+};
+
+const applyAi = async ({rawText, tags, useTagsAi, useSummaryAi, useQuiz, mergeSummaryWithContent}) =>
+{
+    let finalRawText = rawText;
+    let finalTags = [...tags];
+    let summary = null;
+    let quiz = null;
+
+    if (!useTagsAi && !useSummaryAi && !useQuiz)
+    {
+        return {
+            finalRawText,
+            finalTags,
+            summary,
+            quiz
+        };
+    }
+
+    try
+    {
+        const aiData = await analyzeContent(rawText);
+
+        if (useSummaryAi && aiData.summary)
+        {
+            summary = aiData.summary;
+
+            if (mergeSummaryWithContent)
+            {
+                finalRawText = `${rawText}\n\nSummary:\n${summary}`;
+            }
+        }
+
+        if (useTagsAi && aiData.ai_tags)
+        {
+            finalTags = normalizeTags([...finalTags, ...aiData.ai_tags]);
+        }
+
+        if (useQuiz && aiData.quiz)
+        {
+            quiz = aiData.quiz;
+        }
+    }
+    catch (error)
+    {
+        console.error('[CONTENT] AI Analysis Error:', error.message);
+    }
+
+    return {
+        finalRawText,
+        finalTags,
+        summary,
+        quiz
+    };
+};
+
+const saveContentToDb = async (
+{
+    session,
+    userId,
+    title,
+    url,
+    rawText,
+    listName,
+    tags,
+    summary,
+    quiz,
+    options
+}) =>
+{
+    const [content] = await Content.create(
+        [
+            {
+                userId,
+                title,
+                url,
+                rawText,
+                listName,
+                tags,
+                summary,
+                quiz,
+                options
+            }
+        ],
+        { session }
+    );
+
+    return content;
+};
+
+const syncContentToTickTick = async ({ userId, contentId, title, rawText, tags }) =>
+{
+    try
+    {
+        const user = await User.findOne({ userId });
+
+        if (!user?.tickTickConnected || !user?.tickTickAccessToken)
+        {
+            return;
+        }
+
+        const task = await TickTickFunctions.createTickTickTask(
+            user.tickTickAccessToken,
+            { title, rawText, tags }
+        );
+
+        await Content.findByIdAndUpdate(
+            contentId,
+            {
+                $set:
+                {
+                    "integrations.tickTickId": task.id
+                }
+            }
+        );
+
+        console.log('[CONTENT] TickTick task created:', task.id);
+    }
+    catch (error)
+    {
+        console.error('[CONTENT] TickTick sync failed:', error.message);
+    }
+};
+
+const createContent = async (req, res) =>
+{
+    const session = await mongoose.startSession();
+
+    try
+    {
+        let 
+        {
+            userId,
+            title,
+            url,
+            rawText,
+            user_input,
+            use_tagsAi,
+            use_quiz,
+            use_summaryAi,
+            mergeSummaryWithContent,
+            includeInWeeklyEmail,
+            includeInTelegramQuiz
+        } = req.body;
+
+        const validationError = validateContentInput({ userId, title, rawText });
+
+        if (validationError)
+        {
+            return res.status(400).json(
+            {
+                status: "error",
+                message: validationError
+            });
+        }
+
+        const { listName, tags } = prepareContentIn(user_input);
+
+        const  {finalRawText, finalTags, summary, quiz} = await applyAi(
+        {
+            rawText,
+            tags,
+            useTagsAi: use_tagsAi,
+            useSummaryAi: use_summaryAi,
+            useQuiz: use_quiz,
+            mergeSummaryWithContent
+        });
+
+        // Validate quiz if it exists
+        if (quiz) {
+            const quizValidationError = validateQuizObject(quiz);
+            if (quizValidationError) {
+                return res.status(400).json({
+                    status: "error",
+                    message: quizValidationError
+                });
+            }
+        }
+
+        const options = 
+        {
+            useSummaryAi: Boolean(use_summaryAi),
+            useTagsAi: Boolean(use_tagsAi),
+            useQuiz: Boolean(use_quiz),
+            mergeSummaryWithContent: Boolean(mergeSummaryWithContent),
+            includeInWeeklyEmail: Boolean(includeInWeeklyEmail),
+            includeInTelegramQuiz: Boolean(includeInTelegramQuiz)
+        };
+
+        session.startTransaction();
+
+        const content = await saveContentToDb(
+        {
+            session,
+            userId,
+            title,
+            url,
+            rawText: finalRawText,
+            listName,
+            tags: finalTags,
+            summary,
+            quiz,
+            options
+        });
+
+        await session.commitTransaction();
+
+        await syncContentToTickTick(
+        {
+            userId,
+            contentId: content._id,
+            title,
+            rawText: finalRawText,
+            tags: finalTags
+        });
+
+        return res.status(201).json(
+        {
+            status: "success",
+            data:
+            {
+                content,
+                ai:
+                {
+                    summary,
+                    tags: finalTags,
+                    quiz
+                }
+            }
+        });
+    }
+    catch (error)
+    {
+        await session.abortTransaction();
+
+        return res.status(500).json(
+        {
+            status: "error",
+            message: error.message
+        });
+    }
+    finally
+    {
+        session.endSession();
+    }
+};
+
+const getContentByUserId = async (req, res) =>
+{
+    try
+    {
+        const { userId } = req.params;
+        
+        if (!userId || typeof userId !== 'string' || userId.trim() === '')
+        {
+            return res.status(400).json(
+            {
+                status: 'error',
+                message: 'userId is required and must be a non-empty string'
+            });
+        }
+
+        const contents = await Content.find({ userId })
+            .sort({ createdAt: -1 })
+            .select('-__v');
+
+        return res.status(200).json(
+        {
+            status: 'success',
+            data: contents,
+            count: contents.length
+        });
+    }
+    catch (error)
+    {
+        console.error('[CONTENT] Error fetching content by userId:', error.message);
+        return res.status(500).json(
+        {
+            status: 'error',
+            message: error.message
+        });
+    }
+};
+
+export { getAllContents, createContent, getContentByUserId };
+</file>
+
+<file path="Models/Content.js">
+import mongoose from "mongoose";
+
+const quizSchema = new mongoose.Schema(
+    {
+        question: { type: String, trim: true },
+        options: [{ type: String, trim: true }],
+        correctAnswer: { type: String, trim: true },
+        isSolved: { type: Boolean, default: false }
+    },
+    { _id: false }
+);
+
+const articleOptionsSchema = new mongoose.Schema(
+    {
+        useSummaryAi: { type: Boolean, default: true },
+        useTagsAi: { type: Boolean, default: true },
+        useQuiz: { type: Boolean, default: true },
+        includeInWeeklyEmail: { type: Boolean, default: true },
+        includeInTelegramQuiz: { type: Boolean, default: true },
+        mergeSummaryWithContent: { type: Boolean, default: false }
+    },
+    { _id: false }
+);
+
+const integrationSchema = new mongoose.Schema(
+    {
+        tickTickId: { type: String, default: null },
+        tickTickProjectId: { type: String, default: null }
+    },
+    { _id: false }
+);
+
+const contentSchema = new mongoose.Schema(
+{
+    userId: 
+    {
+        type: String,
+        required: true,
+        index: true,
+        trim: true
+    },
+
+    title: 
+    {
+        type: String,
+        required: true,
+        trim: true
+    },
+
+    url: 
+    {
+        type: String,
+        trim: true,
+        default: null
+    },
+
+    rawText: 
+    {
+        type: String,
+        required: true,
+        trim: true
+    },
+
+    listName: 
+    {
+        type: String,
+        default: "inbox",
+        trim: true,
+        lowercase: true
+    },
+
+    tags: [
+    {
+        type: String,
+        trim: true,
+        lowercase: true
+    }
+    ],
+
+    summary: 
+    {
+        type: String,
+        default: null,
+        trim: true
+    },
+
+    quiz: 
+    {
+        type: quizSchema,
+        default: null
+    },
+
+    options: 
+    {
+        type: articleOptionsSchema,
+        default: () => ({})
+    },
+
+    integrations: 
+    {
+        type: integrationSchema,
+        default: () => ({})
+    },
+
+    isRead: 
+    {
+        type: Boolean,
+        default: false
+    },
+
+    lastEmailedAt: 
+    {
+        type: Date,
+        default: null
+    }
+},
+{
+    timestamps: true
+}
+);
+
+contentSchema.index({ userId: 1, createdAt: -1 });
+contentSchema.index({ userId: 1, listName: 1 });
+contentSchema.index({ userId: 1, tags: 1 });
+contentSchema.index({ userId: 1, title: "text", rawText: "text" });
+
+const Content = mongoose.model("Content", contentSchema);
+
+export default Content;
+</file>
+
+<file path="package.json">
+{
+  "name": "ticktick_extension",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node Server.js",
+    "dev": "nodemon Server.js"
+  },
+  "keywords": [],
+  "author": "Ahmed_Sheref",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "axios": "^1.15.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "groq-sdk": "^0.37.0",
+    "mongodb": "^7.1.0",
+    "mongoose": "^9.2.4",
+    "node-cron": "^4.2.1",
+    "node-telegram-bot-api": "^0.67.0",
+    "nodemailer": "^8.0.1",
+    "nodemon": "^3.1.14",
+    "path": "^0.12.7"
+  }
+}
+</file>
+
+<file path="Routes/contentRoute.js">
+import express from 'express';
+import * as contentControl from '../Controllers/contentControl.js';
+
+const router = express.Router();
+
+router.route("/")
+    // .get(contentControl.getAllContents)
+    .post(contentControl.createContent);
+
+router.get("/user/:userId", contentControl.getContentByUserId);
+
+export default router;
+</file>
+
+<file path="Routes/ticktickRoute.js">
+import express from 'express';
+import Settings from '../Models/User.js';
+import { getAuthUrl, exchangeToken } from '../utils/ticktick.js';
+import { hashToken, generateUserIdFromToken } from '../utils/createID.js';
+
+const router = express.Router();
+
+
+
+// AUTH ROUTE
+router.get('/auth', (req, res) =>
+{
+    console.log('=== TickTick Auth Route ===');
+    console.log('Query params:', req.query);
+    
+    const { redirect_uri } = req.query;
+
+    console.log('Redirect URI:', redirect_uri);
+
+    if (!redirect_uri)
+    {
+        console.log('Missing redirect_uri');
+        return res.status(400).json(
+        {
+            status: 'error',
+            message: 'Missing extension redirect_uri'
+        });
+    }
+
+    const stateObj =
+    {
+        extensionRedirectUri: redirect_uri,
+        nonce: Date.now()
+    };
+
+    console.log('State object:', stateObj);
+
+    const state = Buffer.from(JSON.stringify(stateObj)).toString('base64');
+
+    console.log('Encoded state:', state);
+
+    const authUrl = getAuthUrl(state);
+
+    console.log('Generated auth URL:', authUrl);
+    console.log('Redirecting to TickTick...');
+
+    return res.redirect(authUrl);
+});
+
+
+
+// CALLBACK ROUTE
+
+router.get('/callback', async (req, res) =>
+{
+    console.log('=== TickTick Callback Route ===');
+    console.log('Query params:', req.query);
+    
+    try
+    {
+        const { code, state } = req.query;
+
+        console.log('Authorization code:', code ? 'Received' : 'Missing');
+        console.log('State:', state ? 'Received' : 'Missing');
+
+        if (!code || !state)
+        {
+            console.log('Missing required parameters');
+            return res.status(400).json(
+            {
+                status: 'error',
+                message: 'Missing code or state'
+            });
+        }
+
+        const decodedState = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+
+        console.log('Decoded state:', decodedState);
+
+        const extensionRedirectUri = decodedState.extensionRedirectUri;
+
+        console.log('Extension redirect URI:', extensionRedirectUri);
+
+
+        console.log('Exchanging authorization code for tokens...');
+        const tokenData = await exchangeToken(code);
+
+        console.log('Token exchange successful');
+        console.log('Access token received:', tokenData.access_token ? 'DONE' : 'ERROR');
+        console.log('Refresh token received:', tokenData.refresh_token ? 'DONE' : 'ERROR');
+
+        const accessToken = tokenData.access_token;
+        const refreshToken = tokenData.refresh_token;
+
+        const tokenHash = hashToken(accessToken);
+
+        console.log('Looking for existing user with token hash...');
+
+        let user = await Settings.findOne({ tickTickTokenHash: tokenHash });
+
+        if (!user)
+        {
+            console.log('Creating new user...');
+            user = await Settings.create(
+            {
+                userId: generateUserIdFromToken(accessToken),
+                tickTickTokenHash: tokenHash,
+                tickTickAccessToken: accessToken,
+                tickTickRefreshToken: refreshToken,
+                tickTickConnected: true
+            });
+            console.log('New user created with ID:', user.userId);
+        }
+        else
+        {
+            console.log('Updating existing user:', user.userId);
+            user.tickTickAccessToken = accessToken;
+            user.tickTickRefreshToken = refreshToken;
+            user.tickTickConnected = true;
+            await user.save();
+            console.log('User updated successfully');
+        }
+
+
+        const finalUrl = `${extensionRedirectUri}?userId=${encodeURIComponent(user.userId)}`;
+
+        console.log('Redirecting to extension:', finalUrl);
+        console.log('=== TickTick OAuth Flow Complete ===');
+
+        return res.redirect(finalUrl);
+    }
+    catch (error)
+    {
+        console.error('❌ OAuth error:', error);
+        console.error('Error stack:', error.stack);
+
+        return res.status(500).json(
+        {
+            status: 'error',
+            message: error.message
+        });
+    }
+});
+
+export default router;
+</file>
+
+<file path="utils/generativeAI.js">
+import Groq from "groq-sdk";
+
+
+console.log( process.env.GROQ_API_KEY);
+const groq = new Groq({
+    apiKey: process.env.GROQ_API_KEY
+});
+
+const MODEL_NAME = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+
+const buildPrompt = (text) => `
+You must respond with ONLY a valid JSON object.
+No explanation, no markdown, no code fences, no extra text.
+
+Structure:
+{
+  "summary": "bullet1. bullet2. bullet3.",
+  "ai_tags": ["tags..."],
+  "quiz": {
+    "question": "A challenge question based on the text",
+    "options": ["A", "B", "C", "D"],
+    "correctAnswer": "The correct option text"
+  }
+}
+
+IMPORTANT TAGS RULES:
+- Return ONLY 3-5 main technical tags maximum
+- Focus on core technologies and concepts
+- Avoid generic words like "tutorial", "guide", "learn"
+- Use lowercase, single words, no spaces
+- Tags must be in English
+
+LANGUAGE HANDLING:
+- Support both English and Arabic text
+- For Arabic content, generate English summary and quiz
+- Preserve original meaning
+
+Text to analyze:
+${text}
+`;
+
+const validateAiResponse = (data) =>
+{
+    if (!data || typeof data !== "object") throw new Error("Invalid AI response object");
+
+    if (typeof data.summary !== "string") data.summary = "";
+
+    if (!Array.isArray(data.ai_tags)) data.ai_tags = [];
+
+    if (!data.quiz || typeof data.quiz !== "object" || typeof data.quiz.question !== "string" || !Array.isArray(data.quiz.options) || typeof data.quiz.correctAnswer !== "string")
+    {
+        data.quiz = null;
+    }
+
+    return data;
+};
+
+const extractJson = (text) =>
+{
+    const clean = text.replace(/```json|```/gi, "").trim();
+    const match = clean.match(/\{[\s\S]*\}/);
+
+    if (!match) throw new Error("No JSON object found in AI response");
+
+    return JSON.parse(match[0]);
+};
+
+const analyzeContent = async (text) =>
+{
+    if (typeof text !== "string" || !text.trim()) throw new Error("Text is required for AI analysis");
+
+    const safeText = text.trim().slice(0, 12000);
+
+    try
+    {
+        const result = await groq.chat.completions.create({
+            model: MODEL_NAME,
+            temperature: 0.3,
+            messages: [
+                {
+                    role: "user",
+                    content: buildPrompt(safeText)
+                }
+            ]
+        });
+
+        const outputText = result.choices?.[0]?.message?.content;
+
+        if (!outputText)
+        {
+            throw new Error("Empty response from Groq");
+        }
+
+        const parsed = extractJson(outputText);
+        return validateAiResponse(parsed);
+    }
+    catch (error)
+    {
+        console.error("Groq AI Error:", error.message);
+        throw new Error(`Groq AI Error: ${error.message}`);
+    }
+};
+
+export default analyzeContent;
+</file>
+
+<file path="utils/telegramBot.js">
+import TelegramBot from 'node-telegram-bot-api';
+import Settings from '../Models/User.js';
+
+const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
+
+export const startTelegramBot = async () =>
+{
+    try
+    {
+        console.log('[TELEGRAM] Starting Telegram bot...');
+        
+        // Set Webhook
+        const webhookUrl = `${process.env.WEBHOOK_URL}/api/v1/telegram/webhook`;
+        await bot.setWebHook(webhookUrl);
+        console.log('[TELEGRAM] Webhook set:', webhookUrl);
+
+        // /start command - handle deep link and manual commands
+        bot.onText(/\/start (.+)/, async (msg, match) =>
+        {
+            const chatId = msg.chat.id;
+            const userId = match[1].trim();
+            
+            console.log('[TELEGRAM] === START COMMAND ===');
+            console.log('[TELEGRAM] User ID received:', userId);
+            console.log('[TELEGRAM] Chat ID:', chatId);
+
+            try
+            {
+                const user = await Settings.findOne({ userId });
+
+                if (!user)
+                {
+                    console.log('[TELEGRAM] User not found:', userId);
+                    await bot.sendMessage(chatId,
+                        ` Invalid User ID: ${userId}\n\n` +
+                        `Please open the extension and copy your correct User ID.\n\n` +
+                        `Your User ID should look like: USER_1234567890\n\n` +
+                        `Get your User ID from extension settings.`
+                    );
+                    return;
+                }
+
+                console.log('[TELEGRAM] User found, updating connection...');
+                
+                // Update user with Telegram connection
+                user.telegramChatId = chatId.toString();
+                user.receiveTelegramQuiz = true;
+                user.telegramConnected = true;
+
+                await user.save();
+
+                console.log('[TELEGRAM] Connection saved successfully');
+                console.log('[TELEGRAM] User ID:', userId);
+                console.log('[TELEGRAM] Chat ID:', chatId);
+                console.log('[TELEGRAM] Connected:', user.telegramConnected);
+                console.log('[TELEGRAM] Quiz enabled:', user.receiveTelegramQuiz);
+                
+                await bot.sendMessage(chatId,
+                    ` Successfully connected!\n\n` +
+                    ` Your TickTick extension is now linked to Telegram.\n` +
+                    ` You'll receive weekly quizzes every Sunday.\n` +
+                    ` You can interact with your saved articles here.\n\n` +
+                    `User ID: ${userId}\n\n` +
+                    `Good luck! `
+                );
+
+                console.log(`[TELEGRAM] User ${userId} connected with chatId ${chatId}`);
+                console.log('[TELEGRAM] === CONNECTION COMPLETE ===');
+            }
+            catch (error)
+            {
+                console.error('[TELEGRAM] Error:', error.message);
+                await bot.sendMessage(chatId,
+                    " Something went wrong. Please try again later."
+                );
+            }
+        });
+
+        // /start without userId
+        bot.onText(/\/start$/, async (msg) =>
+        {
+            console.log('[TELEGRAM] Message received without userId');
+            const chatId = msg.chat.id;
+            await bot.sendMessage(chatId,
+                ` Please start with your User ID:\n\n` +
+                `/start YOUR_USER_ID\n\n` +
+                `Example: /start USER_123\n\n` +
+                `Get your User ID from the extension settings.`
+            );
+        });
+
+        // Handle any message for debugging
+        bot.on('message', (msg) => {
+            console.log('[TELEGRAM] Debug message:', msg.text, 'from chat:', msg.chat.id);
+        });
+
+        console.log('[TELEGRAM] Bot started successfully');
+    }
+    catch (error)
+    {
+        console.error('[TELEGRAM] Failed to start bot:', error.message);
+    }
+};
+
+export default bot;
+</file>
+
+<file path="utils/ticktick.js">
+import axios from 'axios';
+
+const TICKTICK_AUTH_URL = 'https://ticktick.com/oauth/authorize';
+const TICKTICK_TOKEN_URL = 'https://ticktick.com/oauth/token';
+const TICKTICK_API_URL = 'https://api.ticktick.com/open/v1';
+
+
+// Build OAuth URL
+
+export const getAuthUrl = (state) =>
+{
+    const params = new URLSearchParams(
+    {
+        client_id: process.env.TICKTICK_CLIENT_ID,
+        redirect_uri: process.env.TICKTICK_REDIRECT_URI,
+        response_type: 'code',
+        scope: 'tasks:write tasks:read',
+        state
+    });
+
+    return `${TICKTICK_AUTH_URL}?${params.toString()}`;
+};
+
+
+
+// Exchange code -> access token
+
+export const exchangeToken = async (code) =>
+{
+    try
+    {
+        const credentials = Buffer.from(`${process.env.TICKTICK_CLIENT_ID}:${process.env.TICKTICK_CLIENT_SECRET}`).toString('base64');
+
+        const response = await axios.post(
+            TICKTICK_TOKEN_URL,
+            new URLSearchParams(
+            {
+                code,
+                grant_type: 'authorization_code',
+                redirect_uri: process.env.TICKTICK_REDIRECT_URI
+            }),
+            {
+                headers:
+                {
+                    'Authorization': `Basic ${credentials}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
+        );
+
+        return response.data;
+    }
+    catch (error)
+    {
+        throw new Error(`Failed to exchange token: ${error.message}`);
+    }
+};
+
+export async function getProjectIds(accessToken)
+{
+    try
+    {
+        const response = await axios.get(
+            `${TICKTICK_API_URL}/project`,
+            { headers: { 'Authorization': `Bearer ${accessToken}` } }
+        );
+        return response.data;
+    }
+    catch (error)
+    {
+        throw new Error(`Failed to get projects: ${error.message}`);
+    }
+}
+
+export async function createProject(accessToken)
+{
+    try
+    {
+        const response = await axios.post(
+            `${TICKTICK_API_URL}/project`,
+            { name: "article", kind: "NOTE" },
+            { headers: { 'Authorization': `Bearer ${accessToken}` } }
+        );
+
+        console.log('[TICKTICK] Project created:', response.data.id);
+        return response.data;
+    }
+    catch (error)
+    {
+        throw new Error(`Failed to create project: ${error.message}`);
+    }
+}
+
+export async function projectExist(accessToken)
+{
+    try
+    {
+        const projects = await getProjectIds(accessToken);
+        const existing = projects.find(p => p.name.toLowerCase() === 'article');
+
+        if (existing)
+        {
+            console.log('[TICKTICK] Project found:', existing.id);
+            return existing.id;
+        }
+
+        console.log('[TICKTICK] Project not found, creating...');
+        const newProject = await createProject(accessToken);
+        return newProject.id;
+    }
+    catch (error)
+    {
+        throw new Error(`Failed to check/create project: ${error.message}`);
+    }
+}
+
+export const createTickTickTask = async (accessToken, { title, rawText, tags }) =>
+{
+    try
+    {
+        const projectId = await projectExist(accessToken);
+        console.log('[TICKTICK] Using projectId:', projectId);
+
+        const response = await axios.post(
+            `${TICKTICK_API_URL}/task`,
+            {
+                title,
+                projectId,
+                content: rawText || '',
+                tags: tags || [],
+                kind: 'NOTE'
+            },
+            {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            }
+        );
+
+        console.log('[TICKTICK] Task created:', response.data.id);
+        return response.data;
+    }
+    catch (error)
+    {
+        throw new Error(`Failed to create task: ${error.message}`);
+    }
+};
+</file>
+
+<file path="utils/weeklyQuiz.js">
+import cron from 'node-cron';
+import User from '../Models/User.js';
+import Content from '../Models/Content.js';
+import QuizPoll from '../Models/QuizPoll.js';
+import bot from './telegramBot.js';
+
+export const startWeeklyQuizCron = () =>
+{
+    cron.schedule('* * * * *', async () =>
+    {
+        console.log('[QUIZ] Starting weekly quiz job...');
+
+        try
+        {
+            const users = await User.find(
+            {
+                receiveTelegramQuiz: true,
+                telegramChatId: { $exists: true, $ne: null }
+            });
+
+            console.log(`[QUIZ] Found ${users.length} users to send quiz`);
+
+            for (const user of users)
+            {
+                try
+                {
+                    const contents = await Content.find(
+                    {
+                        userId: user.userId,
+                        'quiz.question': { $exists: true },
+                        'quiz.isSolved': false,
+                        'options.includeInTelegramQuiz': true
+                    })
+                    .sort({ createdAt: -1 })
+                    .limit(3);
+
+                    if (contents.length === 0)
+                    {
+                        console.log(`[QUIZ] No unsolved quizzes for ${user.userId}`);
+                        await bot.sendMessage(
+                            user.telegramChatId,
+                            '🎉 You solved all your quizzes this week! Save more articles to get new ones.'
+                        );
+                        continue;
+                    }
+
+                    await bot.sendMessage(
+                        user.telegramChatId,
+                        `🧠 *Weekly Quiz Time!*\nYou have ${contents.length} question(s) to answer:`,
+                        { parse_mode: 'Markdown' }
+                    );
+
+                    for (const content of contents)
+                    {
+                        if (!content.quiz?.options || content.quiz.options.length < 2)
+                        {
+                            console.log(`[QUIZ] Invalid quiz options for content: ${content._id}`);
+                            continue;
+                        }
+
+                        const correctOptionIndex = content.quiz.options.indexOf(content.quiz.correctAnswer);
+
+                        if (correctOptionIndex === -1)
+                        {
+                            console.log(`[QUIZ] Correct answer not found in options for content: ${content._id}`);
+                            continue;
+                        }
+
+                        const poll = await bot.sendPoll(
+                            user.telegramChatId,
+                            content.quiz.question,
+                            content.quiz.options,
+                            {
+                                type: 'quiz',
+                                correct_option_id: correctOptionIndex,
+                                is_anonymous: false,
+                                explanation: `From article: ${content.title}`
+                            }
+                        );
+
+                        // Create QuizPoll document after sending poll
+                        await QuizPoll.create({
+                            pollId: poll.poll.id,
+                            contentId: content._id,
+                            userId: user.userId,
+                            chatId: user.telegramChatId,
+                            isAnswered: false,
+                            sentAt: new Date()
+                        });
+                        
+                        console.log(`[QUIZ] Quiz sent for: ${content.title}`);
+                    }
+                }
+                catch (userError)
+                {
+                    console.error(`[QUIZ] Failed for ${user.userId}:`, userError.message);
+                }
+            }
+
+            console.log('[QUIZ] Weekly quiz job completed');
+        }
+        catch (error)
+        {
+            console.error('[QUIZ] Weekly quiz job failed:', error.message);
+        }
+    });
+
+    console.log('[QUIZ] Weekly quiz cron started');
+};
+
+bot.on('poll_answer', async (answer) =>
+{
+    try
+    {
+        console.log('[QUIZ] Poll answer received for poll:', answer.poll_id);
+
+        // Find the QuizPoll document
+        const quizPoll = await QuizPoll.findOne({ pollId: answer.poll_id });
+        
+        if (!quizPoll) {
+            console.log('[QUIZ] No poll found for ID:', answer.poll_id);
+            return;
+        }
+
+        if (quizPoll.isAnswered) {
+            console.log('[QUIZ] Poll already answered:', answer.poll_id);
+            return;
+        }
+
+        // Update both QuizPoll and Content documents
+        await Promise.all([
+            QuizPoll.findByIdAndUpdate(
+                quizPoll._id,
+                { 
+                    isAnswered: true,
+                    answeredAt: new Date()
+                }
+            ),
+            Content.findByIdAndUpdate(
+                quizPoll.contentId,
+                { 'quiz.isSolved': true }
+            )
+        ]);
+
+        console.log(`[QUIZ] Quiz solved for content: ${quizPoll.contentId}`);
+    }
+    catch (error)
+    {
+        console.error('[QUIZ] Poll answer error:', error.message);
+    }
+});
+</file>
+
+<file path="index.js">
+import express from "express";
+import contentRouter from "./Routes/contentRoute.js";
+import dotenv from 'dotenv';
+import ticktickRouter from "./Routes/ticktickRoute.js";
+import settingsRouter from './Routes/userRoute.js';
+import telegramRouter from './Routes/telegramRoute.js';
+
+const app = express();
+
+app.use(express.json());
+
+app.use("/api/v1/content", contentRouter);
+app.use('/api/v1/ticktick', ticktickRouter);
+app.use('/api/v1/User', settingsRouter);
+app.use('/api/v1/telegram', telegramRouter);
+
+export default app;
+</file>
+
+<file path="Models/User.js">
+import mongoose from "mongoose";
+
+const userSchema = new mongoose.Schema(
+{
+    userId: 
+    {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    },
+
+    email: 
+    {
+        type: String,
+        trim: true,
+        default: null
+    },
+
+    // Channels
+    weeklyEmailEnabled: 
+    {
+        type: Boolean,
+        default: false
+    },
+
+    telegramChatId: 
+    {
+        type: String,
+        default: null
+    },
+
+    telegramConnected: 
+    {
+        type: Boolean,
+        default: false
+    },
+
+    // Preferences
+    receiveWeeklyEmail:
+    {
+        type: Boolean,
+        default: true
+    },
+
+    receiveTelegramQuiz:
+    {
+        type: Boolean,
+        default: true
+    },
+
+    useSummaryAi:
+    {
+        type: Boolean,
+        default: true
+    },
+
+    useTagsAi: 
+    {
+        type: Boolean,
+        default: true
+    },
+
+    useQuiz: 
+    {
+        type: Boolean,
+        default: true
+    },
+
+    mergeSummary: 
+    {
+        type: Boolean,
+        default: false
+    },
+
+    // TickTick
+    tickTickTokenHash: 
+    {
+        type: String,
+        unique: true,
+        sparse: true
+    },
+
+    tickTickAccessToken: 
+    {
+        type: String,
+        default: null
+    },
+
+    tickTickRefreshToken: 
+    {
+        type: String,
+        default: null
+    },
+
+    tickTickConnected: 
+    {
+        type: Boolean,
+        default: false
+    }
+},
+{
+    timestamps: true
+});
+
+const User = mongoose.model("User", userSchema);
+
+export default User;
+</file>
+
+<file path="Server.js">
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import app from './index.js';
+import { startWeeklyEmailCron } from './utils/weeklyEmail.js';
+import { startTelegramBot } from './utils/telegramBot.js';
+import { startWeeklyQuizCron } from './utils/weeklyQuiz.js';
+
+// Load environment variables centrally
+dotenv.config();
+
+// dotenv.config({path: 'D:\\Programming\\Back_end\\ticktick_extension\\config.env'})
+
+const DB = process.env.DATABASE;
+
+console.log('[DB] DATABASE env variable:', DB ? 'Found' : 'NOT FOUND');
+console.log('[DB] DB value:', DB || 'undefined');
+
+mongoose.connect(DB)
+.then((con) =>
+{
+    console.log('[DB] MongoDB connection successful');
+    startTelegramBot();
+    startWeeklyEmailCron();
+    startWeeklyQuizCron();
+    app.listen(3000, () =>
+    {
+        console.log('[SERVER] Server is running on port 3000');
+    });
+})
+.catch((err) =>
+{
+    console.error('[DB] Connection Error:', err);
+    console.log('[SERVER] Starting server without database connection...');
+    app.listen(3000, () =>
+    {
+        console.log('[SERVER] Server is running on port 3000 (without database)');
+    });
+});
+</file>
+
+<file path="utils/weeklyEmail.js">
+import cron from 'node-cron';
+import User from '../Models/User.js';
+import Content from '../Models/Content.js';
+import { sendWeeklyEmail } from './email.js';
+
+export const startWeeklyEmailCron = () =>
+{
+    cron.schedule('* * * * *', async () =>
+    {
+        console.log('[EMAIL] Starting weekly email job...');
+
+        try
+        {
+            const users = await User.find(
+            {
+                weeklyEmailEnabled: true,
+                email: { $exists: true, $ne: null }
+            });
+
+            console.log(`[EMAIL] Found ${users.length} users to email`);
+
+            for (const user of users)
+            {
+                try
+                {
+                    const oneWeekAgo = new Date();
+                    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
+                    const contents = await Content.find(
+                    {
+                        userId: user.userId,
+                        "options.includeInWeeklyEmail": true,
+                        summary: { $ne: null },
+                        lastEmailedAt: null,
+                        createdAt: { $gte: oneWeekAgo }
+                    })
+                    .sort({ createdAt: -1 });
+
+                    if (contents.length === 0)
+                    {
+                        console.log(`[EMAIL] No articles for ${user.email} this week`);
+                        continue;
+                    }
+
+                    await sendWeeklyEmail(user.email, contents);
+
+                    await Content.updateMany(
+                        { _id: { $in: contents.map(content => content._id) } },
+                        { $set: { lastEmailedAt: new Date() } }
+                    );
+
+                    console.log(`[EMAIL] Weekly email processed for ${user.email}`);
+                }
+                catch (userError)
+                {
+                    console.error(`[EMAIL] Failed for ${user.email}:`, userError.message);
+                }
+            }
+
+            console.log('[EMAIL] Weekly email job completed');
+        }
+        catch (error)
+        {
+            console.error('[EMAIL] Weekly email job failed:', error.message);
+        }
+    });
+
+    console.log('[EMAIL] Weekly email cron started');
+};
+</file>
+
+<file path="utils/email.js">
+import nodemailer from 'nodemailer';
+import { weeklyEmailTemplate } from './emailTemplate.js';
+
+const transporter = nodemailer.createTransport(
+{
+    service: 'gmail',
+    auth: 
+    {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    }
+});
+
+export const sendWeeklyEmail = async (email, contents) =>
+{
+    try
+    {
+        await transporter.sendMail(
+        {
+            from: `"TickTick Extension" no reply`,
+            to: email,
+            subject: `Your Weekly Digest — ${contents.length} Articles`,
+            html: weeklyEmailTemplate(contents)
+        });
+
+        console.log(`[EMAIL] Weekly email sent to ${email}`);
+    }
+    catch (error)
+    {
+        console.error('[EMAIL] Failed to send email:', error.message);
+        throw new Error(`Failed to send email: ${error.message}`);
+    }
+};
+</file>
+
+</files>

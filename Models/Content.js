@@ -106,6 +106,12 @@ const contentSchema = new mongoose.Schema(
     {
         type: Boolean,
         default: false
+    },
+
+    lastEmailedAt: 
+    {
+        type: Date,
+        default: null
     }
 },
 {
