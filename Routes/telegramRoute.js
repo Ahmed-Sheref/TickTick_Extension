@@ -30,7 +30,7 @@ router.post('/webhook', (req, res) =>
     }
     catch (error)
     {
-        console.error('Webhook error:', error.message);
+        console.error('[TELEGRAM] Webhook error:', error.message);
         res.sendStatus(500);
     }
 });

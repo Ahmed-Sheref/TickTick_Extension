@@ -1,8 +1,5 @@
 import TelegramBot from 'node-telegram-bot-api';
-import dotenv from 'dotenv';
 import Settings from '../Models/User.js';
-
-dotenv.config({path: 'D:\\Programming\\Back_end\\TickTick_EXTENSION\\config.env'});
 
 const bot = new TelegramBot(process.env.TELEGRAM_BOT_TOKEN);
 
@@ -10,12 +7,12 @@ export const startTelegramBot = async () =>
 {
     try
     {
-        console.log(' Starting Telegram bot...');
+        console.log('[TELEGRAM] Starting Telegram bot...');
         
         // Set Webhook
         const webhookUrl = `${process.env.WEBHOOK_URL}/api/v1/telegram/webhook`;
         await bot.setWebHook(webhookUrl);
-        console.log(' Telegram Webhook set:', webhookUrl);
+        console.log('[TELEGRAM] Webhook set:', webhookUrl);
 
         // /start command - handle deep link and manual commands
         bot.onText(/\/start (.+)/, async (msg, match) =>
@@ -23,11 +20,9 @@ export const startTelegramBot = async () =>
             const chatId = msg.chat.id;
             const userId = match[1].trim();
             
-            console.log(' === TELEGRAM BOT START COMMAND ===');
-            console.log(' User ID received:', userId);
-            console.log(' Chat ID:', chatId);
-            console.log(' Full message:', msg.text);
-            console.log(' Message type: Deep link or manual command');
+            console.log('[TELEGRAM] === START COMMAND ===');
+            console.log('[TELEGRAM] User ID received:', userId);
+            console.log('[TELEGRAM] Chat ID:', chatId);
 
             try
             {
@@ -35,7 +30,7 @@ export const startTelegramBot = async () =>
 
                 if (!user)
                 {
-                    console.log(' User not found in database:', userId);
+                    console.log('[TELEGRAM] User not found:', userId);
                     await bot.sendMessage(chatId,
                         ` Invalid User ID: ${userId}\n\n` +
                         `Please open the extension and copy your correct User ID.\n\n` +
@@ -45,21 +40,20 @@ export const startTelegramBot = async () =>
                     return;
                 }
 
-                console.log(' User found in database, updating connection...');
+                console.log('[TELEGRAM] User found, updating connection...');
                 
                 // Update user with Telegram connection
                 user.telegramChatId = chatId.toString();
-                user.telegramQuiz = true;
+                user.receiveTelegramQuiz = true;
                 user.telegramConnected = true;
 
                 await user.save();
 
-                console.log(' Telegram connection saved successfully');
-                console.log(' User details:');
-                console.log('  - User ID:', userId);
-                console.log('  - Chat ID:', chatId);
-                console.log('  - Telegram Connected:', user.telegramConnected);
-                console.log('  - Telegram Quiz:', user.telegramQuiz);
+                console.log('[TELEGRAM] Connection saved successfully');
+                console.log('[TELEGRAM] User ID:', userId);
+                console.log('[TELEGRAM] Chat ID:', chatId);
+                console.log('[TELEGRAM] Connected:', user.telegramConnected);
+                console.log('[TELEGRAM] Quiz enabled:', user.receiveTelegramQuiz);
                 
                 await bot.sendMessage(chatId,
                     ` Successfully connected!\n\n` +
@@ -70,12 +64,12 @@ export const startTelegramBot = async () =>
                     `Good luck! `
                 );
 
-                console.log(` User ${userId} connected with chatId ${chatId}`);
-                console.log('=== TELEGRAM BOT CONNECTION COMPLETE ===');
+                console.log(`[TELEGRAM] User ${userId} connected with chatId ${chatId}`);
+                console.log('[TELEGRAM] === CONNECTION COMPLETE ===');
             }
             catch (error)
             {
-                console.error(' Telegram bot error:', error);
+                console.error('[TELEGRAM] Error:', error.message);
                 await bot.sendMessage(chatId,
                     " Something went wrong. Please try again later."
                 );
@@ -85,7 +79,7 @@ export const startTelegramBot = async () =>
         // /start without userId
         bot.onText(/\/start$/, async (msg) =>
         {
-            console.log(msg);
+            console.log('[TELEGRAM] Message received without userId');
             const chatId = msg.chat.id;
             await bot.sendMessage(chatId,
                 ` Please start with your User ID:\n\n` +
@@ -97,15 +91,14 @@ export const startTelegramBot = async () =>
 
         // Handle any message for debugging
         bot.on('message', (msg) => {
-            console.log('📨 Received message:', msg.text);
-            console.log('👤 From chat ID:', msg.chat.id);
+            console.log('[TELEGRAM] Debug message:', msg.text, 'from chat:', msg.chat.id);
         });
 
-        console.log(' Telegram bot started successfully and ready to receive commands!');
+        console.log('[TELEGRAM] Bot started successfully');
     }
     catch (error)
     {
-        console.error(' Failed to start Telegram bot:', error);
+        console.error('[TELEGRAM] Failed to start bot:', error.message);
     }
 };
 
