@@ -1,59 +1,69 @@
 import cron from 'node-cron';
-import Settings from '../Models/User.js';
+import User from '../Models/User.js';
 import Content from '../Models/Content.js';
 import { sendWeeklyEmail } from './email.js';
 
 export const startWeeklyEmailCron = () =>
 {
-
     cron.schedule('* * * * *', async () =>
     {
-        console.log('Starting weekly email job...');
+        console.log('[EMAIL] Starting weekly email job...');
 
         try
         {
-            const users = await Settings.find(
+            const users = await User.find(
             {
-                weeklyEmail: true,
+                receiveWeeklyEmail: true,
                 email: { $exists: true, $ne: null }
             });
 
-            console.log(`Found ${users.length} users to email`);
+            console.log(`[EMAIL] Found ${users.length} users to email`);
 
             for (const user of users)
             {
                 try
                 {
                     const oneWeekAgo = new Date();
-                    oneWeekAgo.setFullYear(oneWeekAgo.getFullYear() - 1);
+                    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
                     const contents = await Content.find(
                     {
                         userId: user.userId,
+                        "options.includeInWeeklyEmail": true,
+                        summary: { $ne: null },
+                        lastEmailedAt: null,
                         createdAt: { $gte: oneWeekAgo }
-                    });
+                    })
+                    .sort({ createdAt: -1 });
 
                     if (contents.length === 0)
                     {
-                        console.log(`No articles for ${user.email} this week`);
+                        console.log(`[EMAIL] No articles for ${user.email} this week`);
                         continue;
                     }
 
                     await sendWeeklyEmail(user.email, contents);
+
+                    await Content.updateMany(
+                        { _id: { $in: contents.map(content => content._id) } },
+                        { $set: { lastEmailedAt: new Date() } }
+                    );
+
+                    console.log(`[EMAIL] Weekly email processed for ${user.email}`);
                 }
                 catch (userError)
                 {
-                    console.error(`Failed for ${user.email}:`, userError.message);
+                    console.error(`[EMAIL] Failed for ${user.email}:`, userError.message);
                 }
             }
 
-            console.log('Weekly email job done!');
+            console.log('[EMAIL] Weekly email job completed');
         }
         catch (error)
         {
-            console.error('Weekly email job failed:', error.message);
+            console.error('[EMAIL] Weekly email job failed:', error.message);
         }
     });
 
-    console.log(' Weekly email cron started');
+    console.log('[EMAIL] Weekly email cron started');
 };

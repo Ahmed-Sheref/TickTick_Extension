@@ -1,8 +1,5 @@
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
 import { weeklyEmailTemplate } from './emailTemplate.js';
-
-dotenv.config({path: 'D:\\Programming\\Back_end\\TickTick_EXTENSION\\config.env'});
 
 const transporter = nodemailer.createTransport(
 {
@@ -26,10 +23,11 @@ export const sendWeeklyEmail = async (email, contents) =>
             html: weeklyEmailTemplate(contents)
         });
 
-        console.log(`Email sent to ${email}`);
+        console.log(`[EMAIL] Weekly email sent to ${email}`);
     }
     catch (error)
     {
+        console.error('[EMAIL] Failed to send email:', error.message);
         throw new Error(`Failed to send email: ${error.message}`);
     }
 };
