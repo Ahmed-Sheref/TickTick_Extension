@@ -1,4 +1,4 @@
-import dotenv from 'dotenv';
+import 'dotenv/config';
 import mongoose from 'mongoose';
 import app from './index.js';
 import { startWeeklyEmailCron } from './utils/weeklyEmail.js';
@@ -6,7 +6,7 @@ import { startTelegramBot } from './utils/telegramBot.js';
 import { startWeeklyQuizCron } from './utils/weeklyQuiz.js';
 
 // Load environment variables centrally
-dotenv.config();
+// dotenv.config();
 
 // dotenv.config({path: 'D:\\Programming\\Back_end\\ticktick_extension\\config.env'})
 

@@ -5,7 +5,7 @@ import { sendWeeklyEmail } from './email.js';
 
 export const startWeeklyEmailCron = () =>
 {
-    cron.schedule('* * * * *', async () =>
+    cron.schedule('*/30 * * * * *', async () =>
     {
         console.log('[EMAIL] Starting weekly email job...');
 
@@ -13,7 +13,7 @@ export const startWeeklyEmailCron = () =>
         {
             const users = await User.find(
             {
-                receiveWeeklyEmail: true,
+                weeklyEmailEnabled: true,
                 email: { $exists: true, $ne: null }
             });
 
@@ -24,15 +24,15 @@ export const startWeeklyEmailCron = () =>
                 try
                 {
                     const oneWeekAgo = new Date();
-                    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                    oneWeekAgo.setDate(oneWeekAgo.getMinutes() - 5);
 
                     const contents = await Content.find(
                     {
                         userId: user.userId,
                         "options.includeInWeeklyEmail": true,
-                        summary: { $ne: null },
-                        lastEmailedAt: null,
-                        createdAt: { $gte: oneWeekAgo }
+                        summary: { $ne: null }
+                        // lastEmailedAt: null,
+                        // createdAt: { $gte: oneWeekAgo }
                     })
                     .sort({ createdAt: -1 });
 

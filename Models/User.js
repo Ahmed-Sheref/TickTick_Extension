@@ -37,12 +37,6 @@ const userSchema = new mongoose.Schema(
     },
 
     // Preferences
-    receiveWeeklyEmail:
-    {
-        type: Boolean,
-        default: true
-    },
-
     receiveTelegramQuiz:
     {
         type: Boolean,

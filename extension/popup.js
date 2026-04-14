@@ -49,12 +49,15 @@ const el = {
 
 function setStatus(message, type = "info") {
   el.statusBar.textContent = message;
-  el.statusBar.className = `status-bar ${type}`;
+  // Map type names to new BEM class names
+  const typeMap = { info: "info", success: "success", error: "error", warning: "warning" };
+  const t = typeMap[type] || "info";
+  el.statusBar.className = `status-bar status-bar--${t}`;
 }
 
 function setButtonLoading(button, loading, loadingText) {
   if (!button) return;
-  if (!button.dataset.defaultText) button.dataset.defaultText = button.textContent;
+  if (!button.dataset.defaultText) button.dataset.defaultText = button.textContent.trim();
   button.disabled = loading;
   button.textContent = loading ? loadingText : button.dataset.defaultText;
 }
@@ -62,18 +65,24 @@ function setButtonLoading(button, loading, loadingText) {
 function setConnectedState(connected) {
   el.onboardingView.classList.toggle("active", !connected);
   el.appView.classList.toggle("active", connected);
-  const classes = connected ? "status-pill success" : "status-pill warning";
-  const text = connected ? "Connected" : "Not Connected";
-  el.ticktickStatusPill.className = classes;
-  el.ticktickStatusPill.textContent = text;
-  el.ticktickStatusSecondary.className = classes;
-  el.ticktickStatusSecondary.textContent = text;
+
+  const pillClass = connected ? "status-pill status-pill--success" : "status-pill status-pill--warning";
+  const pillText = connected ? "Connected" : "Not Connected";
+  const pillDot = `<span class="pill-dot"></span>`;
+
+  [el.ticktickStatusPill, el.ticktickStatusSecondary].forEach(pill => {
+    if (!pill) return;
+    pill.className = pillClass;
+    pill.innerHTML = `${pillDot} ${pillText}`;
+  });
 }
 
 function switchTab(name) {
   const saveActive = name === "save";
   el.tabSave.classList.toggle("active", saveActive);
+  el.tabSave.setAttribute("aria-selected", String(saveActive));
   el.tabSettings.classList.toggle("active", !saveActive);
+  el.tabSettings.setAttribute("aria-selected", String(!saveActive));
   el.panelSave.classList.toggle("active", saveActive);
   el.panelSettings.classList.toggle("active", !saveActive);
   if (saveActive) loadPageContext();
@@ -93,7 +102,7 @@ async function getActiveTab() {
 }
 
 // ══════════════════════════════════════════
-// TELEGRAM — FIX المشكلة الثانية
+// TELEGRAM
 // ══════════════════════════════════════════
 
 async function openTelegramBot() {
@@ -105,28 +114,20 @@ async function openTelegramBot() {
     return;
   }
 
-  // استخدم الـ userId الأصلي مش الـ safe version
   const deepLink = `https://t.me/${TELEGRAM_BOT_USERNAME}?start=${encodeURIComponent(userId)}`;
 
   console.log("📱 Opening Telegram deep link:", deepLink);
   console.log("👤 Original userId:", userId);
 
   try {
-    await chrome.tabs.create({
-      url: deepLink,
-      active: true
-    });
-
-    setStatus(`📱 Opening Telegram with /start ${userId}...`, "success");
+    await chrome.tabs.create({ url: deepLink, active: true });
+    setStatus(`📱 Opening Telegram with /start ${userId}…`, "success");
   } catch (error) {
     console.error("❌ Failed to open Telegram:", error);
-
     const botLink = `https://t.me/${TELEGRAM_BOT_USERNAME}`;
     const command = `/start ${userId}`;
-
     await chrome.tabs.create({ url: botLink, active: true });
     await copyText(command, "📋 Command copied!");
-
     setStatus(`❌ Auto-open failed. Paste this: ${command}`, "warning");
   }
 }
@@ -135,7 +136,6 @@ async function openTelegramBot() {
 // SELECTION — FIX المشكلة الأولى (ChatGPT)
 // ══════════════════════════════════════════
 
-// Listen for selection changes pushed from content script
 chrome.runtime.onMessage.addListener((message) => {
   if (message?.type === "SELECTION_CHANGED" && message.selectedText) {
     if (el.rawText) {
@@ -164,13 +164,11 @@ async function loadPageContext() {
     try {
       response = await chrome.tabs.sendMessage(activeTab.id, { type: "GET_PAGE_CONTEXT" });
     } catch (_) {
-      // Content script not injected yet — try injecting it manually
       try {
         await chrome.scripting.executeScript({
           target: { tabId: activeTab.id },
           files: ["content.js"]
         });
-        // Small delay then retry
         await new Promise(r => setTimeout(r, 300));
         response = await chrome.tabs.sendMessage(activeTab.id, { type: "GET_PAGE_CONTEXT" });
       } catch (_2) {
@@ -178,7 +176,6 @@ async function loadPageContext() {
       }
     }
 
-    // Load cached selection as fallback (important for ChatGPT)
     const storageData = await storageGet([SELECTION_KEY]);
     const cachedSelection = storageData[SELECTION_KEY] || "";
 
@@ -186,7 +183,6 @@ async function loadPageContext() {
       el.title.value = response.data.title || activeTab.title || el.title.value || "";
       el.url.value = response.data.url || activeTab.url || el.url.value || "";
 
-      // Priority: live selection > cached selection > page text
       if (response.data.selectedText) {
         el.rawText.value = response.data.selectedText;
         setStatus("✅ Selected text loaded from page.", "success");
@@ -200,7 +196,6 @@ async function loadPageContext() {
         setStatus("⚠️ No text found. Paste manually.", "error");
       }
     } else {
-      // Fallback when content script fails (restricted pages like chrome://)
       if (cachedSelection) {
         el.rawText.value = cachedSelection;
         setStatus("📋 Loaded from cached selection.", "info");
@@ -219,9 +214,9 @@ async function loadPageContext() {
 // ══════════════════════════════════════════
 
 async function startTickTickConnect() {
-  setButtonLoading(el.connectTickTickBtn, true, "Connecting...");
-  setButtonLoading(el.reconnectTickTickBtn, true, "Connecting...");
-  setStatus("Opening TickTick connection...", "info");
+  setButtonLoading(el.connectTickTickBtn, true, "Connecting…");
+  setButtonLoading(el.reconnectTickTickBtn, true, "Connecting…");
+  setStatus("Opening TickTick connection…", "info");
 
   try {
     const redirectUri = chrome.identity.getRedirectURL("ticktick");
@@ -310,24 +305,28 @@ async function saveEmailSettings() {
   const data = await storageGet([STORAGE_KEYS.userId]);
   const userId = data[STORAGE_KEYS.userId];
   const email = el.email.value.trim();
-  const weeklyEmailToggle = el.weeklyEmailToggle.checked;
+  const weeklyEmailEnabled = el.weeklyEmailToggle.checked; // ✅ Fixed: was `weeklyEmail`, now matches backend field
 
   if (!userId) { setStatus("Connect TickTick first.", "error"); return; }
   if (!email) { setStatus("Email is required.", "error"); return; }
 
-  setButtonLoading(el.saveEmailSettingsBtn, true, "Saving...");
+  // Basic email validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) { setStatus("Please enter a valid email address.", "error"); return; }
+
+  setButtonLoading(el.saveEmailSettingsBtn, true, "Saving…");
   try {
     const response = await fetch(`${API_BASE}/User/email`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, email, weeklyEmail: weeklyEmailToggle })
+      body: JSON.stringify({ userId, email, weeklyEmailEnabled }) // ✅ Fixed field name
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result?.message || `HTTP ${response.status}`);
 
-    await storageSet({ 
-      [STORAGE_KEYS.email]: email, 
-      [STORAGE_KEYS.weeklyEmailToggle]: weeklyEmailToggle
+    await storageSet({
+      [STORAGE_KEYS.email]: email,
+      [STORAGE_KEYS.weeklyEmailToggle]: weeklyEmailEnabled
     });
     setStatus("✅ Email settings saved.", "success");
   } catch (error) {
@@ -338,7 +337,7 @@ async function saveEmailSettings() {
 }
 
 async function saveQuizPreference() {
-  await storageSet({ 
+  await storageSet({
     [STORAGE_KEYS.telegramQuizToggle]: el.telegramQuizToggle.checked
   });
   setStatus("✅ Quiz preferences saved.", "success");
@@ -368,8 +367,8 @@ async function saveArticle() {
     mergeWithUserText: el.mergeWithUserText.checked
   };
 
-  setButtonLoading(el.saveArticleBtn, true, "Saving...");
-  setStatus("Saving article...", "info");
+  setButtonLoading(el.saveArticleBtn, true, "Saving…");
+  setStatus("Saving article…", "info");
 
   try {
     const response = await fetch(`${API_BASE}/content`, {
@@ -400,11 +399,10 @@ function bindEvents() {
   el.reconnectTickTickBtn.addEventListener("click", startTickTickConnect);
 
   el.refreshPageBtn?.addEventListener("click", async () => {
-    // Clear cached selection so we get fresh content
     await chrome.storage.local.remove("ticktick_last_selection_cache");
     el.title.value = "";
     el.url.value = "";
-    setStatus("🔄 Refreshing page content...", "info");
+    setStatus("🔄 Refreshing page content…", "info");
     await loadPageContext();
   });
 
@@ -422,21 +420,17 @@ function bindEvents() {
     await copyText(el.telegramCommand.textContent, "✅ Telegram command copied!");
   });
 
-  // ✅ المشكلة الثانية محلولة هنا
   el.openTelegramBotBtn.addEventListener("click", openTelegramBot);
 
   el.tabSave.addEventListener("click", () => switchTab("save"));
   el.tabSettings.addEventListener("click", () => switchTab("settings"));
 
-  // Toggle event listeners
-  el.weeklyEmailToggle?.addEventListener("change", (e) => {
-    const isEnabled = e.target.checked;
-    // No need to hide/show options since we simplified the UI
+  el.weeklyEmailToggle?.addEventListener("change", () => {
+    // No conditional UI for email — always visible
   });
 
   el.telegramQuizToggle?.addEventListener("change", (e) => {
-    const isEnabled = e.target.checked;
-    el.telegramOptions.classList.toggle("hidden", !isEnabled);
+    el.telegramOptions.classList.toggle("hidden", !e.target.checked);
   });
 }
 
@@ -452,7 +446,7 @@ async function init() {
   if (data[STORAGE_KEYS.connected] && data[STORAGE_KEYS.userId]) {
     await loadPageContext();
   } else {
-    setStatus("Connect TickTick to unlock the workspace.", "info");
+    setStatus("Connect TickTick to unlock your workspace.", "info");
   }
 }
 
