@@ -28,12 +28,8 @@ mongoose.connect(DB)
         console.log(`[SERVER] Server is running on port ${PORT}`);
     });
 })
-.catch((err) =>
+.catch((err) => 
 {
     console.error('[DB] Connection Error:', err);
-    console.log('[SERVER] Starting server without database connection...');
-    app.listen(PORT, () =>
-    {
-        console.log(`[SERVER] Server is running on port ${PORT} (without database)`);
-    });
+    process.exit(1);
 });
