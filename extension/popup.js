@@ -135,31 +135,27 @@ async function connectTickTick() {
   try {
     setStatus("Opening TickTick login...", "info");
 
-    // بعت message للـ background يعمل الـ auth
-    chrome.runtime.sendMessage({ action: "startTickTickAuth" }, async (response) => {
+    chrome.runtime.sendMessage({ action: "startTickTickAuth" }, (response) => {
       if (chrome.runtime.lastError) {
+        console.error("runtime.sendMessage error:", chrome.runtime.lastError.message);
         setStatus(chrome.runtime.lastError.message, "danger");
         return;
       }
 
-      if (!response || response.error) {
-        setStatus(response?.error || "Auth failed", "danger");
+      if (!response) {
+        setStatus("No response from background.", "danger");
         return;
       }
 
-      const { userId } = response;
+      if (response.error) {
+        setStatus(response.error, "danger");
+        return;
+      }
 
-      await storageSet({
-        [STORAGE_KEYS.userId]: userId,
-        [STORAGE_KEYS.connected]: true
-      });
-
-      if (el.userId) el.userId.value = userId;
-      fillTelegramCommand(userId);
-      setConnectedUI(true);
-      setStatus("Connected successfully!", "success");
+      if (response.started) {
+        setStatus("TickTick login tab opened.", "success");
+      }
     });
-
   } catch (error) {
     console.error("connectTickTick error:", error);
     setStatus(error.message || "Connect failed", "danger");
