@@ -6,7 +6,8 @@
 
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "identity"
   ],
 
   "host_permissions": [
@@ -28,12 +29,5 @@
       "matches": ["<all_urls>"],
       "js": ["content.js"]
     }
-  ],
-
-
-"permissions": [
-  "storage",
-  "activeTab",
-  "identity"
-]
+  ]
 }
