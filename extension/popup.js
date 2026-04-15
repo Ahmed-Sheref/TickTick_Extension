@@ -33,8 +33,6 @@ const el = {
   useTagsAi: document.getElementById("useTagsAi"),
   useQuiz: document.getElementById("useQuiz"),
   mergeSummaryWithContent: document.getElementById("mergeSummaryWithContent"),
-  includeInWeeklyEmail: document.getElementById("includeInWeeklyEmail"),
-  includeInTelegramQuiz: document.getElementById("includeInTelegramQuiz"),
 
   refreshPageBtn: document.getElementById("refreshPageBtn"),
   saveArticleBtn: document.getElementById("saveArticleBtn"),
@@ -344,9 +342,7 @@ async function saveArticle()
       use_summaryAi: el.useSummaryAi.checked,
       use_tagsAi: el.useTagsAi.checked,
       use_quiz: el.useQuiz.checked,
-      mergeSummaryWithContent: el.mergeSummaryWithContent.checked,
-      includeInWeeklyEmail: el.includeInWeeklyEmail.checked,
-      includeInTelegramQuiz: el.includeInTelegramQuiz.checked
+      mergeSummaryWithContent: el.mergeSummaryWithContent.checked
     };
 
     if (!payload.title)

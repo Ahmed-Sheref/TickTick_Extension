@@ -242,9 +242,7 @@ const createContent = async (req, res) =>
             use_tagsAi,
             use_quiz,
             use_summaryAi,
-            mergeSummaryWithContent,
-            includeInWeeklyEmail,
-            includeInTelegramQuiz
+            mergeSummaryWithContent
         } = req.body;
 
         const validationError = validateContentInput({ userId, title, rawText });
@@ -260,7 +258,7 @@ const createContent = async (req, res) =>
 
         const { listName, tags } = prepareContentIn(user_input);
 
-        const  {finalRawText, finalTags, summary, quiz} = await applyAi(
+        const { finalRawText, finalTags, summary, quiz } = await applyAi(
         {
             rawText,
             tags,
@@ -289,8 +287,8 @@ const createContent = async (req, res) =>
             useTagsAi: Boolean(use_tagsAi),
             useQuiz: Boolean(use_quiz),
             mergeSummaryWithContent: Boolean(mergeSummaryWithContent),
-            includeInWeeklyEmail: Boolean(includeInWeeklyEmail),
-            includeInTelegramQuiz: Boolean(includeInTelegramQuiz)
+            includeInWeeklyEmail: Boolean(use_summaryAi),
+            includeInTelegramQuiz: Boolean(use_quiz)
         };
 
         session.startTransaction();
