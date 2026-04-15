@@ -1,33 +1,30 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 import { weeklyEmailTemplate } from './emailTemplate.js';
 
-const transporter = nodemailer.createTransport(
-{
-    service: 'gmail',
-    auth: 
-    {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-export const sendWeeklyEmail = async (email, contents) =>
+console.log(process.env.SENDGRID_API_KEY)
+
+export const sendWeeklyEmail = async (email, contents) => 
 {
-    try
+    try 
     {
-        await transporter.sendMail(
+        await sgMail.send(
         {
-            from: `"TickTick Extension" no reply`,
             to: email,
+            from: 
+            {
+                email: process.env.SENDGRID_FROM_EMAIL,
+                name: process.env.SENDGRID_FROM_NAME || 'TickTick',
+            },
             subject: `Your Weekly Digest — ${contents.length} Articles`,
-            html: weeklyEmailTemplate(contents)
+            html: weeklyEmailTemplate(contents),
         });
 
-        console.log(`[EMAIL] Weekly email sent to ${email}`);
-    }
-    catch (error)
+    console.log('Email sent to:', email);
+    } 
+        catch (error) 
     {
-        console.error('[EMAIL] Failed to send email:', error.message);
-        throw new Error(`Failed to send email: ${error.message}`);
+        console.error('SendGrid Error:', error.response?.body || error.message);
     }
 };

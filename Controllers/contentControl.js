@@ -270,11 +270,13 @@ const createContent = async (req, res) =>
             mergeSummaryWithContent
         });
 
-        // Validate quiz if it exists
-        if (quiz) {
+        if (quiz) 
+        {
             const quizValidationError = validateQuizObject(quiz);
-            if (quizValidationError) {
-                return res.status(400).json({
+            if (quizValidationError)
+            {
+                return res.status(400).json(
+                {
                     status: "error",
                     message: quizValidationError
                 });

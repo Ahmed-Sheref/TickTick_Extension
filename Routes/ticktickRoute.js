@@ -131,7 +131,7 @@ router.get('/callback', async (req, res) =>
     }
     catch (error)
     {
-        console.error('❌ OAuth error:', error);
+        console.error('OAuth error:', error);
         console.error('Error stack:', error.stack);
 
         return res.status(500).json(
