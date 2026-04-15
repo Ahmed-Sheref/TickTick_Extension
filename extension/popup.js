@@ -1,5 +1,6 @@
 const API_BASE = "http://localhost:3000/api/v1";
-const TELEGRAM_BOT_USERNAME = "Tick_review_bot"; // ← غير هذا لاسم البوت الحقيقي
+const TELEGRAM_BOT_USERNAME = "Tick_review_bot";
+
 const STORAGE_KEYS = {
   userId: "ticktick_userId",
   connected: "ticktick_connected",
@@ -12,442 +13,439 @@ const el = {
   onboardingView: document.getElementById("onboardingView"),
   appView: document.getElementById("appView"),
   statusBar: document.getElementById("statusBar"),
+
   ticktickStatusPill: document.getElementById("ticktickStatusPill"),
   ticktickStatusSecondary: document.getElementById("ticktickStatusSecondary"),
   connectTickTickBtn: document.getElementById("connectTickTickBtn"),
   reconnectTickTickBtn: document.getElementById("reconnectTickTickBtn"),
+
   tabSave: document.getElementById("tabSave"),
   tabSettings: document.getElementById("tabSettings"),
   panelSave: document.getElementById("panelSave"),
   panelSettings: document.getElementById("panelSettings"),
+
   title: document.getElementById("title"),
   url: document.getElementById("url"),
   rawText: document.getElementById("rawText"),
   userInput: document.getElementById("userInput"),
+
   useSummaryAi: document.getElementById("useSummaryAi"),
   useTagsAi: document.getElementById("useTagsAi"),
   useQuiz: document.getElementById("useQuiz"),
-  mergeWithUserText: document.getElementById("mergeWithUserText"),
+  mergeSummaryWithContent: document.getElementById("mergeSummaryWithContent"),
+  includeInWeeklyEmail: document.getElementById("includeInWeeklyEmail"),
+  includeInTelegramQuiz: document.getElementById("includeInTelegramQuiz"),
+
   refreshPageBtn: document.getElementById("refreshPageBtn"),
   saveArticleBtn: document.getElementById("saveArticleBtn"),
+
   userId: document.getElementById("userId"),
   copyUserIdBtn: document.getElementById("copyUserIdBtn"),
+
   email: document.getElementById("email"),
   weeklyEmailToggle: document.getElementById("weeklyEmailToggle"),
   saveEmailSettingsBtn: document.getElementById("saveEmailSettingsBtn"),
+
   telegramQuizToggle: document.getElementById("telegramQuizToggle"),
   telegramCommand: document.getElementById("telegramCommand"),
   copyTelegramCommandBtn: document.getElementById("copyTelegramCommandBtn"),
   openTelegramBotBtn: document.getElementById("openTelegramBotBtn"),
-  saveQuizSettingsBtn: document.getElementById("saveQuizSettingsBtn"),
-  telegramOptions: document.getElementById("telegramOptions")
+  saveQuizSettingsBtn: document.getElementById("saveQuizSettingsBtn")
 };
 
-// ══════════════════════════════════════════
-// HELPERS
-// ══════════════════════════════════════════
-
-function setStatus(message, type = "info") {
-  el.statusBar.textContent = message;
-  // Map type names to new BEM class names
-  const typeMap = { info: "info", success: "success", error: "error", warning: "warning" };
-  const t = typeMap[type] || "info";
-  el.statusBar.className = `status-bar status-bar--${t}`;
-}
-
-function setButtonLoading(button, loading, loadingText) {
-  if (!button) return;
-  if (!button.dataset.defaultText) button.dataset.defaultText = button.textContent.trim();
-  button.disabled = loading;
-  button.textContent = loading ? loadingText : button.dataset.defaultText;
-}
-
-function setConnectedState(connected) {
-  el.onboardingView.classList.toggle("active", !connected);
-  el.appView.classList.toggle("active", connected);
-
-  const pillClass = connected ? "status-pill status-pill--success" : "status-pill status-pill--warning";
-  const pillText = connected ? "Connected" : "Not Connected";
-  const pillDot = `<span class="pill-dot"></span>`;
-
-  [el.ticktickStatusPill, el.ticktickStatusSecondary].forEach(pill => {
-    if (!pill) return;
-    pill.className = pillClass;
-    pill.innerHTML = `${pillDot} ${pillText}`;
-  });
-}
-
-function switchTab(name) {
-  const saveActive = name === "save";
-  el.tabSave.classList.toggle("active", saveActive);
-  el.tabSave.setAttribute("aria-selected", String(saveActive));
-  el.tabSettings.classList.toggle("active", !saveActive);
-  el.tabSettings.setAttribute("aria-selected", String(!saveActive));
-  el.panelSave.classList.toggle("active", saveActive);
-  el.panelSettings.classList.toggle("active", !saveActive);
-  if (saveActive) loadPageContext();
-}
-
-function storageGet(keys) {
+function storageGet(keys)
+{
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
 }
 
-function storageSet(data) {
+function storageSet(data)
+{
   return new Promise((resolve) => chrome.storage.local.set(data, resolve));
 }
 
-async function getActiveTab() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  return tabs[0];
+function setStatus(message, type = "info")
+{
+  if (!el.statusBar) return;
+  el.statusBar.textContent = message;
+  el.statusBar.className = `status-bar status-bar--${type}`;
 }
 
-// ══════════════════════════════════════════
-// TELEGRAM
-// ══════════════════════════════════════════
+function switchTab(tab)
+{
+  const isSave = tab === "save";
 
-async function openTelegramBot() {
-  const data = await storageGet([STORAGE_KEYS.userId]);
-  const userId = data[STORAGE_KEYS.userId];
+  el.panelSave.style.display = isSave ? "block" : "none";
+  el.panelSettings.style.display = isSave ? "none" : "block";
 
-  if (!userId) {
-    setStatus("Connect TickTick first.", "error");
-    return;
-  }
+  el.tabSave.classList.toggle("btn-secondary", isSave);
+  el.tabSave.classList.toggle("btn-ghost", !isSave);
 
-  const deepLink = `https://t.me/${TELEGRAM_BOT_USERNAME}?start=${encodeURIComponent(userId)}`;
-
-  console.log("📱 Opening Telegram deep link:", deepLink);
-  console.log("👤 Original userId:", userId);
-
-  try {
-    await chrome.tabs.create({ url: deepLink, active: true });
-    setStatus(`📱 Opening Telegram with /start ${userId}…`, "success");
-  } catch (error) {
-    console.error("❌ Failed to open Telegram:", error);
-    const botLink = `https://t.me/${TELEGRAM_BOT_USERNAME}`;
-    const command = `/start ${userId}`;
-    await chrome.tabs.create({ url: botLink, active: true });
-    await copyText(command, "📋 Command copied!");
-    setStatus(`❌ Auto-open failed. Paste this: ${command}`, "warning");
-  }
+  el.tabSettings.classList.toggle("btn-secondary", !isSave);
+  el.tabSettings.classList.toggle("btn-ghost", isSave);
 }
 
-// ══════════════════════════════════════════
-// SELECTION — FIX المشكلة الأولى (ChatGPT)
-// ══════════════════════════════════════════
+function setConnectedUI(isConnected)
+{
+  el.onboardingView.style.display = isConnected ? "none" : "block";
+  el.appView.style.display = isConnected ? "block" : "none";
 
-chrome.runtime.onMessage.addListener((message) => {
-  if (message?.type === "SELECTION_CHANGED" && message.selectedText) {
-    if (el.rawText) {
-      el.rawText.value = message.selectedText;
-      setStatus("📝 Selected text updated from page.", "success");
-    }
+  const statusText = isConnected ? "Connected" : "Not Connected";
+  const statusClass = isConnected ? "status-pill status-pill--success" : "status-pill status-pill--danger";
+
+  if (el.ticktickStatusPill)
+  {
+    el.ticktickStatusPill.className = statusClass;
+    el.ticktickStatusPill.innerHTML = `<span class="pill-dot"></span>${statusText}`;
   }
-});
 
-async function loadPageContext() {
-  const SELECTION_KEY = "ticktick_last_selection_cache";
-
-  try {
-    const activeTab = await getActiveTab();
-    if (!activeTab?.id) {
-      setStatus("Could not access the active tab.", "error");
-      return;
-    }
-
-    // Fill title & URL immediately from tab metadata
-    if (activeTab.title && !el.title.value.trim()) el.title.value = activeTab.title;
-    if (activeTab.url && !el.url.value.trim()) el.url.value = activeTab.url;
-
-    // Try content script first
-    let response = null;
-    try {
-      response = await chrome.tabs.sendMessage(activeTab.id, { type: "GET_PAGE_CONTEXT" });
-    } catch (_) {
-      try {
-        await chrome.scripting.executeScript({
-          target: { tabId: activeTab.id },
-          files: ["content.js"]
-        });
-        await new Promise(r => setTimeout(r, 300));
-        response = await chrome.tabs.sendMessage(activeTab.id, { type: "GET_PAGE_CONTEXT" });
-      } catch (_2) {
-        response = null;
-      }
-    }
-
-    const storageData = await storageGet([SELECTION_KEY]);
-    const cachedSelection = storageData[SELECTION_KEY] || "";
-
-    if (response?.ok) {
-      el.title.value = response.data.title || activeTab.title || el.title.value || "";
-      el.url.value = response.data.url || activeTab.url || el.url.value || "";
-
-      if (response.data.selectedText) {
-        el.rawText.value = response.data.selectedText;
-        setStatus("✅ Selected text loaded from page.", "success");
-      } else if (cachedSelection) {
-        el.rawText.value = cachedSelection;
-        setStatus("📋 Last selection loaded from cache.", "info");
-      } else if (response.data.pageText) {
-        el.rawText.value = response.data.pageText;
-        setStatus("📄 Page content loaded.", "info");
-      } else {
-        setStatus("⚠️ No text found. Paste manually.", "error");
-      }
-    } else {
-      if (cachedSelection) {
-        el.rawText.value = cachedSelection;
-        setStatus("📋 Loaded from cached selection.", "info");
-      } else {
-        setStatus("⚠️ Can't read this page. Paste text manually.", "error");
-      }
-    }
-  } catch (error) {
-    console.error("loadPageContext error:", error);
-    setStatus("⚠️ Error loading page. Paste text manually.", "error");
+  if (el.ticktickStatusSecondary)
+  {
+    el.ticktickStatusSecondary.className = statusClass;
+    el.ticktickStatusSecondary.innerHTML = `<span class="pill-dot"></span>${statusText}`;
   }
 }
 
-// ══════════════════════════════════════════
-// TICKTICK AUTH
-// ══════════════════════════════════════════
+async function apiFetch(path, options = {})
+{
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
+    ...options
+  });
 
-async function startTickTickConnect() {
-  setButtonLoading(el.connectTickTickBtn, true, "Connecting…");
-  setButtonLoading(el.reconnectTickTickBtn, true, "Connecting…");
-  setStatus("Opening TickTick connection…", "info");
+  const contentType = response.headers.get("content-type") || "";
+  const isJson = contentType.includes("application/json");
+  const data = isJson ? await response.json() : await response.text();
 
-  try {
-    const redirectUri = chrome.identity.getRedirectURL("ticktick");
+  if (!response.ok)
+  {
+    const message = typeof data === "object" && data?.message
+      ? data.message
+      : `Request failed with status ${response.status}`;
+
+    throw new Error(message);
+  }
+
+  return data;
+}
+
+function fillTelegramCommand(userId)
+{
+  if (!el.telegramCommand) return;
+  el.telegramCommand.textContent = userId ? `/start ${userId}` : "/start";
+}
+
+async function getCurrentTabArticle()
+{
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+
+  if (!tab?.id)
+  {
+    throw new Error("No active tab found.");
+  }
+
+  if (!/^https?:/i.test(tab.url || ""))
+  {
+    throw new Error("This page cannot be parsed. Open a normal web page first.");
+  }
+
+  const response = await chrome.tabs.sendMessage(tab.id, { type: "GET_ARTICLE_DATA" });
+
+  if (!response)
+  {
+    throw new Error("Could not read page content. Refresh the tab and try again.");
+  }
+
+  return response;
+}
+
+async function refreshPageData()
+{
+  try
+  {
+    setStatus("Reading page data...", "info");
+
+    const article = await getCurrentTabArticle();
+
+    el.title.value = article.title || "";
+    el.url.value = article.url || "";
+    el.rawText.value = article.rawText || "";
+
+    setStatus("Page data loaded.", "success");
+  }
+  catch (error)
+  {
+    setStatus(error.message, "danger");
+  }
+}
+
+async function connectTickTick()
+{
+  try
+  {
+    setStatus("Opening TickTick login...", "info");
+
+    const redirectUri = chrome.identity.getRedirectURL();
     const authUrl = `${API_BASE}/ticktick/auth?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-    const finalRedirectUrl = await chrome.identity.launchWebAuthFlow({
-      url: authUrl,
-      interactive: true
-    });
+    chrome.tabs.create({ url: authUrl });
 
-    if (!finalRedirectUrl) throw new Error("No redirect received from TickTick.");
-
-    const url = new URL(finalRedirectUrl);
-    const userId = url.searchParams.get("userId");
-
-    if (!userId) throw new Error("Missing userId in TickTick callback redirect.");
-
-    await storageSet({
-      [STORAGE_KEYS.userId]: userId,
-      [STORAGE_KEYS.connected]: true
-    });
-
-    await applyStoredUser();
-    setConnectedState(true);
-    switchTab("save");
-    setStatus("✅ TickTick connected successfully.", "success");
-    await loadPageContext();
-
-  } catch (error) {
-    console.error("TickTick connection error:", error);
-    setStatus(`TickTick connection failed: ${error.message}`, "error");
-  } finally {
-    setButtonLoading(el.connectTickTickBtn, false);
-    setButtonLoading(el.reconnectTickTickBtn, false);
+    setStatus("Complete TickTick login in the opened tab.", "info");
+  }
+  catch (error)
+  {
+    setStatus(error.message, "danger");
   }
 }
 
-// ══════════════════════════════════════════
-// SETTINGS
-// ══════════════════════════════════════════
-
-async function applyStoredUser() {
-  const data = await storageGet([
+async function loadSavedState()
+{
+  const saved = await storageGet([
     STORAGE_KEYS.userId,
+    STORAGE_KEYS.connected,
     STORAGE_KEYS.email,
     STORAGE_KEYS.weeklyEmailToggle,
-    STORAGE_KEYS.telegramQuizToggle,
-    STORAGE_KEYS.connected
+    STORAGE_KEYS.telegramQuizToggle
   ]);
-  const userId = data[STORAGE_KEYS.userId] || "";
+
+  const userId = saved[STORAGE_KEYS.userId] || "";
+  const connected = Boolean(saved[STORAGE_KEYS.connected]);
+
+  setConnectedUI(connected);
+
   el.userId.value = userId;
-  el.email.value = data[STORAGE_KEYS.email] || "";
-  el.weeklyEmailToggle.checked = Boolean(data[STORAGE_KEYS.weeklyEmailToggle]);
-  el.telegramQuizToggle.checked = Boolean(data[STORAGE_KEYS.telegramQuizToggle]);
+  el.email.value = saved[STORAGE_KEYS.email] || "";
+  el.weeklyEmailToggle.checked = Boolean(saved[STORAGE_KEYS.weeklyEmailToggle]);
+  el.telegramQuizToggle.checked =
+    saved[STORAGE_KEYS.telegramQuizToggle] === undefined
+      ? true
+      : Boolean(saved[STORAGE_KEYS.telegramQuizToggle]);
 
-  // Show/hide telegram options based on toggle state
-  el.telegramOptions.classList.toggle("hidden", !el.telegramQuizToggle.checked);
+  fillTelegramCommand(userId);
 
-  // Show the full command with userId
-  el.telegramCommand.textContent = userId ? `/start ${userId}` : "/start <your_id>";
-  setConnectedState(Boolean(data[STORAGE_KEYS.connected] && userId));
-}
-
-async function copyText(value, successMessage) {
-  if (!value) { setStatus("Nothing to copy.", "error"); return; }
-  try {
-    await navigator.clipboard.writeText(value);
-    setStatus(successMessage, "success");
-  } catch {
-    try {
-      const ta = document.createElement("textarea");
-      ta.value = value;
-      ta.style.cssText = "position:fixed;left:-9999px;top:-9999px";
-      document.body.appendChild(ta);
-      ta.focus(); ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      setStatus(successMessage, "success");
-    } catch {
-      setStatus("Copy failed. Please copy manually.", "error");
-    }
+  if (connected && userId)
+  {
+    await loadUserPreferencesFromBackend(userId);
   }
 }
 
-async function saveEmailSettings() {
-  const data = await storageGet([STORAGE_KEYS.userId]);
-  const userId = data[STORAGE_KEYS.userId];
-  const email = el.email.value.trim();
-  const weeklyEmailEnabled = el.weeklyEmailToggle.checked; // ✅ Fixed: was `weeklyEmail`, now matches backend field
+async function loadUserPreferencesFromBackend(userId)
+{
+  try
+  {
+    const result = await apiFetch(`/User/preferences/${encodeURIComponent(userId)}`);
 
-  if (!userId) { setStatus("Connect TickTick first.", "error"); return; }
-  if (!email) { setStatus("Email is required.", "error"); return; }
+    const prefs = result?.data || {};
 
-  // Basic email validation
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) { setStatus("Please enter a valid email address.", "error"); return; }
+    el.email.value = prefs.email || "";
+    el.weeklyEmailToggle.checked = Boolean(prefs.weeklyEmailEnabled);
+    el.telegramQuizToggle.checked = Boolean(prefs.receiveTelegramQuiz);
 
-  setButtonLoading(el.saveEmailSettingsBtn, true, "Saving…");
-  try {
-    const response = await fetch(`${API_BASE}/User/email`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, email, weeklyEmailEnabled }) // ✅ Fixed field name
+    await storageSet({
+      [STORAGE_KEYS.email]: prefs.email || "",
+      [STORAGE_KEYS.weeklyEmailToggle]: Boolean(prefs.weeklyEmailEnabled),
+      [STORAGE_KEYS.telegramQuizToggle]: Boolean(prefs.receiveTelegramQuiz)
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result?.message || `HTTP ${response.status}`);
+
+    setStatus("Preferences synced.", "success");
+  }
+  catch (error)
+  {
+    setStatus(`Connected, but could not load preferences: ${error.message}`, "info");
+  }
+}
+
+async function saveEmailSettings()
+{
+  try
+  {
+    const userId = el.userId.value.trim();
+    const email = el.email.value.trim();
+    const weeklyEmailEnabled = el.weeklyEmailToggle.checked;
+
+    if (!userId)
+    {
+      throw new Error("User ID is missing. Please reconnect TickTick.");
+    }
+
+    await apiFetch("/User/email", {
+      method: "POST",
+      body: JSON.stringify({
+        userId,
+        email,
+        weeklyEmailEnabled
+      })
+    });
 
     await storageSet({
       [STORAGE_KEYS.email]: email,
       [STORAGE_KEYS.weeklyEmailToggle]: weeklyEmailEnabled
     });
-    setStatus("✅ Email settings saved.", "success");
-  } catch (error) {
-    setStatus(`Email settings failed: ${error.message}`, "error");
-  } finally {
-    setButtonLoading(el.saveEmailSettingsBtn, false);
+
+    setStatus("Email settings saved.", "success");
+  }
+  catch (error)
+  {
+    setStatus(error.message, "danger");
   }
 }
 
-async function saveQuizPreference() {
-  await storageSet({
-    [STORAGE_KEYS.telegramQuizToggle]: el.telegramQuizToggle.checked
-  });
-  setStatus("✅ Quiz preferences saved.", "success");
+async function saveQuizPreference()
+{
+  try
+  {
+    const userId = el.userId.value.trim();
+    const receiveTelegramQuiz = el.telegramQuizToggle.checked;
+
+    if (!userId)
+    {
+      throw new Error("User ID is missing. Please reconnect TickTick.");
+    }
+
+    await apiFetch("/User/quiz-preferences", {
+      method: "POST",
+      body: JSON.stringify({
+        userId,
+        receiveTelegramQuiz
+      })
+    });
+
+    await storageSet({
+      [STORAGE_KEYS.telegramQuizToggle]: receiveTelegramQuiz
+    });
+
+    setStatus("Quiz preferences saved.", "success");
+  }
+  catch (error)
+  {
+    setStatus(error.message, "danger");
+  }
 }
 
-// ══════════════════════════════════════════
-// SAVE ARTICLE
-// ══════════════════════════════════════════
+async function saveArticle()
+{
+  try
+  {
+    const userId = el.userId.value.trim();
 
-async function saveArticle() {
-  const data = await storageGet([STORAGE_KEYS.userId]);
-  const userId = data[STORAGE_KEYS.userId];
+    if (!userId)
+    {
+      throw new Error("User ID is missing. Please connect TickTick first.");
+    }
 
-  if (!userId) { setStatus("Connect TickTick first.", "error"); return; }
-  if (!el.title.value.trim()) { setStatus("Title is required.", "error"); return; }
-  if (!el.rawText.value.trim()) { setStatus("Article text is required.", "error"); return; }
+    const payload = {
+      userId,
+      title: el.title.value.trim(),
+      url: el.url.value.trim(),
+      rawText: el.rawText.value.trim(),
+      user_input: el.userInput.value.trim() || "~inbox",
+      use_summaryAi: el.useSummaryAi.checked,
+      use_tagsAi: el.useTagsAi.checked,
+      use_quiz: el.useQuiz.checked,
+      mergeSummaryWithContent: el.mergeSummaryWithContent.checked,
+      includeInWeeklyEmail: el.includeInWeeklyEmail.checked,
+      includeInTelegramQuiz: el.includeInTelegramQuiz.checked
+    };
 
-  const payload = {
-    userId,
-    title: el.title.value.trim(),
-    url: el.url.value.trim(),
-    rawText: el.rawText.value.trim(),
-    user_input: el.userInput.value.trim() || "~inbox",
-    use_tagsAi: el.useTagsAi.checked,
-    use_summaryAi: el.useSummaryAi.checked,
-    use_quiz: el.useQuiz.checked,
-    mergeWithUserText: el.mergeWithUserText.checked
-  };
+    if (!payload.title)
+    {
+      throw new Error("Title is required.");
+    }
 
-  setButtonLoading(el.saveArticleBtn, true, "Saving…");
-  setStatus("Saving article…", "info");
+    if (!payload.rawText)
+    {
+      throw new Error("Article text is required.");
+    }
 
-  try {
-    const response = await fetch(`${API_BASE}/content`, {
+    setStatus("Saving article...", "info");
+
+    const result = await apiFetch("/content", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result?.message || `HTTP ${response.status}`);
 
-    setStatus("✅ Article saved successfully!", "success");
-    el.title.value = "";
-    el.rawText.value = "";
-    el.userInput.value = "";
-  } catch (error) {
-    setStatus(`Save failed: ${error.message}`, "error");
-  } finally {
-    setButtonLoading(el.saveArticleBtn, false);
+    console.log("Saved article:", result);
+    setStatus("Article saved successfully.", "success");
+  }
+  catch (error)
+  {
+    setStatus(error.message, "danger");
   }
 }
 
-// ══════════════════════════════════════════
-// BIND EVENTS
-// ══════════════════════════════════════════
+async function copyUserId()
+{
+  try
+  {
+    const value = el.userId.value.trim();
+    if (!value) throw new Error("No user ID to copy.");
 
-function bindEvents() {
-  el.connectTickTickBtn.addEventListener("click", startTickTickConnect);
-  el.reconnectTickTickBtn.addEventListener("click", startTickTickConnect);
+    await navigator.clipboard.writeText(value);
+    setStatus("User ID copied.", "success");
+  }
+  catch (error)
+  {
+    setStatus(error.message, "danger");
+  }
+}
 
-  el.refreshPageBtn?.addEventListener("click", async () => {
-    await chrome.storage.local.remove("ticktick_last_selection_cache");
-    el.title.value = "";
-    el.url.value = "";
-    setStatus("🔄 Refreshing page content…", "info");
-    await loadPageContext();
-  });
+async function copyTelegramCommand()
+{
+  try
+  {
+    const value = el.telegramCommand.textContent.trim();
+    await navigator.clipboard.writeText(value);
+    setStatus("Telegram command copied.", "success");
+  }
+  catch (error)
+  {
+    setStatus(error.message, "danger");
+  }
+}
 
-  el.saveArticleBtn.addEventListener("click", saveArticle);
-  el.saveEmailSettingsBtn.addEventListener("click", saveEmailSettings);
-  el.saveQuizSettingsBtn.addEventListener("click", saveQuizPreference);
-
-  el.copyUserIdBtn?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    await copyText(el.userId.value, "✅ User ID copied!");
-  });
-
-  el.copyTelegramCommandBtn?.addEventListener("click", async (e) => {
-    e.preventDefault();
-    await copyText(el.telegramCommand.textContent, "✅ Telegram command copied!");
-  });
-
-  el.openTelegramBotBtn.addEventListener("click", openTelegramBot);
-
-  el.tabSave.addEventListener("click", () => switchTab("save"));
-  el.tabSettings.addEventListener("click", () => switchTab("settings"));
-
-  el.weeklyEmailToggle?.addEventListener("change", () => {
-    // No conditional UI for email — always visible
-  });
-
-  el.telegramQuizToggle?.addEventListener("change", (e) => {
-    el.telegramOptions.classList.toggle("hidden", !e.target.checked);
+function openTelegramBot()
+{
+  chrome.tabs.create({
+    url: `https://t.me/${TELEGRAM_BOT_USERNAME}`
   });
 }
 
-// ══════════════════════════════════════════
-// INIT
-// ══════════════════════════════════════════
+function reconnectTickTick()
+{
+  connectTickTick();
+}
 
-async function init() {
+function bindEvents()
+{
+  el.connectTickTickBtn?.addEventListener("click", connectTickTick);
+  el.reconnectTickTickBtn?.addEventListener("click", reconnectTickTick);
+
+  el.tabSave?.addEventListener("click", () => switchTab("save"));
+  el.tabSettings?.addEventListener("click", () => switchTab("settings"));
+
+  el.refreshPageBtn?.addEventListener("click", refreshPageData);
+  el.saveArticleBtn?.addEventListener("click", saveArticle);
+
+  el.copyUserIdBtn?.addEventListener("click", copyUserId);
+  el.saveEmailSettingsBtn?.addEventListener("click", saveEmailSettings);
+
+  el.copyTelegramCommandBtn?.addEventListener("click", copyTelegramCommand);
+  el.openTelegramBotBtn?.addEventListener("click", openTelegramBot);
+  el.saveQuizSettingsBtn?.addEventListener("click", saveQuizPreference);
+}
+
+async function bootstrap()
+{
   bindEvents();
-  await applyStoredUser();
-
-  const data = await storageGet([STORAGE_KEYS.connected, STORAGE_KEYS.userId]);
-  if (data[STORAGE_KEYS.connected] && data[STORAGE_KEYS.userId]) {
-    await loadPageContext();
-  } else {
-    setStatus("Connect TickTick to unlock your workspace.", "info");
-  }
+  switchTab("save");
+  await loadSavedState();
+  setStatus("Ready", "info");
 }
 
-init();
+bootstrap().catch((error) =>
+{
+  console.error(error);
+  setStatus(error.message || "Unexpected popup error.", "danger");
+});
