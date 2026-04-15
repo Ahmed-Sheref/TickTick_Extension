@@ -1,23 +1,36 @@
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (!changeInfo.url) return;
+const API_BASE = "https://ticktickextension-production.up.railway.app/api/v1";
 
-  const redirectBase = chrome.identity.getRedirectURL("ticktick");
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "startTickTickAuth") {
+    
+    const extensionId = chrome.runtime.id;
+    const redirectUri = `https://${extensionId}.chromiumapp.org/ticktick`;
+    const authUrl = `${API_BASE}/ticktick/auth?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-  if (!changeInfo.url.startsWith(redirectBase)) return;
+    chrome.identity.launchWebAuthFlow(
+      { url: authUrl, interactive: true },
+      (responseUrl) => {
+        if (chrome.runtime.lastError || !responseUrl) {
+          sendResponse({ error: chrome.runtime.lastError?.message || "Auth cancelled" });
+          return;
+        }
 
-  try {
-    const url = new URL(changeInfo.url);
-    const userId = url.searchParams.get("userId");
+        try {
+          const url = new URL(responseUrl);
+          const userId = url.searchParams.get("userId");
 
-    if (!userId) return;
+          if (!userId) {
+            sendResponse({ error: "No userId in response" });
+            return;
+          }
 
-    await chrome.storage.local.set({
-      ticktick_userId: userId,
-      ticktick_connected: true
-    });
+          sendResponse({ userId });
+        } catch (e) {
+          sendResponse({ error: e.message });
+        }
+      }
+    );
 
-    await chrome.tabs.remove(tabId);
-  } catch (error) {
-    console.error("OAuth tab watcher error:", error);
+    return true; // مهم جداً عشان sendResponse تشتغل async
   }
 });

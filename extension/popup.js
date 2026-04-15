@@ -135,50 +135,31 @@ async function connectTickTick() {
   try {
     setStatus("Opening TickTick login...", "info");
 
-    // بناء الـ redirectUri من الـ extension ID الحالي بدون getRedirectURL
-    const extensionId = chrome.runtime.id;
-    const redirectUri = `https://${extensionId}.chromiumapp.org/ticktick`;
-
-    const authUrl = `${API_BASE}/ticktick/auth?redirect_uri=${encodeURIComponent(redirectUri)}`;
-
-    chrome.identity.launchWebAuthFlow(
-      {
-        url: authUrl,
-        interactive: true
-      },
-      async (responseUrl) => {
-        if (chrome.runtime.lastError || !responseUrl) {
-          setStatus(
-            chrome.runtime.lastError?.message || "Auth cancelled",
-            "danger"
-          );
-          return;
-        }
-
-        try {
-          const url = new URL(responseUrl);
-          const userId = url.searchParams.get("userId");
-
-          if (!userId) {
-            setStatus("No userId returned. Please try again.", "danger");
-            return;
-          }
-
-          await storageSet({
-            [STORAGE_KEYS.userId]: userId,
-            [STORAGE_KEYS.connected]: true
-          });
-
-          if (el.userId) el.userId.value = userId;
-          fillTelegramCommand(userId);
-          setConnectedUI(true);
-          setStatus("Connected successfully!", "success");
-        } catch (parseError) {
-          console.error("Error parsing response URL:", parseError);
-          setStatus("Connection error. Please try again.", "danger");
-        }
+    // بعت message للـ background يعمل الـ auth
+    chrome.runtime.sendMessage({ action: "startTickTickAuth" }, async (response) => {
+      if (chrome.runtime.lastError) {
+        setStatus(chrome.runtime.lastError.message, "danger");
+        return;
       }
-    );
+
+      if (!response || response.error) {
+        setStatus(response?.error || "Auth failed", "danger");
+        return;
+      }
+
+      const { userId } = response;
+
+      await storageSet({
+        [STORAGE_KEYS.userId]: userId,
+        [STORAGE_KEYS.connected]: true
+      });
+
+      if (el.userId) el.userId.value = userId;
+      fillTelegramCommand(userId);
+      setConnectedUI(true);
+      setStatus("Connected successfully!", "success");
+    });
+
   } catch (error) {
     console.error("connectTickTick error:", error);
     setStatus(error.message || "Connect failed", "danger");
