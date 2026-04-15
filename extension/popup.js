@@ -131,10 +131,12 @@ async function connectTickTick() {
   try {
     setStatus("Opening TickTick login...", "info");
 
-    const redirectUri = chrome.identity.getRedirectURL("ticktick");
+    // بناء الـ redirectUri يدوياً من الـ extension ID الحالي
+    const extensionId = chrome.runtime.id;
+    const redirectUri = `https://${extensionId}.chromiumapp.org/ticktick`;
+
     const authUrl = `${API_BASE}/ticktick/auth?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-    // ✅ استخدم launchWebAuthFlow بدل chrome.tabs.create
     chrome.identity.launchWebAuthFlow(
       {
         url: authUrl,
@@ -142,31 +144,30 @@ async function connectTickTick() {
       },
       async (responseUrl) => {
         if (chrome.runtime.lastError || !responseUrl) {
-          setStatus(chrome.runtime.lastError?.message || "Auth cancelled", "danger");
+          setStatus(
+            chrome.runtime.lastError?.message || "Auth cancelled",
+            "danger"
+          );
           return;
         }
 
-        // استخرج الـ userId من الـ URL
         const url = new URL(responseUrl);
         const userId = url.searchParams.get("userId");
 
         if (!userId) {
-          setStatus("No userId returned from auth", "danger");
+          setStatus("No userId returned. Try again.", "danger");
           return;
         }
 
-        // احفظ الـ userId في storage
         await storageSet({
           [STORAGE_KEYS.userId]: userId,
           [STORAGE_KEYS.connected]: true,
         });
 
-        setStatus("Connected successfully!", "success");
-        setConnectedUI(true);
-
-        // حدّث الـ UI
         if (el.userId) el.userId.value = userId;
         fillTelegramCommand(userId);
+        setConnectedUI(true);
+        setStatus("Connected successfully!", "success");
       }
     );
   } catch (error) {
