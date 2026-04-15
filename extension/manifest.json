@@ -3,7 +3,14 @@
   "name": "TickTick Extension",
   "version": "1.0",
   "description": "Save articles and generate AI summaries",
-  "permissions": ["activeTab", "storage", "identity", "tabs"],
+
+  "permissions": [
+    "activeTab",
+    "storage",
+    "identity",
+    "tabs"
+  ],
+
   "host_permissions": [
     "https://ticktickextension-production.up.railway.app/*",
     "https://ticktick.com/*",
@@ -12,16 +19,24 @@
     "https://telegram.me/*",
     "<all_urls>"
   ],
+
   "action": {
     "default_popup": "popup.html"
   },
+
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"]
     }
   ],
+
   "background": {
     "service_worker": "background.js"
+  },
+
+  "oauth2": {
+    "client_id": "YOUR_GOOGLE_CLIENT_ID_IF_NEEDED",
+    "scopes": []
   }
 }

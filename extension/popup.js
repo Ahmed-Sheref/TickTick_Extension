@@ -134,59 +134,44 @@ async function connectTickTick() {
     const redirectUri = chrome.identity.getRedirectURL("ticktick");
     const authUrl = `${API_BASE}/ticktick/auth?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-    chrome.tabs.create({ url: authUrl }, (tab) => {
-      if (chrome.runtime.lastError) {
-        setStatus(chrome.runtime.lastError.message, "danger");
-        return;
-      }
+    // ✅ استخدم launchWebAuthFlow بدل chrome.tabs.create
+    chrome.identity.launchWebAuthFlow(
+      {
+        url: authUrl,
+        interactive: true,
+      },
+      async (responseUrl) => {
+        if (chrome.runtime.lastError || !responseUrl) {
+          setStatus(chrome.runtime.lastError?.message || "Auth cancelled", "danger");
+          return;
+        }
 
-      setStatus("TickTick login tab opened.", "success");
-    });
+        // استخرج الـ userId من الـ URL
+        const url = new URL(responseUrl);
+        const userId = url.searchParams.get("userId");
+
+        if (!userId) {
+          setStatus("No userId returned from auth", "danger");
+          return;
+        }
+
+        // احفظ الـ userId في storage
+        await storageSet({
+          [STORAGE_KEYS.userId]: userId,
+          [STORAGE_KEYS.connected]: true,
+        });
+
+        setStatus("Connected successfully!", "success");
+        setConnectedUI(true);
+
+        // حدّث الـ UI
+        if (el.userId) el.userId.value = userId;
+        fillTelegramCommand(userId);
+      }
+    );
   } catch (error) {
     console.error("connectTickTick error:", error);
     setStatus(error.message || "Connect failed", "danger");
-  }
-}
-async function saveArticle() {
-  try {
-    const userId = el.userId?.value.trim();
-
-    if (!userId) {
-      throw new Error("User ID is missing. Please connect TickTick first.");
-    }
-
-    const payload = {
-      userId,
-      title: el.title?.value.trim(),
-      url: el.url?.value.trim(),
-      rawText: el.rawText?.value.trim(),
-      user_input: el.userInput?.value.trim() || "~inbox",
-      use_summaryAi: Boolean(el.useSummaryAi?.checked),
-      use_tagsAi: Boolean(el.useTagsAi?.checked),
-      use_quiz: Boolean(el.useQuiz?.checked),
-      mergeSummaryWithContent: Boolean(el.mergeSummaryWithContent?.checked)
-    };
-
-    if (!payload.title) {
-      throw new Error("Title is required.");
-    }
-
-    if (!payload.rawText) {
-      throw new Error("Article text is required.");
-    }
-
-    setStatus("Saving article...", "info");
-
-    const result = await apiFetch("/content", {
-      method: "POST",
-      body: JSON.stringify(payload)
-    });
-
-    console.log("Saved article:", result);
-    setStatus("Article saved successfully.", "success");
-  } catch (error) {
-    console.error("saveArticle error:", error);
-    setStatus(error.message, "danger");
   }
 }
 
