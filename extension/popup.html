@@ -1,311 +1,209 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>TickTick Extension</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="popup.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TickTick Extension</title>
+  <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
 <div class="shell">
 
-  <!-- ═══════════════════════════════════════
-       ONBOARDING VIEW
-  ═══════════════════════════════════════ -->
-  <div id="onboardingView" class="view active">
-    <div class="onboard-wrap">
-
-      <div class="onboard-brand">
-        <div class="brand-icon">
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 11L9 16L18 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-        </div>
-        <div>
-          <p class="brand-label">Knowledge Workspace</p>
-          <h1 class="brand-title">TickTick Extension</h1>
-        </div>
+  <!-- Onboarding -->
+  <div id="onboardingView">
+    <div class="card">
+      <div class="card-label">
+        <span class="card-label-icon">⚡</span>
+        Welcome
       </div>
 
-      <div class="onboard-hero">
-        <h2 class="onboard-headline">Connect your TickTick<br/>account to get started</h2>
-        <p class="onboard-sub">Link once, then capture articles, generate AI summaries, and review them with Telegram quizzes — all in one place.</p>
+      <h1 style="margin-top: 0;">Connect TickTick</h1>
+      <p class="field-hint">
+        Link your TickTick account to start saving articles, generating summaries, and controlling email and Telegram delivery.
+      </p>
+
+      <div class="btn-row">
+        <button id="connectTickTickBtn" class="btn btn-primary btn-full" type="button">Connect TickTick</button>
       </div>
-
-      <ul class="onboard-features" role="list">
-        <li class="feature-item">
-          <span class="feature-dot"></span>
-          <span>One identity across browsers</span>
-        </li>
-        <li class="feature-item">
-          <span class="feature-dot"></span>
-          <span>Article saving with AI enrichment</span>
-        </li>
-        <li class="feature-item">
-          <span class="feature-dot"></span>
-          <span>Weekly email digest + Telegram quizzes</span>
-        </li>
-      </ul>
-
-      <button id="connectTickTickBtn" class="btn btn-primary btn-xl" type="button">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 1v6M8 1L5 4M8 1l3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 9v4a1 1 0 001 1h10a1 1 0 001-1V9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        Connect with TickTick
-      </button>
-
-      <p class="onboard-note">After connecting, this popup unlocks automatically.</p>
-
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════
-       APP VIEW
-  ═══════════════════════════════════════ -->
-  <div id="appView" class="view">
-
-    <!-- Header -->
-    <header class="app-header">
-      <div class="app-header-left">
-        <div class="brand-icon brand-icon--sm">
-          <svg width="14" height="14" viewBox="0 0 22 22" fill="none"><path d="M4 11L9 16L18 6" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <!-- Main App -->
+  <div id="appView" style="display:none;">
+    <header class="card" style="margin-bottom: 14px;">
+      <div class="connection-status-row">
+        <div id="ticktickStatusPill" class="status-pill status-pill--success">
+          <span class="pill-dot"></span>
+          Connected
         </div>
-        <span class="app-header-name">TickTick Extension</span>
-      </div>
-      <div id="ticktickStatusPill" class="status-pill status-pill--success">
-        <span class="pill-dot"></span>
-        Connected
+
+        <div style="display:flex; gap:8px;">
+          <button id="tabSave" class="btn btn-secondary btn-sm" type="button">Save</button>
+          <button id="tabSettings" class="btn btn-ghost btn-sm" type="button">Settings</button>
+        </div>
       </div>
     </header>
 
-    <!-- Tab Navigation -->
-    <nav class="tabs" role="tablist" aria-label="Main sections">
-      <button id="tabSave" class="tab active" type="button" role="tab" aria-selected="true" aria-controls="panelSave">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M13 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V3a1 1 0 00-1-1z" stroke="currentColor" stroke-width="1.6"/><path d="M5 8h6M5 11h4M5 5h2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        Save Article
-      </button>
-      <button id="tabSettings" class="tab" type="button" role="tab" aria-selected="false" aria-controls="panelSettings">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M2.93 2.93l1.06 1.06M12.01 12.01l1.06 1.06M2.93 13.07l1.06-1.06M12.01 3.99l1.06-1.06" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
-        Settings
-      </button>
-    </nav>
-
-    <!-- Main Content -->
     <main>
-
-      <!-- ─── SAVE ARTICLE PANEL ─── -->
-      <section id="panelSave" class="panel active" role="tabpanel" aria-labelledby="tabSave">
-
-        <div class="panel-header">
-          <div class="panel-header-text">
-            <h2>Save Current Article</h2>
-            <p>Capture the page and enrich it with smart options before saving.</p>
-          </div>
-          <button id="refreshPageBtn" class="btn btn-ghost btn-icon" type="button" title="Reload page context" aria-label="Refresh page context">
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13.5 8A5.5 5.5 0 112.5 5M2.5 2v3h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-
+      <!-- Save Panel -->
+      <section id="panelSave">
         <div class="card">
-
-          <div class="field">
-            <label class="field-label" for="title">Title</label>
-            <input id="title" class="input" type="text" placeholder="Article title…" autocomplete="off" />
-          </div>
-
-          <div class="field">
-            <label class="field-label" for="url">URL</label>
-            <input id="url" class="input" type="url" placeholder="https://example.com/article" autocomplete="off" />
-          </div>
-
-          <div class="field">
-            <label class="field-label" for="rawText">
-              Article Text
-              <span class="field-badge">auto-filled</span>
-            </label>
-            <textarea id="rawText" class="textarea" rows="7" placeholder="Selected text appears here — or paste manually…"></textarea>
-            <p class="field-hint">Selected text is preferred. Falls back to page content if nothing is selected.</p>
-          </div>
-
-          <div class="field">
-            <label class="field-label" for="userInput">
-              List &amp; Tags
-            </label>
-            <input id="userInput" class="input" type="text" placeholder="~learning #nodejs #backend" autocomplete="off" />
-            <p class="field-hint">Use <kbd>~</kbd> for a list and <kbd>#</kbd> for tags.</p>
-          </div>
-
-          <fieldset class="options-grid" aria-label="AI enrichment options">
-            <legend class="options-legend">Enrichment Options</legend>
-
-            <label class="option-tile">
-              <input id="useSummaryAi" type="checkbox" checked />
-              <span class="option-tile-inner">
-                <span class="option-icon">✦</span>
-                <span class="option-text">
-                  <strong>AI Summary</strong>
-                  <small>Generate a concise summary</small>
-                </span>
-              </span>
-            </label>
-
-            <label class="option-tile">
-              <input id="useTagsAi" type="checkbox" checked />
-              <span class="option-tile-inner">
-                <span class="option-icon">⊞</span>
-                <span class="option-text">
-                  <strong>AI Tags</strong>
-                  <small>Suggest relevant tags</small>
-                </span>
-              </span>
-            </label>
-
-            <label class="option-tile">
-              <input id="useQuiz" type="checkbox" checked />
-              <span class="option-tile-inner">
-                <span class="option-icon">◎</span>
-                <span class="option-text">
-                  <strong>Quiz</strong>
-                  <small>Create one review question</small>
-                </span>
-              </span>
-            </label>
-
-            <label class="option-tile">
-              <input id="mergeWithUserText" type="checkbox" />
-              <span class="option-tile-inner">
-                <span class="option-icon">⊕</span>
-                <span class="option-text">
-                  <strong>Merge Summary</strong>
-                  <small>Append summary to saved text</small>
-                </span>
-              </span>
-            </label>
-
-          </fieldset>
-
-          <button id="saveArticleBtn" class="btn btn-primary btn-full" type="button">
-            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M13 2H3a1 1 0 00-1 1v10a1 1 0 001 1h10a1 1 0 001-1V3a1 1 0 00-1-1z" stroke="currentColor" stroke-width="1.7"/><path d="M10.5 2v4a.5.5 0 01-.5.5H6a.5.5 0 01-.5-.5V2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10.5h10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          <div class="card-label">
+            <span class="card-label-icon">📝</span>
             Save Article
-          </button>
+          </div>
 
+          <label class="field-label" for="title">Title</label>
+          <input id="title" class="input" type="text" placeholder="Article title" />
+
+          <label class="field-label" for="url">URL</label>
+          <input id="url" class="input" type="text" placeholder="https://example.com/article" />
+
+          <label class="field-label" for="rawText">Article Text</label>
+          <textarea id="rawText" class="textarea" rows="8" placeholder="Paste article content here..."></textarea>
+
+          <label class="field-label" for="userInput">List & Tags</label>
+          <input id="userInput" class="input" type="text" placeholder="~learning #backend #nodejs" />
+          <p class="field-hint">Use <code>~listName</code> and <code>#tags</code>.</p>
+
+          <div class="card" style="margin-top:14px;">
+            <div class="card-label">
+              <span class="card-label-icon">🤖</span>
+              AI Processing
+            </div>
+
+            <label class="toggle-row" for="useSummaryAi">
+              <span>Generate AI Summary</span>
+              <input id="useSummaryAi" type="checkbox" checked />
+            </label>
+
+            <label class="toggle-row" for="useTagsAi">
+              <span>Generate AI Tags</span>
+              <input id="useTagsAi" type="checkbox" checked />
+            </label>
+
+            <label class="toggle-row" for="useQuiz">
+              <span>Generate Quiz for This Article</span>
+              <input id="useQuiz" type="checkbox" checked />
+            </label>
+
+            <label class="toggle-row" for="mergeSummaryWithContent">
+              <span>Append Summary to Saved Text</span>
+              <input id="mergeSummaryWithContent" type="checkbox" />
+            </label>
+          </div>
+
+          <div class="card" style="margin-top:14px;">
+            <div class="card-label">
+              <span class="card-label-icon">📨</span>
+              Delivery for This Article
+            </div>
+
+            <label class="toggle-row" for="includeInWeeklyEmail">
+              <span>Include This Article in Weekly Email</span>
+              <input id="includeInWeeklyEmail" type="checkbox" checked />
+            </label>
+
+            <label class="toggle-row" for="includeInTelegramQuiz">
+              <span>Include This Article in Telegram Quiz</span>
+              <input id="includeInTelegramQuiz" type="checkbox" checked />
+            </label>
+          </div>
+
+          <div class="btn-row" style="margin-top: 14px;">
+            <button id="refreshPageBtn" class="btn btn-ghost" type="button">Refresh Page Data</button>
+            <button id="saveArticleBtn" class="btn btn-primary" type="button">Save Article</button>
+          </div>
         </div>
       </section>
 
-      <!-- ─── SETTINGS PANEL ─── -->
-      <section id="panelSettings" class="panel" role="tabpanel" aria-labelledby="tabSettings">
+      <!-- Settings Panel -->
+      <section id="panelSettings" style="display:none;">
+        <div class="card settings-card">
+          <div class="card-label">
+            <span class="card-label-icon">👤</span>
+            User
+          </div>
 
-        <div class="panel-header">
-          <div class="panel-header-text">
-            <h2>Settings</h2>
-            <p>Identity, email, Telegram, and TickTick connection.</p>
+          <label class="field-label" for="userId">User ID</label>
+          <div class="btn-row">
+            <input id="userId" class="input" type="text" readonly />
+            <button id="copyUserIdBtn" class="btn btn-ghost btn-sm" type="button">Copy</button>
           </div>
         </div>
 
-        <div class="settings-stack">
+        <div class="card settings-card">
+          <div class="card-label">
+            <span class="card-label-icon">✉️</span>
+            Weekly Email Digest
+          </div>
 
-          <!-- Identity -->
-          <div class="card settings-card">
-            <div class="card-label">
-              <span class="card-label-icon">⊙</span>
-              Identity
+          <label class="field-label" for="email">Email Address</label>
+          <input id="email" class="input" type="email" placeholder="you@example.com" />
+
+          <label class="toggle-row" for="weeklyEmailToggle">
+            <span>Enable Weekly Email Digest</span>
+            <input id="weeklyEmailToggle" type="checkbox" />
+          </label>
+
+          <button id="saveEmailSettingsBtn" class="btn btn-secondary btn-full" type="button">Save Email Settings</button>
+        </div>
+
+        <div class="card settings-card">
+          <div class="card-label">
+            <span class="card-label-icon">📲</span>
+            Telegram Quiz Delivery
+          </div>
+
+          <label class="toggle-row" for="telegramQuizToggle">
+            <span>Enable Telegram Quiz Delivery</span>
+            <input id="telegramQuizToggle" type="checkbox" checked />
+          </label>
+
+          <div class="telegram-options" id="telegramOptions">
+            <p class="field-hint" style="margin-bottom: 12px;">
+              Send this command to your bot in Telegram to connect your account and receive quiz questions.
+            </p>
+
+            <div class="command-block">
+              <span class="command-block-label">Start command</span>
+              <code id="telegramCommand">/start</code>
             </div>
-            <div class="field">
-              <label class="field-label" for="userId">Your User ID</label>
-              <div class="input-copy-row">
-                <input id="userId" class="input input--readonly" type="text" readonly aria-label="Your User ID" />
-                <button id="copyUserIdBtn" class="btn btn-ghost btn-icon" type="button" title="Copy User ID" aria-label="Copy User ID">
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M3 11V3h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-              </div>
-              <p class="field-hint">This ID links your extension, email digest, and Telegram bot.</p>
+
+            <div class="btn-row">
+              <button id="copyTelegramCommandBtn" class="btn btn-ghost btn-sm" type="button">Copy Command</button>
+              <button id="openTelegramBotBtn" class="btn btn-primary btn-sm" type="button">Open Telegram Bot</button>
             </div>
           </div>
 
-          <!-- Email Preferences -->
-          <div class="card settings-card">
-            <div class="card-label-row">
-              <div class="card-label">
-                <span class="card-label-icon">✉</span>
-                Email Digest
-              </div>
-              <label class="toggle-switch" aria-label="Enable weekly email digest">
-                <input type="checkbox" id="weeklyEmailToggle" />
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              </label>
-            </div>
-            <div class="field">
-              <label class="field-label" for="email">Email Address</label>
-              <input id="email" class="input" type="email" placeholder="name@example.com" autocomplete="email" />
-            </div>
-            <p class="field-hint">Receive a weekly digest of your saved articles when enabled.</p>
-            <button id="saveEmailSettingsBtn" class="btn btn-secondary btn-full" type="button">Save Email Settings</button>
+          <button id="saveQuizSettingsBtn" class="btn btn-secondary btn-full" type="button">Save Quiz Preferences</button>
+        </div>
+
+        <div class="card settings-card">
+          <div class="card-label">
+            <span class="card-label-icon">⟳</span>
+            TickTick Connection
           </div>
 
-          <!-- Telegram & Quiz -->
-          <div class="card settings-card">
-            <div class="card-label-row">
-              <div class="card-label">
-                <span class="card-label-icon">⟴</span>
-                Telegram &amp; Quiz
-              </div>
-              <label class="toggle-switch" aria-label="Enable Telegram quiz">
-                <input type="checkbox" id="telegramQuizToggle" />
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              </label>
+          <div class="connection-status-row">
+            <div id="ticktickStatusSecondary" class="status-pill status-pill--success">
+              <span class="pill-dot"></span>
+              Connected
             </div>
-
-            <div class="telegram-options" id="telegramOptions">
-              <p class="field-hint" style="margin-bottom: 12px;">Send yourself the command below in Telegram to activate your quiz bot. You'll receive weekly quiz questions from your saved articles.</p>
-
-              <div class="command-block">
-                <span class="command-block-label">Start command</span>
-                <code id="telegramCommand">/start</code>
-              </div>
-
-              <div class="btn-row">
-                <button id="copyTelegramCommandBtn" class="btn btn-ghost btn-sm" type="button">
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M3 11V3h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  Copy Command
-                </button>
-                <button id="openTelegramBotBtn" class="btn btn-primary btn-sm" type="button">
-                  <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M6 3H3a1 1 0 00-1 1v9a1 1 0 001 1h9a1 1 0 001-1v-3M9 2h5m0 0v5m0-5L7 10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                  Open Telegram Bot
-                </button>
-              </div>
-            </div>
-
-            <button id="saveQuizSettingsBtn" class="btn btn-secondary btn-full" type="button">Save Quiz Preferences</button>
+            <p class="field-hint" style="margin:0; flex:1">
+              Your TickTick account is linked to this extension.
+            </p>
           </div>
 
-          <!-- TickTick Connection -->
-          <div class="card settings-card">
-            <div class="card-label">
-              <span class="card-label-icon">⟳</span>
-              TickTick Connection
-            </div>
-            <div class="connection-status-row">
-              <div id="ticktickStatusSecondary" class="status-pill status-pill--success">
-                <span class="pill-dot"></span>
-                Connected
-              </div>
-              <p class="field-hint" style="margin:0; flex:1">Your TickTick account is linked to this extension.</p>
-            </div>
-            <button id="reconnectTickTickBtn" class="btn btn-ghost btn-full" type="button">Reconnect TickTick</button>
-          </div>
-
+          <button id="reconnectTickTickBtn" class="btn btn-ghost btn-full" type="button">Reconnect TickTick</button>
         </div>
       </section>
-
     </main>
 
-    <!-- Status Bar -->
     <div id="statusBar" class="status-bar status-bar--info" role="status" aria-live="polite">Ready</div>
+  </div>
+</div>
 
-  </div><!-- /appView -->
-
-</div><!-- /shell -->
 <script src="popup.js"></script>
 </body>
 </html>
