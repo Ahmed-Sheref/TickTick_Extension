@@ -50,7 +50,13 @@
     const current = getSelectedTextSafe();
     if (!current) return;
 
+    try {
+  if (chrome?.storage?.local) {
     chrome.storage.local.set({ [SELECTION_KEY]: current });
+  }
+} catch (e) {
+  console.warn("Storage failed:", e.message);
+}
   }
 
   function getReadableText() {
