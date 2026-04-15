@@ -30,10 +30,10 @@
     }
   ],
 
-  
-  "permissions": [
-  "identity",
+
+"permissions": [
   "storage",
-  "activeTab"
+  "activeTab",
+  "identity"
 ]
 }
