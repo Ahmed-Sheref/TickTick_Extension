@@ -15,7 +15,11 @@ Creates a new content item, optionally enriches it with AI, saves it to MongoDB,
 - \`user_input\` supports:
   - \`~listName\` → parsed as list name
   - \`#tag\` → parsed as tags
-- AI flags control whether \`summary\`, \`tags\`, and \`quiz\` are generated
+- AI flags control content generation and backend behavior:
+  - \`use_summaryAi\`: generates summary AND automatically makes content eligible for weekly email
+  - \`use_tagsAi\`: generates AI tags in addition to parsed user tags
+  - \`use_quiz\`: generates quiz AND automatically makes content eligible for Telegram quiz flow
+  - \`mergeSummaryWithContent\`: when enabled, appends the summary to the saved content
 - Successful creation returns the saved content plus an \`ai\` object
 - This endpoint is rate-limited more strictly than general routes
       `.trim(),
@@ -34,6 +38,7 @@ Creates a new content item, optionally enriches it with AI, saves it to MongoDB,
                   use_summaryAi: false,
                   use_tagsAi: false,
                   use_quiz: false,
+                  mergeSummaryWithContent: false,
                 },
               },
               full: {
@@ -49,8 +54,6 @@ Creates a new content item, optionally enriches it with AI, saves it to MongoDB,
                   use_tagsAi: true,
                   use_quiz: true,
                   mergeSummaryWithContent: false,
-                  includeInWeeklyEmail: true,
-                  includeInTelegramQuiz: true,
                 },
               },
             },

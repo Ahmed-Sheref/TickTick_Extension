@@ -166,7 +166,7 @@ export const schemas = {
       useSummaryAi: {
         type: 'boolean',
         default: true,
-        description: 'Generate an AI summary for the article.',
+        description: 'Generate an AI summary for the article. When true, automatically sets includeInWeeklyEmail=true.',
       },
       useTagsAi: {
         type: 'boolean',
@@ -176,22 +176,22 @@ export const schemas = {
       useQuiz: {
         type: 'boolean',
         default: true,
-        description: 'Generate one quiz object for Telegram usage.',
+        description: 'Generate one quiz object for Telegram usage. When true, automatically sets includeInTelegramQuiz=true.',
       },
       includeInWeeklyEmail: {
         type: 'boolean',
         default: true,
-        description: 'Mark this content eligible for the weekly email digest.',
+        description: 'Backend-derived flag: true when use_summaryAi=true, indicating content is eligible for weekly email digest.',
       },
       includeInTelegramQuiz: {
         type: 'boolean',
         default: true,
-        description: 'Mark this content eligible for Telegram quiz flow.',
+        description: 'Backend-derived flag: true when use_quiz=true, indicating content is eligible for Telegram quiz flow.',
       },
       mergeSummaryWithContent: {
         type: 'boolean',
         default: false,
-        description: 'If enabled, summary may be merged with saved/generated content flow.',
+        description: 'If enabled, appends the AI summary to the saved content text.',
       },
     },
   },
@@ -293,7 +293,7 @@ export const schemas = {
       use_summaryAi: {
         type: 'boolean',
         default: true,
-        description: 'Generate summary and return it under both content.summary and data.ai.summary when available.',
+        description: 'Generate summary and automatically make content eligible for weekly email digest.',
       },
       use_tagsAi: {
         type: 'boolean',
@@ -303,19 +303,12 @@ export const schemas = {
       use_quiz: {
         type: 'boolean',
         default: true,
-        description: 'Generate one quiz object.',
+        description: 'Generate quiz and automatically make content eligible for Telegram quiz flow.',
       },
       mergeSummaryWithContent: {
         type: 'boolean',
         default: false,
-      },
-      includeInWeeklyEmail: {
-        type: 'boolean',
-        default: true,
-      },
-      includeInTelegramQuiz: {
-        type: 'boolean',
-        default: true,
+        description: 'If enabled, appends the AI summary to the saved content text.',
       },
     },
   },
