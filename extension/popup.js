@@ -134,43 +134,14 @@ async function connectTickTick() {
     const redirectUri = chrome.identity.getRedirectURL("ticktick");
     const authUrl = `${API_BASE}/ticktick/auth?redirect_uri=${encodeURIComponent(redirectUri)}`;
 
-    chrome.identity.launchWebAuthFlow(
-      {
-        url: authUrl,
-        interactive: true
-      },
-      async (callbackUrl) => {
-        if (chrome.runtime.lastError) {
-          console.error("OAuth error:", chrome.runtime.lastError.message);
-          setStatus(chrome.runtime.lastError.message, "danger");
-          return;
-        }
-
-        if (!callbackUrl) {
-          setStatus("No callback URL received from TickTick.", "danger");
-          return;
-        }
-
-        const url = new URL(callbackUrl);
-        const userId = url.searchParams.get("userId");
-
-        if (!userId) {
-          setStatus("userId not found in callback.", "danger");
-          return;
-        }
-
-        await storageSet({
-          [STORAGE_KEYS.userId]: userId,
-          [STORAGE_KEYS.connected]: true
-        });
-
-        if (el.userId) el.userId.value = userId;
-        setConnectedUI(true);
-        fillTelegramCommand(userId);
-
-        setStatus("Connected successfully.", "success");
+    chrome.tabs.create({ url: authUrl }, (tab) => {
+      if (chrome.runtime.lastError) {
+        setStatus(chrome.runtime.lastError.message, "danger");
+        return;
       }
-    );
+
+      setStatus("TickTick login tab opened.", "success");
+    });
   } catch (error) {
     console.error("connectTickTick error:", error);
     setStatus(error.message || "Connect failed", "danger");
