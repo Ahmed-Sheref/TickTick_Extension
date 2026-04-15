@@ -15,6 +15,7 @@ const DB = process.env.DATABASE;
 console.log('[DB] DATABASE env variable:', DB ? 'Found' : 'NOT FOUND');
 console.log('[DB] DB value:', DB || 'undefined');
 
+const PORT = process.env.PORT || 3000;
 mongoose.connect(DB)
 .then((con) =>
 {
@@ -22,17 +23,17 @@ mongoose.connect(DB)
     startTelegramBot();
     startWeeklyEmailCron();
     startWeeklyQuizCron();
-    app.listen(3000, () =>
+    app.listen(PORT, () =>
     {
-        console.log('[SERVER] Server is running on port 3000');
+        console.log(`[SERVER] Server is running on port ${PORT}`);
     });
 })
 .catch((err) =>
 {
     console.error('[DB] Connection Error:', err);
     console.log('[SERVER] Starting server without database connection...');
-    app.listen(3000, () =>
+    app.listen(PORT, () =>
     {
-        console.log('[SERVER] Server is running on port 3000 (without database)');
+        console.log(`[SERVER] Server is running on port ${PORT} (without database)`);
     });
 });
