@@ -51,6 +51,8 @@ const el = {
   saveQuizSettingsBtn: document.getElementById("saveQuizSettingsBtn")
 };
 
+// ─── Utility Functions ────────────────────────────────────────────────────────
+
 function storageGet(keys) {
   return new Promise((resolve) => chrome.storage.local.get(keys, resolve));
 }
@@ -127,11 +129,13 @@ function fillTelegramCommand(userId) {
   el.telegramCommand.textContent = userId ? `/start ${userId}` : "/start";
 }
 
+// ─── Action Functions ─────────────────────────────────────────────────────────
+
 async function connectTickTick() {
   try {
     setStatus("Opening TickTick login...", "info");
 
-    // بناء الـ redirectUri يدوياً من الـ extension ID الحالي
+    // بناء الـ redirectUri من الـ extension ID الحالي بدون getRedirectURL
     const extensionId = chrome.runtime.id;
     const redirectUri = `https://${extensionId}.chromiumapp.org/ticktick`;
 
@@ -140,7 +144,7 @@ async function connectTickTick() {
     chrome.identity.launchWebAuthFlow(
       {
         url: authUrl,
-        interactive: true,
+        interactive: true
       },
       async (responseUrl) => {
         if (chrome.runtime.lastError || !responseUrl) {
@@ -151,28 +155,76 @@ async function connectTickTick() {
           return;
         }
 
-        const url = new URL(responseUrl);
-        const userId = url.searchParams.get("userId");
+        try {
+          const url = new URL(responseUrl);
+          const userId = url.searchParams.get("userId");
 
-        if (!userId) {
-          setStatus("No userId returned. Try again.", "danger");
-          return;
+          if (!userId) {
+            setStatus("No userId returned. Please try again.", "danger");
+            return;
+          }
+
+          await storageSet({
+            [STORAGE_KEYS.userId]: userId,
+            [STORAGE_KEYS.connected]: true
+          });
+
+          if (el.userId) el.userId.value = userId;
+          fillTelegramCommand(userId);
+          setConnectedUI(true);
+          setStatus("Connected successfully!", "success");
+        } catch (parseError) {
+          console.error("Error parsing response URL:", parseError);
+          setStatus("Connection error. Please try again.", "danger");
         }
-
-        await storageSet({
-          [STORAGE_KEYS.userId]: userId,
-          [STORAGE_KEYS.connected]: true,
-        });
-
-        if (el.userId) el.userId.value = userId;
-        fillTelegramCommand(userId);
-        setConnectedUI(true);
-        setStatus("Connected successfully!", "success");
       }
     );
   } catch (error) {
     console.error("connectTickTick error:", error);
     setStatus(error.message || "Connect failed", "danger");
+  }
+}
+
+async function saveArticle() {
+  try {
+    const userId = el.userId?.value.trim();
+
+    if (!userId) {
+      throw new Error("User ID is missing. Please connect TickTick first.");
+    }
+
+    const payload = {
+      userId,
+      title: el.title?.value.trim(),
+      url: el.url?.value.trim(),
+      rawText: el.rawText?.value.trim(),
+      user_input: el.userInput?.value.trim() || "~inbox",
+      use_summaryAi: Boolean(el.useSummaryAi?.checked),
+      use_tagsAi: Boolean(el.useTagsAi?.checked),
+      use_quiz: Boolean(el.useQuiz?.checked),
+      mergeSummaryWithContent: Boolean(el.mergeSummaryWithContent?.checked)
+    };
+
+    if (!payload.title) {
+      throw new Error("Title is required.");
+    }
+
+    if (!payload.rawText) {
+      throw new Error("Article text is required.");
+    }
+
+    setStatus("Saving article...", "info");
+
+    const result = await apiFetch("/content", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    console.log("Saved article:", result);
+    setStatus("Article saved successfully.", "success");
+  } catch (error) {
+    console.error("saveArticle error:", error);
+    setStatus(error.message, "danger");
   }
 }
 
@@ -218,13 +270,14 @@ async function saveQuizPreference() {
   console.log("saveQuizPreference not implemented yet");
 }
 
+// ─── Event Binding ────────────────────────────────────────────────────────────
+
 function bindEvents() {
   console.log("bindEvents called");
-  console.log("connectTickTickBtn:", el.connectTickTickBtn);
 
   if (el.connectTickTickBtn) {
     el.connectTickTickBtn.addEventListener("click", () => {
-      console.log("Connect button listener fired");
+      console.log("Connect button clicked");
       connectTickTick();
     });
   } else {
@@ -243,12 +296,25 @@ function bindEvents() {
   el.saveQuizSettingsBtn?.addEventListener("click", saveQuizPreference);
 }
 
+// ─── Bootstrap ────────────────────────────────────────────────────────────────
+
 async function bootstrap() {
   console.log("popup bootstrap started");
+
+  // استرجع الـ userId المحفوظ لو موجود
+  const stored = await storageGet([STORAGE_KEYS.userId, STORAGE_KEYS.connected]);
+  const userId = stored[STORAGE_KEYS.userId];
+  const isConnected = Boolean(stored[STORAGE_KEYS.connected] && userId);
+
   bindEvents();
   switchTab("save");
-  setConnectedUI(false);
-  fillTelegramCommand("");
+  setConnectedUI(isConnected);
+  fillTelegramCommand(userId || "");
+
+  if (isConnected && el.userId) {
+    el.userId.value = userId;
+  }
+
   setStatus("Ready", "info");
 }
 
