@@ -21,7 +21,7 @@ mongoose.connect(DB)
 {
     console.log('[DB] MongoDB connection successful');
     // startTelegramBot();
-    startWeeklyEmailCron();
+    // startWeeklyEmailCron();
     // startWeeklyQuizCron();
     app.listen(PORT, () =>
     {
