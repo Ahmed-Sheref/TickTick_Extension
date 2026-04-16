@@ -23,7 +23,7 @@ mongoose.connect(DB)
     // startTelegramBot();
     // startWeeklyEmailCron();
     // startWeeklyQuizCron();
-    app.listen(PORT, () =>
+    app.listen(PORT, '0.0.0.0',() =>
     {
         console.log(`[SERVER] Server is running on port ${PORT}`);
     });

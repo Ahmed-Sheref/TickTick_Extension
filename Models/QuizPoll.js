@@ -39,7 +39,6 @@ const quizPollSchema = new mongoose.Schema({
 });
 
 // Indexes for performance
-quizPollSchema.index({ pollId: 1 });
 quizPollSchema.index({ contentId: 1 });
 quizPollSchema.index({ userId: 1, isAnswered: 1 });
 quizPollSchema.index({ chatId: 1 });
