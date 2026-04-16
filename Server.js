@@ -20,9 +20,9 @@ mongoose.connect(DB)
 .then((con) =>
 {
     console.log('[DB] MongoDB connection successful');
-    startTelegramBot();
+    // startTelegramBot();
     startWeeklyEmailCron();
-    startWeeklyQuizCron();
+    // startWeeklyQuizCron();
     app.listen(PORT, () =>
     {
         console.log(`[SERVER] Server is running on port ${PORT}`);
