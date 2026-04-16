@@ -1,5 +1,4 @@
-const API_BASE = "https://ticktickextension-production.up.railway.app/api/v1";
-
+const API_BASE = "https://carefree-alignment-production-7eff.up.railway.app/api/v1";
 let authTabId = null;
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {

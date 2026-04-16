@@ -1,4 +1,4 @@
-const API_BASE = "https://ticktickextension-production.up.railway.app/api/v1";
+const API_BASE = "https://carefree-alignment-production-7eff.up.railway.app/api/v1";
 const TELEGRAM_BOT_USERNAME = "Tick_review_bot";
 
 const STORAGE_KEYS = {
