@@ -9,12 +9,12 @@ import { setupSwagger } from './swagger/UI/swagger-ui.js';
 const app = express();
 
 // Request logging (optional but helpful)
-app.use(requestLogger);
 
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+app.use(requestLogger);
 // Setup Swagger UI documentation
 setupSwagger(app);
 
