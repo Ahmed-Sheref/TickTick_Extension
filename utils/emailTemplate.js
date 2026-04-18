@@ -1,168 +1,150 @@
-export const weeklyEmailTemplate = (contents) =>
-{
+export const weeklyEmailTemplate = (contents) => {
+
     // ─── helpers ───────────────────────────────────────────────────────────
     const fmt = (dateStr) =>
         new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
+    const BG_IMAGE_URL = "https://res.cloudinary.com/ddior7stk/image/upload/v1776472734/background_ras8qi.jpg";
+    
+    const LOGO_URL = "https://res.cloudinary.com/ddior7stk/image/upload/v1776472636/logo_nuun6p.png";
+
     // ─── article cards ─────────────────────────────────────────────────────
     const articleCards = contents.map((c, index) => `
 
-        <!-- Article ${index + 1} -->
         <tr>
-            <td style="padding: 0 0 16px 0;">
-                <table width="100%" cellpadding="0" cellspacing="0"
-                    style="background:#ffffff; border-radius:14px; border:1.5px solid #e8e8f0; overflow:hidden;">
-
-                    <!-- Article number strip -->
+            <td style="padding:0 0 24px 0;">
+                <table width="100%" cellpadding="0" cellspacing="0" style="
+                    background:#ffffff;
+                    border-radius:12px;
+                    border:1px solid #e2e8f0;
+                    overflow:hidden;
+                    box-shadow:0 1px 3px rgba(15,23,42,0.03);
+                ">
                     <tr>
-                        <td style="padding:12px 20px; border-bottom:1.5px solid #f0f0f6;">
-                            <table width="100%" cellpadding="0" cellspacing="0">
+                        <td style="padding:24px;">
+
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:12px;">
                                 <tr>
                                     <td>
                                         <span style="
-                                            display:inline-block;
                                             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                                            font-size:10.5px;
-                                            font-weight:700;
-                                            letter-spacing:0.07em;
-                                            text-transform:uppercase;
-                                            color:#8e8ea8;
-                                        ">Article ${index + 1}</span>
-                                    </td>
-                                    <td align="right">
-                                        <span style="
-                                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                                            font-size:11px;
-                                            color:#b5b5cc;
-                                        ">${fmt(c.createdAt)}</span>
+                                            font-size:12px;
+                                            color:#64748b;
+                                            font-weight:500;
+                                        ">
+                                            <strong style="color:#0f172a; font-weight:700;">#${String(index + 1).padStart(2,'0')}</strong> 
+                                            &nbsp;&bull;&nbsp; ${fmt(c.createdAt)}
+                                        </span>
                                     </td>
                                 </tr>
                             </table>
-                        </td>
-                    </tr>
 
-                    <!-- Body -->
-                    <tr>
-                        <td style="padding:20px;">
-
-                            <!-- Title -->
                             <h2 style="
                                 margin:0 0 6px 0;
                                 font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                                font-size:17px;
+                                font-size:18px;
                                 font-weight:700;
-                                color:#1a1a22;
-                                line-height:1.3;
-                                letter-spacing:-0.02em;
+                                color:#0f172a;
+                                line-height:1.4;
                             ">${c.title}</h2>
 
-                            <!-- URL -->
                             ${c.url ? `
                             <a href="${c.url}" style="
+                                display:inline-block;
                                 font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                                font-size:12.5px;
-                                color:#4f62e8;
+                                font-size:13px;
+                                color:#3b5bfb;
                                 text-decoration:none;
-                                display:block;
-                                margin-bottom:16px;
-                                word-break:break-all;
-                                line-height:1.4;
-                            ">${c.url}</a>
-                            ` : '<div style="margin-bottom:16px;"></div>'}
+                                margin-bottom:20px;
+                            ">Read original article &rarr;</a>
+                            ` : '<div style="margin-bottom:20px;"></div>'}
 
-                            <!-- Summary -->
                             ${c.summary ? `
-                            <table width="100%" cellpadding="0" cellspacing="0"
-                                style="margin-bottom:16px; background:#f7f7fb; border-radius:10px; border:1.5px solid #e8e8f0; overflow:hidden;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:20px;">
                                 <tr>
                                     <td style="
-                                        padding:4px 14px;
-                                        background:#f0f0f6;
-                                        border-bottom:1.5px solid #e8e8f0;
+                                        background:#f8fafc;
+                                        border-left:3px solid #94a3b8;
+                                        border-radius:4px 8px 8px 4px;
+                                        padding:16px;
                                     ">
                                         <span style="
+                                            display:block;
                                             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                                            font-size:10.5px;
+                                            font-size:11px;
                                             font-weight:700;
-                                            letter-spacing:0.07em;
+                                            letter-spacing:0.06em;
                                             text-transform:uppercase;
-                                            color:#6b6b84;
-                                        ">Summary</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:14px;">
+                                            color:#475569;
+                                            margin-bottom:8px;
+                                        ">Overview</span>
                                         <p style="
                                             margin:0;
                                             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                                            font-size:13.5px;
-                                            color:#3e3e50;
-                                            line-height:1.65;
+                                            font-size:14.5px;
+                                            color:#334155;
+                                            line-height:1.6;
                                         ">${c.summary}</p>
                                     </td>
                                 </tr>
                             </table>
                             ` : ''}
 
-                            <!-- Tags -->
                             ${c.tags && c.tags.length > 0 ? `
-                            <div style="margin-bottom:16px; line-height:1.8;">
+                            <div style="margin-bottom:20px; line-height:2.2;">
                                 ${c.tags.map(tag => `<span style="
                                     display:inline-block;
-                                    background:#eceffe;
-                                    color:#4f62e8;
+                                    background:#f1f5f9;
+                                    color:#64748b;
                                     font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
                                     font-size:11px;
                                     font-weight:600;
-                                    padding:3px 9px;
-                                    border-radius:999px;
-                                    margin:2px 4px 2px 0;
-                                ">#${tag}</span>`).join('')}
+                                    padding:4px 12px;
+                                    border-radius:6px;
+                                    margin:0 6px 0 0;
+                                ">${tag}</span>`).join('')}
                             </div>
                             ` : ''}
 
-                            <!-- Quiz -->
                             ${c.quiz ? `
-                            <table width="100%" cellpadding="0" cellspacing="0"
-                                style="background:#fafaf7; border-radius:10px; border:1.5px solid #e8e8e0; overflow:hidden;">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="
+                                border:1px solid #e2e8f0;
+                                border-radius:8px;
+                                background:#ffffff;
+                            ">
                                 <tr>
-                                    <td style="
-                                        padding:4px 14px;
-                                        background:#f5f5ef;
-                                        border-bottom:1.5px solid #e8e8e0;
-                                    ">
+                                    <td style="padding:16px;">
                                         <span style="
+                                            display:block;
                                             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                                            font-size:10.5px;
+                                            font-size:11px;
                                             font-weight:700;
-                                            letter-spacing:0.07em;
+                                            letter-spacing:0.06em;
                                             text-transform:uppercase;
-                                            color:#6b6b84;
-                                        ">Review Question</span>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td style="padding:14px;">
+                                            color:#475569;
+                                            margin-bottom:12px;
+                                        ">Quick Check</span>
+                                        
                                         <p style="
-                                            margin:0 0 12px 0;
+                                            margin:0 0 14px 0;
                                             font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                                            font-size:13.5px;
+                                            font-size:14px;
                                             font-weight:600;
-                                            color:#1a1a22;
+                                            color:#0f172a;
                                             line-height:1.5;
                                         ">${c.quiz.question}</p>
+
                                         <table cellpadding="0" cellspacing="0">
                                             ${c.quiz.options.map((opt) => {
                                                 const isCorrect = opt === c.quiz.correctAnswer;
                                                 return `<tr>
-                                                    <td style="padding:3px 0;">
+                                                    <td style="padding:4px 0;">
                                                         <span style="
-                                                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
-                                                            font-size:13px;
-                                                            color:${isCorrect ? '#16a34a' : '#6b6b84'};
-                                                            font-weight:${isCorrect ? '600' : '400'};
                                                             display:block;
-                                                            padding:2px 0;
+                                                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                                                            font-size:13.5px;
+                                                            color:${isCorrect ? '#15803d' : '#64748b'};
+                                                            font-weight:${isCorrect ? '600' : '400'};
                                                         ">${isCorrect ? '✓' : '○'}&nbsp;&nbsp;${opt}</span>
                                                     </td>
                                                 </tr>`;
@@ -175,7 +157,6 @@ export const weeklyEmailTemplate = (contents) =>
 
                         </td>
                     </tr>
-
                 </table>
             </td>
         </tr>
@@ -192,114 +173,105 @@ export const weeklyEmailTemplate = (contents) =>
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <title>Weekly Digest — TickTick Extension</title>
 </head>
-<body style="margin:0; padding:0; background:#f0f0f6; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+<body style="margin:0; padding:0; background:#f1f4f9; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
 
-    <!-- Outer wrapper -->
-    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f0f6; padding:36px 16px;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f4f9; padding:36px 16px;">
         <tr>
             <td align="center">
-                <!-- Content column -->
                 <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;">
 
-                    <!-- ── HEADER ── -->
                     <tr>
                         <td style="
-                            background:#ffffff;
-                            border-radius:14px 14px 0 0;
-                            border:1.5px solid #e8e8f0;
+                            border-radius:16px 16px 0 0;
+                            border:1.5px solid #e2e8f0;
                             border-bottom:none;
-                            padding:32px 32px 28px;
+                            overflow:hidden;
+                            background-color:#f8f9fc;
+                            background-image:linear-gradient(rgba(248,249,252,0.80), rgba(248,249,252,0.96)), url('${BG_IMAGE_URL}');
+                            background-size:cover;
+                            background-position:right center;
+                            padding:32px 32px 0;
                         ">
-                            <!-- Brand row -->
+
                             <table cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
                                 <tr>
                                     <td style="vertical-align:middle; padding-right:12px;">
-                                        <!-- brand icon -->
-                                        <div style="
-                                            width:36px;
-                                            height:36px;
-                                            background:#1a1a22;
+                                        <img src="${LOGO_URL}" width="34" height="34" alt="Logo" style="
+                                            display:block;
+                                            width:34px;
+                                            height:34px;
                                             border-radius:10px;
-                                            display:inline-block;
-                                            text-align:center;
-                                            line-height:36px;
-                                            font-size:16px;
-                                        ">✓</div>
+                                            object-fit:cover;
+                                            border:1px solid rgba(0,0,0,0.05);
+                                        " />
                                     </td>
                                     <td style="vertical-align:middle;">
                                         <p style="
-                                            margin:0 0 1px 0;
-                                            font-size:10.5px;
+                                            margin:0 0 2px 0;
+                                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                                            font-size:10px;
                                             font-weight:700;
                                             letter-spacing:0.08em;
                                             text-transform:uppercase;
-                                            color:#8e8ea8;
+                                            color:#64748b;
                                         ">Knowledge Workspace</p>
                                         <p style="
                                             margin:0;
+                                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
                                             font-size:15px;
                                             font-weight:700;
-                                            color:#1a1a22;
+                                            color:#0f172a;
                                             letter-spacing:-0.01em;
                                         ">TickTick Extension</p>
                                     </td>
                                 </tr>
                             </table>
 
-                            <!-- Headline -->
                             <h1 style="
-                                margin:0 0 8px 0;
-                                font-size:26px;
+                                margin:0 0 10px 0;
+                                font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                                font-size:28px;
                                 font-weight:700;
-                                color:#1a1a22;
-                                letter-spacing:-0.025em;
+                                color:#0f172a;
+                                letter-spacing:-0.03em;
                                 line-height:1.2;
-                            ">Your Weekly Digest</h1>
+                            ">
+                                Your Weekly Digest
+                            </h1>
                             <p style="
-                                margin:0 0 20px 0;
+                                margin:0 0 24px 0;
+                                font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
                                 font-size:14px;
-                                color:#6b6b84;
-                                line-height:1.5;
-                            ">Here are the ${contents.length} article${contents.length !== 1 ? 's' : ''} you saved this week — with AI summaries and review questions.</p>
+                                color:#475569;
+                                line-height:1.6;
+                            ">Here is a quick recap of the <strong style="color:#0f172a;">${contents.length} article${contents.length !== 1 ? 's' : ''}</strong> you saved this week to keep you up to speed.</p>
 
-                            <!-- Stats pill -->
-                            <table cellpadding="0" cellspacing="0">
+                            <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:10px;">
                                 <tr>
-                                    <td style="
-                                        background:#f0f0f6;
-                                        border:1.5px solid #e8e8f0;
-                                        border-radius:999px;
-                                        padding:6px 16px;
-                                    ">
+                                    <td style="border-bottom:1.5px solid #e2e8f0; padding-bottom:0;">
                                         <span style="
-                                            font-size:12.5px;
+                                            display:inline-block;
+                                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                                            font-size:13px;
                                             font-weight:600;
-                                            color:#3e3e50;
-                                            white-space:nowrap;
-                                        ">${contents.length} article${contents.length !== 1 ? 's' : ''} saved this week</span>
+                                            color:#0f172a;
+                                            padding:8px 0;
+                                            border-bottom:2.5px solid #0f172a;
+                                            margin-bottom:-1.5px;
+                                        ">Weekly Review</span>
                                     </td>
                                 </tr>
                             </table>
+
                         </td>
                     </tr>
 
-                    <!-- thin accent line under header -->
                     <tr>
                         <td style="
-                            background:#1a1a22;
-                            height:3px;
-                            font-size:0;
-                            line-height:0;
-                        ">&nbsp;</td>
-                    </tr>
-
-                    <!-- ── ARTICLES ── -->
-                    <tr>
-                        <td style="
-                            background:#f7f7fb;
-                            border-left:1.5px solid #e8e8f0;
-                            border-right:1.5px solid #e8e8f0;
-                            padding:20px;
+                            background:#f8f9fc;
+                            border-left:1.5px solid #e2e8f0;
+                            border-right:1.5px solid #e2e8f0;
+                            padding:24px 20px 0 20px;
                         ">
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 ${articleCards}
@@ -307,42 +279,40 @@ export const weeklyEmailTemplate = (contents) =>
                         </td>
                     </tr>
 
-                    <!-- ── FOOTER ── -->
                     <tr>
                         <td style="
                             background:#ffffff;
-                            border-radius:0 0 14px 14px;
-                            border:1.5px solid #e8e8f0;
-                            border-top:none;
+                            border-radius:0 0 16px 16px;
+                            border:1.5px solid #e2e8f0;
+                            border-top:1.5px solid #e2e8f0;
                             padding:20px 32px;
                         ">
                             <table width="100%" cellpadding="0" cellspacing="0">
                                 <tr>
                                     <td>
                                         <p style="
-                                            margin:0 0 3px 0;
-                                            font-size:12.5px;
+                                            margin:0 0 4px 0;
+                                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                                            font-size:13px;
                                             font-weight:600;
-                                            color:#3e3e50;
+                                            color:#334155;
                                         ">TickTick Extension</p>
                                         <p style="
                                             margin:0;
-                                            font-size:11.5px;
-                                            color:#b5b5cc;
-                                        ">Weekly Knowledge Digest • Capture → Enrich → Review</p>
+                                            font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+                                            font-size:12px;
+                                            color:#94a3b8;
+                                        ">Capture &rarr; Enrich &rarr; Review</p>
                                     </td>
                                     <td align="right" style="vertical-align:middle;">
-                                        <span style="
+                                        <img src="${LOGO_URL}" width="32" height="32" alt="Logo" style="
                                             display:inline-block;
-                                            width:28px;
-                                            height:28px;
-                                            background:#1a1a22;
-                                            border-radius:8px;
-                                            text-align:center;
-                                            line-height:28px;
-                                            font-size:13px;
-                                            color:#ffffff;
-                                        ">✓</span>
+                                            width:32px;
+                                            height:32px;
+                                            border-radius:9px;
+                                            object-fit:cover;
+                                            border:1px solid rgba(0,0,0,0.05);
+                                        " />
                                     </td>
                                 </tr>
                             </table>
@@ -350,7 +320,6 @@ export const weeklyEmailTemplate = (contents) =>
                     </tr>
 
                 </table>
-                <!-- /content column -->
             </td>
         </tr>
     </table>

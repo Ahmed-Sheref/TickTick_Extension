@@ -119,6 +119,9 @@ const contentSchema = new mongoose.Schema(
 }
 );
 
+
+
+
 contentSchema.index({ userId: 1, createdAt: -1 });
 contentSchema.index({ userId: 1, listName: 1 });
 contentSchema.index({ userId: 1, tags: 1 });
