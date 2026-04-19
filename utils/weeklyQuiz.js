@@ -6,7 +6,7 @@ import bot from './telegramBot.js';
 
 export const startWeeklyQuizCron = () =>
 {
-    cron.schedule('0 0 * * *', async () =>
+    cron.schedule('0 0 * * 0', async () =>
     {
         console.log('[QUIZ] Starting weekly quiz job...');
 
