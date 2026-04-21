@@ -6,7 +6,7 @@ export const weeklyEmailTemplate = (contents) => {
 
     const BG_IMAGE_URL = "https://res.cloudinary.com/ddior7stk/image/upload/v1776472734/background_ras8qi.jpg";
     
-    const LOGO_URL = "https://res.cloudinary.com/ddior7stk/image/upload/v1776472636/logo_nuun6p.png";
+    const LOGO_URL = "https://res.cloudinary.com/dlvsqylnq/image/upload/f_auto,q_auto/logo_dtqabu";
 
     // ─── article cards ─────────────────────────────────────────────────────
     const articleCards = contents.map((c, index) => `
