@@ -24,15 +24,15 @@ export const startWeeklyEmailCron = () =>
                 try
                 {
                     const oneWeekAgo = new Date();
-                    oneWeekAgo.setDate(oneWeekAgo.getMinutes() - 5);
+                    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
                     const contents = await Content.find(
                     {
                         userId: user.userId,
                         "options.includeInWeeklyEmail": true,
-                        summary: { $ne: null }
-                        // lastEmailedAt: null,
-                        // createdAt: { $gte: oneWeekAgo }
+                        summary: { $ne: null },
+                        lastEmailedAt: null,
+                        createdAt: { $gte: oneWeekAgo }
                     })
                     .sort({ createdAt: -1 });
 
