@@ -5,7 +5,7 @@ import { sendWeeklyEmail } from './email.js';
 
 export const startWeeklyEmailCron = () =>
 {
-    cron.schedule('*/20 * * * * *', async () =>
+    cron.schedule('0 0 * * 0', async () =>
     {
         console.log('[EMAIL] Starting weekly email job...');
 
