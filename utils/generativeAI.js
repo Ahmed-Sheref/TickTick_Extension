@@ -1,7 +1,6 @@
 import Groq from "groq-sdk";
 
-if (!process.env.GROQ_API_KEY) 
-{
+if (!process.env.GROQ_API_KEY) {
     throw new Error("GROQ_API_KEY is missing in environment variables");
 }
 
@@ -18,7 +17,7 @@ No explanation, no markdown, no code fences, no extra text.
 Structure:
 {
   "summary": "bullet1. bullet2. bullet3.",
-  "ai_tags": ["tags..."],
+  "ai_tags": ["tag"],
   "quiz": {
     "question": "A challenge question based on the text",
     "options": ["A", "B", "C", "D"],
@@ -26,12 +25,13 @@ Structure:
   }
 }
 
-IMPORTANT TAGS RULES:
-- Return ONLY 3-5 main technical tags maximum
-- Focus on core technologies and concepts
-- Avoid generic words like "tutorial", "guide", "learn"
-- Use lowercase, single words, no spaces
-- Tags must be in English
+IMPORTANT TAG RULES:
+- Return EXACTLY ONE main technical tag
+- ai_tags must be an array with one item only
+- Choose the most important core technology or concept in the article
+- Avoid generic words like "tutorial", "guide", "learn", "article"
+- Use lowercase, single word, no spaces
+- Tag must be in English
 
 LANGUAGE HANDLING:
 - Support both English and Arabic text
@@ -42,15 +42,36 @@ Text to analyze:
 ${text}
 `;
 
-const validateAiResponse = (data) =>
+const validateAiResponse = (data) => 
 {
-    if (!data || typeof data !== "object") throw new Error("Invalid AI response object");
+    if (!data || typeof data !== "object") 
+    {
+        throw new Error("Invalid AI response object");
+    }
 
-    if (typeof data.summary !== "string") data.summary = "";
+    if (typeof data.summary !== "string") 
+    {
+        data.summary = "";
+    }
 
-    if (!Array.isArray(data.ai_tags)) data.ai_tags = [];
+    if (!Array.isArray(data.ai_tags)) 
+    {
+        data.ai_tags = [];
+    }
 
-    if (!data.quiz || typeof data.quiz !== "object" || typeof data.quiz.question !== "string" || !Array.isArray(data.quiz.options) || typeof data.quiz.correctAnswer !== "string")
+    data.ai_tags = data.ai_tags
+        .filter(tag => typeof tag === "string" && tag.trim())
+        .map(tag => tag.trim().toLowerCase().replace(/\s+/g, "-"))
+        .slice(0, 1);
+
+    if (
+        !data.quiz ||
+        typeof data.quiz !== "object" ||
+        typeof data.quiz.question !== "string" ||
+        !Array.isArray(data.quiz.options) ||
+        data.quiz.options.length !== 4 ||
+        typeof data.quiz.correctAnswer !== "string"
+    ) 
     {
         data.quiz = null;
     }
@@ -58,25 +79,32 @@ const validateAiResponse = (data) =>
     return data;
 };
 
-const extractJson = (text) =>
+const extractJson = (text) => 
 {
     const clean = text.replace(/```json|```/gi, "").trim();
     const match = clean.match(/\{[\s\S]*\}/);
 
-    if (!match) throw new Error("No JSON object found in AI response");
+    if (!match) 
+    {
+        throw new Error("No JSON object found in AI response");
+    }
 
     return JSON.parse(match[0]);
 };
 
-const analyzeContent = async (text) =>
+const analyzeContent = async (text) => 
 {
-    if (typeof text !== "string" || !text.trim()) throw new Error("Text is required for AI analysis");
+    if (typeof text !== "string" || !text.trim()) 
+    {
+        throw new Error("Text is required for AI analysis");
+    }
 
     const safeText = text.trim().slice(0, 12000);
 
-    try
+    try 
     {
-        const result = await groq.chat.completions.create({
+        const result = await groq.chat.completions.create(
+        {
             model: MODEL_NAME,
             temperature: 0.3,
             messages: [
@@ -89,15 +117,16 @@ const analyzeContent = async (text) =>
 
         const outputText = result.choices?.[0]?.message?.content;
 
-        if (!outputText)
+        if (!outputText) 
         {
             throw new Error("Empty response from Groq");
         }
 
         const parsed = extractJson(outputText);
+
         return validateAiResponse(parsed);
-    }
-    catch (error)
+    } 
+    catch (error) 
     {
         console.error("Groq AI Error:", error.message);
         throw new Error(`Groq AI Error: ${error.message}`);
