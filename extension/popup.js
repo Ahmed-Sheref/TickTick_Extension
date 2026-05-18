@@ -2,8 +2,9 @@
    popup.js — TickTick Extension
    ========================================================================= */
 
-const API_BASE = "https://carefree-alignment-production-7eff.up.railway.app/api/v1";
-const TELEGRAM_BOT_USERNAME = "Tick_review_bot";
+  //  const API_BASE = "https://carefree-alignment-production-7eff.up.railway.app/api/v1";
+   const API_BASE = "https://lionfish-app-jxpvk.ondigitalocean.app/api/v1";
+   const TELEGRAM_BOT_USERNAME = "Tick_review_bot";
 
 const STORAGE_KEYS = {
   userId:              "ticktick_userId",
