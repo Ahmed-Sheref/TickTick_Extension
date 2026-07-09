@@ -25,5 +25,6 @@ export const sendWeeklyEmail = async (email, contents) =>
         catch (error) 
     {
         console.error('SendGrid Error:', error.response?.body || error.message);
+        throw error;
     }
 };
