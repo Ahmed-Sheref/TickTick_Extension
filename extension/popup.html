@@ -1,194 +1,716 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>TickTick Extension</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="popup.css" />
+    <meta charset="UTF-8" />
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    />
+
+    <title>TickTick Extension</title>
+
+    <link
+        rel="preconnect"
+        href="https://fonts.googleapis.com"
+    />
+
+    <link
+        rel="preconnect"
+        href="https://fonts.gstatic.com"
+        crossorigin
+    />
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap"
+        rel="stylesheet"
+    />
+
+    <link
+        rel="stylesheet"
+        href="popup.css"
+    />
 </head>
+
 <body>
-<div class="shell">
+    <div class="shell">
 
-  <div id="onboardingView" class="full-screen-center">
-    <div class="onboard-container">
-      <div class="tt-icon-large"></div>
-      <h1>Welcome to TickTick</h1>
-      <p>Sign in to sync your articles and manage your tasks seamlessly.</p>
-      <button id="connectTickTickBtn" type="button">Connect Now</button>
+        <!-- Onboarding -->
+        <div
+            id="onboardingView"
+            class="full-screen-center"
+        >
+            <div class="onboard-container">
+
+                <div class="tt-icon-large"></div>
+
+                <h1>Welcome to TickTick</h1>
+
+                <p>
+                    Sign in to sync your articles and tasks.
+                </p>
+
+                <button
+                    id="connectTickTickBtn"
+                    type="button"
+                >
+                    Connect Now
+                </button>
+
+            </div>
+        </div>
+
+        <!-- Main App -->
+        <div
+            id="appView"
+            style="display: none;"
+        >
+
+            <header class="app-header-two-tier">
+
+                <div class="header-top-row">
+
+                    <div class="brand-wrap">
+                        <div class="brand-logo"></div>
+                        <span class="brand-text">TickTick</span>
+                    </div>
+
+                    <div class="header-actions">
+
+                        <div
+                            id="ticktickStatusPill"
+                            class="status-pill outline-pill"
+                        >
+                            <span class="pill-dot"></span>
+                            Connected
+                        </div>
+
+                        <button
+                            id="themeToggleBtn"
+                            class="theme-toggle-btn"
+                            type="button"
+                            title="Toggle Theme"
+                        ></button>
+
+                    </div>
+
+                </div>
+
+                <div class="header-bottom-row">
+
+                    <button
+                        id="tabSave"
+                        class="line-tab active"
+                        type="button"
+                    >
+                        Save
+                    </button>
+
+                    <button
+                        id="tabSettings"
+                        class="line-tab"
+                        type="button"
+                    >
+                        Settings
+                    </button>
+
+                </div>
+
+            </header>
+
+            <main class="main-scroll">
+
+                <!-- Save Panel -->
+                <section
+                    id="panelSave"
+                    class="panel"
+                >
+
+                    <div class="form-group">
+
+                        <label
+                            class="label"
+                            for="title"
+                        >
+                            Title
+                        </label>
+
+                        <input
+                            id="title"
+                            class="input"
+                            type="text"
+                            placeholder="Article title"
+                            dir="auto"
+                        />
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label
+                            class="label"
+                            for="url"
+                        >
+                            URL
+                        </label>
+
+                        <input
+                            id="url"
+                            class="input"
+                            type="text"
+                            placeholder="https://example.com/article"
+                        />
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label
+                            class="label"
+                            for="rawText"
+                        >
+                            Article Text
+                        </label>
+
+                        <textarea
+                            id="rawText"
+                            class="textarea"
+                            rows="4"
+                            placeholder="Paste article content here..."
+                            dir="auto"
+                        ></textarea>
+
+                    </div>
+
+
+                    <!-- TickTick Project -->
+                    <div
+                        id="projectField"
+                        class="form-group compact-form-group"
+                    >
+                        <label
+                            class="label"
+                            for="projectPickerBtn"
+                        >
+                            TickTick Project
+                        </label>
+
+                        <div class="picker">
+
+                            <button
+                                id="projectPickerBtn"
+                                class="picker-control"
+                                type="button"
+                                aria-haspopup="listbox"
+                                aria-controls="projectMenu"
+                                aria-expanded="false"
+                            >
+                                <span class="picker-leading-icon">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"
+                                        />
+                                    </svg>
+                                </span>
+
+                                <span
+                                    id="projectPickerLabel"
+                                    class="picker-label"
+                                >
+                                    Loading projects...
+                                </span>
+
+                                <span class="picker-chevron">
+                                    <svg
+                                        viewBox="0 0 20 20"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="m5.75 7.75 4.25 4.25 4.25-4.25"
+                                        />
+                                    </svg>
+                                </span>
+                            </button>
+
+                            <div
+                                id="projectMenu"
+                                class="picker-menu"
+                                role="listbox"
+                                style="display: none;"
+                            ></div>
+
+                            <select
+                                id="projectSelect"
+                                aria-hidden="true"
+                                tabindex="-1"
+                                hidden
+                            >
+                                <option value="">
+                                    Loading projects...
+                                </option>
+                            </select>
+
+                        </div>
+                    </div>
+
+                    <!-- Tags: type or select in the same box -->
+                    <div
+                        id="tagsField"
+                        class="form-group compact-form-group"
+                    >
+                        <label
+                            class="label"
+                            for="tagInput"
+                        >
+                            Tags
+                        </label>
+
+                        <div class="tags-picker">
+
+                            <div
+                                id="tagsInputBox"
+                                class="tags-input-box"
+                            >
+                                <div
+                                    id="selectedTagsContainer"
+                                    class="selected-tags-container"
+                                ></div>
+
+                                <input
+                                    id="tagInput"
+                                    class="tag-text-input"
+                                    type="text"
+                                    placeholder="Type or select tags"
+                                    autocomplete="off"
+                                    spellcheck="false"
+                                    aria-autocomplete="list"
+                                    aria-controls="tagSuggestions"
+                                    aria-expanded="false"
+                                />
+                            </div>
+
+                            <div
+                                id="tagSuggestions"
+                                class="tag-suggestions"
+                                role="listbox"
+                                style="display: none;"
+                            ></div>
+
+                        </div>
+
+                        <p class="hint">
+                            Type a tag and press Enter, comma, or space. The # is added automatically.
+                        </p>
+                    </div>
+
+                    <div class="ai-block">
+
+                        <span class="ai-block-label">
+                            AI Processing
+                        </span>
+
+                        <div class="ai-options-grid">
+
+                            <label
+                                class="toggle-row"
+                                for="useSummaryAi"
+                            >
+                                <span>Weekly Email</span>
+
+                                <div class="toggle-wrap">
+
+                                    <input
+                                        id="useSummaryAi"
+                                        type="checkbox"
+                                        checked
+                                    />
+
+                                    <span class="toggle-track">
+                                        <span class="toggle-thumb"></span>
+                                    </span>
+
+                                </div>
+                            </label>
+
+                            <label
+                                class="toggle-row"
+                                for="useTagsAi"
+                            >
+                                <span>AI Tags</span>
+
+                                <div class="toggle-wrap">
+
+                                    <input
+                                        id="useTagsAi"
+                                        type="checkbox"
+                                        checked
+                                    />
+
+                                    <span class="toggle-track">
+                                        <span class="toggle-thumb"></span>
+                                    </span>
+
+                                </div>
+                            </label>
+
+                            <label
+                                class="toggle-row"
+                                for="useQuiz"
+                            >
+                                <span>Telegram Quiz</span>
+
+                                <div class="toggle-wrap">
+
+                                    <input
+                                        id="useQuiz"
+                                        type="checkbox"
+                                        checked
+                                    />
+
+                                    <span class="toggle-track">
+                                        <span class="toggle-thumb"></span>
+                                    </span>
+
+                                </div>
+                            </label>
+
+                            <label
+                                class="toggle-row"
+                                for="mergeSummaryWithContent"
+                            >
+                                <span>Append Summary</span>
+
+                                <div class="toggle-wrap">
+
+                                    <input
+                                        id="mergeSummaryWithContent"
+                                        type="checkbox"
+                                    />
+
+                                    <span class="toggle-track">
+                                        <span class="toggle-thumb"></span>
+                                    </span>
+
+                                </div>
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                    <div class="save-actions">
+
+                        <button
+                            id="refreshPageBtn"
+                            class="btn btn-ghost"
+                            type="button"
+                        >
+                            Refresh
+                        </button>
+
+                        <button
+                            id="saveArticleBtn"
+                            class="btn btn-primary"
+                            type="button"
+                        >
+                            Save Article
+                        </button>
+
+                    </div>
+
+                </section>
+
+                <!-- Settings Panel -->
+                <section
+                    id="panelSettings"
+                    class="panel"
+                    style="display: none;"
+                >
+
+                    <div class="settings-group">
+
+                        <span class="settings-group-label">
+                            Account & Connection
+                        </span>
+
+                        <div
+                            class="form-group"
+                            style="margin-bottom: 8px;"
+                        >
+
+                            <div class="input-row">
+
+                                <input
+                                    id="userId"
+                                    class="input input--mono"
+                                    type="text"
+                                    readonly
+                                    placeholder="User ID"
+                                />
+
+                                <button
+                                    id="copyUserIdBtn"
+                                    class="btn btn-ghost btn-sm"
+                                    type="button"
+                                >
+                                    Copy ID
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                        <div
+                            class="connection-row"
+                            style="margin-bottom: 0;"
+                        >
+
+                            <div
+                                id="ticktickStatusSecondary"
+                                class="status-pill modern-pill"
+                            >
+                                <span class="pill-dot"></span>
+                                Connected
+                            </div>
+
+                            <button
+                                id="reconnectTickTickBtn"
+                                class="btn btn-ghost btn-sm"
+                                style="margin-left: auto;"
+                                type="button"
+                            >
+                                Reconnect
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                    <div class="settings-group">
+
+                        <span class="settings-group-label">
+                            Weekly Email Digest
+                        </span>
+
+                        <div class="input-row">
+
+                            <input
+                                id="email"
+                                class="input"
+                                type="email"
+                                placeholder="you@example.com"
+                            />
+
+                            <button
+                                id="saveEmailSettingsBtn"
+                                class="btn btn-secondary btn-sm"
+                                type="button"
+                            >
+                                Save
+                            </button>
+
+                        </div>
+
+                        <div
+                            id="currentEmailContainer"
+                            style="
+                                display: none;
+                                margin-top: 12px;
+                                padding-top: 12px;
+                                border-top: 1px dashed var(--border);
+                            "
+                        >
+
+                            <div
+                                style="
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                    margin-bottom: 8px;
+                                "
+                            >
+
+                                <span
+                                    style="
+                                        font-size: 10.5px;
+                                        color: var(--ink-3);
+                                        font-weight: 700;
+                                        text-transform: uppercase;
+                                    "
+                                >
+                                    Current Email
+                                </span>
+
+                                <span
+                                    id="currentEmailDisplay"
+                                    style="
+                                        font-size: 12.5px;
+                                        font-weight: 600;
+                                        color: var(--ink-0);
+                                    "
+                                ></span>
+
+                            </div>
+
+                            <label
+                                class="toggle-row"
+                                for="weeklyEmailToggle"
+                                style="padding: 0; border: none;"
+                            >
+                                <span>Enable Weekly Digest</span>
+
+                                <div class="toggle-wrap">
+
+                                    <input
+                                        id="weeklyEmailToggle"
+                                        type="checkbox"
+                                    />
+
+                                    <span class="toggle-track">
+                                        <span class="toggle-thumb"></span>
+                                    </span>
+
+                                </div>
+                            </label>
+
+                        </div>
+
+                    </div>
+
+                    <div class="settings-group">
+
+                        <div
+                            style="
+                                display: flex;
+                                justify-content: space-between;
+                                align-items: center;
+                                margin-bottom: 12px;
+                            "
+                        >
+
+                            <span
+                                class="settings-group-label"
+                                style="margin-bottom: 0 !important;"
+                            >
+                                Telegram Quiz
+                            </span>
+
+                            <div
+                                id="telegramStatusPill"
+                                class="status-pill status-pill--danger"
+                                style="
+                                    padding: 2px 8px;
+                                    font-size: 9.5px;
+                                "
+                            >
+                                <span class="pill-dot"></span>
+
+                                <span id="telegramStatusText">
+                                    Not Connected
+                                </span>
+                            </div>
+
+                        </div>
+
+                        <label
+                            class="toggle-row"
+                            for="telegramQuizToggle"
+                        >
+                            <span>Enable Telegram Quiz Delivery</span>
+
+                            <div class="toggle-wrap">
+
+                                <input
+                                    id="telegramQuizToggle"
+                                    type="checkbox"
+                                    checked
+                                />
+
+                                <span class="toggle-track">
+                                    <span class="toggle-thumb"></span>
+                                </span>
+
+                            </div>
+                        </label>
+
+                        <div
+                            id="telegramOptions"
+                            class="telegram-options"
+                            style="
+                                border-top: 1px dashed var(--border);
+                                padding-top: 10px;
+                                margin-top: 10px;
+                            "
+                        >
+
+                            <div
+                                class="command-block"
+                                style="padding: 8px 10px;"
+                            >
+
+                                <span class="command-block-label">
+                                    Start command
+                                </span>
+
+                                <div class="input-row">
+
+                                    <code
+                                        id="telegramCommand"
+                                        style="flex: 1;"
+                                    >
+                                        /start ...
+                                    </code>
+
+                                    <button
+                                        id="copyTelegramCommandBtn"
+                                        class="btn btn-ghost btn-sm"
+                                        type="button"
+                                    >
+                                        Copy
+                                    </button>
+
+                                </div>
+
+                            </div>
+
+                            <div
+                                class="input-row"
+                                style="margin-top: 8px;"
+                            >
+
+                                <button
+                                    id="openTelegramBotBtn"
+                                    class="btn btn-primary btn-sm"
+                                    style="width: 100%;"
+                                    type="button"
+                                >
+                                    Open Bot
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </section>
+
+            </main>
+
+            <div
+                id="statusBar"
+                class="status-bar"
+            >
+                Ready
+            </div>
+
+        </div>
+
     </div>
-  </div>
 
-  <div id="appView" style="display:none;">
-
-    <header class="app-header-two-tier">
-      <div class="header-top-row">
-        <div class="brand-wrap">
-          <div class="brand-logo"></div>
-          <span class="brand-text">TickTick</span>
-        </div>
-        <div class="header-actions">
-          <div id="ticktickStatusPill" class="status-pill outline-pill">
-            <span class="pill-dot"></span>Connected
-          </div>
-          <button id="themeToggleBtn" class="theme-toggle-btn" type="button" title="Toggle Theme"></button>
-        </div>
-      </div>
-
-      <div class="header-bottom-row">
-        <button id="tabSave" class="line-tab active" type="button">Save</button>
-        <button id="tabSettings" class="line-tab" type="button">Settings</button>
-      </div>
-    </header>
-
-    <main class="main-scroll">
-
-      <section id="panelSave" class="panel">
-
-        <div class="form-group">
-          <label class="label" for="title">Title</label>
-          <input id="title" class="input" type="text" placeholder="Article title" dir="auto" />
-        </div>
-
-        <div class="form-group">
-          <label class="label" for="url">URL</label>
-          <input id="url" class="input" type="text" placeholder="https://example.com/article" />
-        </div>
-
-        <div class="form-group">
-          <label class="label" for="rawText">Article Text</label>
-          <textarea id="rawText" class="textarea" rows="3" placeholder="Paste article content here..." dir="auto"></textarea>
-        </div>
-
-        <div class="form-group">
-          <label class="label" for="userInput">List & Tags</label>
-          <input id="userInput" class="input" type="text" placeholder="~learning #backend #nodejs" />
-          <p class="hint">Use <code>~listName</code> and <code>#tags</code></p>
-        </div>
-
-        <div class="ai-block">
-          <span class="ai-block-label">AI Processing</span>
-          <div class="ai-options-grid">
-            <label class="toggle-row" for="useSummaryAi">
-              <span>Weekly Email</span>
-              <div class="toggle-wrap">
-                <input id="useSummaryAi" type="checkbox" checked />
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              </div>
-            </label>
-
-            <label class="toggle-row" for="useTagsAi">
-              <span>AI Tags</span>
-              <div class="toggle-wrap">
-                <input id="useTagsAi" type="checkbox" checked />
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              </div>
-            </label>
-
-            <label class="toggle-row" for="useQuiz">
-              <span>Telegram Quiz</span>
-              <div class="toggle-wrap">
-                <input id="useQuiz" type="checkbox" checked />
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              </div>
-            </label>
-
-            <label class="toggle-row" for="mergeSummaryWithContent">
-              <span>Append Summary</span>
-              <div class="toggle-wrap">
-                <input id="mergeSummaryWithContent" type="checkbox" />
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <div class="save-actions">
-          <button id="refreshPageBtn" class="btn btn-ghost" type="button">Refresh</button>
-          <button id="saveArticleBtn" class="btn btn-primary" type="button">Save Article</button>
-        </div>
-
-      </section>
-
-      <section id="panelSettings" class="panel" style="display:none;">
-
-        <div class="settings-group">
-          <span class="settings-group-label">Account & Connection</span>
-          <div class="form-group" style="margin-bottom: 8px;">
-            <div class="input-row">
-              <input id="userId" class="input input--mono" type="text" readonly placeholder="User ID" />
-              <button id="copyUserIdBtn" class="btn btn-ghost btn-sm" type="button">Copy ID</button>
-            </div>
-          </div>
-          <div class="connection-row" style="margin-bottom: 0;">
-            <div id="ticktickStatusSecondary" class="status-pill modern-pill">
-              <span class="pill-dot"></span> Connected
-            </div>
-            <button id="reconnectTickTickBtn" class="btn btn-ghost btn-sm" style="margin-left: auto;">Reconnect</button>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <span class="settings-group-label">Weekly Email Digest</span>
-          <div class="input-row">
-            <input id="email" class="input" type="email" placeholder="you@example.com" />
-            <button id="saveEmailSettingsBtn" class="btn btn-secondary btn-sm" type="button">Save</button>
-          </div>
-          
-          <div id="currentEmailContainer" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-              <span style="font-size: 10.5px; color: var(--ink-3); font-weight: 700; text-transform: uppercase;">Current Email:</span>
-              <span id="currentEmailDisplay" style="font-size: 12.5px; font-weight: 600; color: var(--ink-0);"></span>
-            </div>
-            
-            <label class="toggle-row" for="weeklyEmailToggle" style="padding: 0; border: none;">
-              <span>Enable Weekly Digest</span>
-              <div class="toggle-wrap">
-                <input id="weeklyEmailToggle" type="checkbox" />
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-              </div>
-            </label>
-          </div>
-        </div>
-
-        <div class="settings-group">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-            <span class="settings-group-label" style="margin-bottom: 0 !important;">Telegram Quiz</span>
-            <div id="telegramStatusPill" class="status-pill status-pill--danger" style="padding: 2px 8px; font-size: 9.5px;">
-              <span class="pill-dot"></span><span id="telegramStatusText">Not Connected</span>
-            </div>
-          </div>
-
-          <label class="toggle-row" for="telegramQuizToggle">
-            <span>Enable Telegram Quiz Delivery</span>
-            <div class="toggle-wrap">
-              <input id="telegramQuizToggle" type="checkbox" checked />
-              <span class="toggle-track"><span class="toggle-thumb"></span></span>
-            </div>
-          </label>
-
-          <div class="telegram-options" id="telegramOptions" style="border-top: 1px dashed var(--border); padding-top: 10px; margin-top: 10px;">
-            <div class="command-block" style="padding: 8px 10px;">
-              <span class="command-block-label">Start command</span>
-              <div class="input-row">
-                <code id="telegramCommand" style="flex:1;">/start ...</code>
-                <button id="copyTelegramCommandBtn" class="btn btn-ghost btn-sm" type="button">Copy</button>
-              </div>
-            </div>
-            <div class="input-row" style="margin-top: 8px;">
-              <button id="openTelegramBotBtn" class="btn btn-primary btn-sm" style="width: 100%;" type="button">Open Bot</button>
-            </div>
-          </div>
-        </div>
-
-      </section>
-    </main>
-    <div id="statusBar" class="status-bar">Ready</div>
-  </div>
-</div>
-
-<script src="popup.js"></script>
+    <script src="popup.js"></script>
 </body>
 </html>
