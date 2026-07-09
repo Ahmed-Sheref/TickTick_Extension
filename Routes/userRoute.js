@@ -47,7 +47,8 @@ const validateQuizPreferencesInput = ({ userId, receiveTelegramQuiz }) =>
 
 router.post('/email', asyncHandler(async (req, res) =>
 {
-    const { userId, email, weeklyEmailEnabled } = req.body;
+    const userId = req.user.userId;
+    const { email, weeklyEmailEnabled } = req.body;
 
     const validationError = validateEmailInput({ userId, email, weeklyEmailEnabled });
 
@@ -73,7 +74,8 @@ router.post('/email', asyncHandler(async (req, res) =>
 
 router.post('/quiz-preferences', asyncHandler(async (req, res) =>
 {
-    const { userId, receiveTelegramQuiz } = req.body;
+    const userId = req.user.userId;
+    const { receiveTelegramQuiz } = req.body;
 
     const validationError = validateQuizPreferencesInput({ userId, receiveTelegramQuiz });
 
@@ -102,23 +104,16 @@ router.post('/quiz-preferences', asyncHandler(async (req, res) =>
     });
 }));
 
-router.get('/preferences/:userId', asyncHandler(async (req, res) =>
+router.get('/preferences/me', asyncHandler(async (req, res) =>
 {
-    const { userId } = req.params;
-
-    if (!userId || typeof userId !== 'string' || userId.trim() === '')
-    {
-        const error = new Error('userId is required and must be a non-empty string');
-        error.status = 400;
-        throw error;
-    }
+    const userId = req.user.userId;
 
     const user = await Settings.findOne({ userId }).lean();
 
     res.json(
     {
         status: 'success',
-        data: 
+        data:
         {
             userId,
             email: user?.email ?? '',
