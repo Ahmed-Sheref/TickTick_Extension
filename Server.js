@@ -26,6 +26,7 @@ mongoose.connect(DB)
     app.listen(PORT, '0.0.0.0',() =>
     {
         console.log(`[SERVER] Server is running on port ${PORT}`);
+        console.log(`Ahmed Sheref hello`);
     });
 })
 .catch((err) => 
@@ -33,3 +34,4 @@ mongoose.connect(DB)
     console.error('[DB] Connection Error:', err);
     process.exit(1);
 });
+
