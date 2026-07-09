@@ -114,11 +114,11 @@ export async function projectExist(accessToken)
     }
 }
 
-export const createTickTickTask = async (accessToken, { title, rawText, tags }) =>
+export const createTickTickTask = async (accessToken, { title, rawText, tags, projectId }) =>
 {
     try
     {
-        const projectId = await projectExist(accessToken);
+        // const projectId = projectId;
         console.log('[TICKTICK] Using projectId:', projectId);
 
         const response = await axios.post(
@@ -142,4 +142,22 @@ export const createTickTickTask = async (accessToken, { title, rawText, tags }) 
     {
         throw new Error(`Failed to create task: ${error.message}`);
     }
+};
+
+export const getTickTickProjects = async (accessToken) =>
+{
+    const response = await fetch("https://api.ticktick.com/open/v1/project", 
+    {
+        method: "GET",
+        headers: {
+            Authorization: `Bearer ${accessToken}`
+        }
+    });
+
+    if (!response.ok)
+    {
+        throw new Error("Failed to fetch TickTick projects");
+    }
+
+    return response.json();
 };

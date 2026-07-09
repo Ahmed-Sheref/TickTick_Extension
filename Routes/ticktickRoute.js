@@ -2,6 +2,7 @@ import express from 'express';
 import Settings from '../Models/User.js';
 import { getAuthUrl, exchangeToken } from '../utils/ticktick.js';
 import { hashToken, generateUserIdFromToken } from '../utils/createID.js';
+import {createAppToken} from "../utils/jwt.js";
 
 const router = express.Router();
 
@@ -122,7 +123,8 @@ router.get('/callback', async (req, res) =>
         }
 
 
-        const finalUrl = `${extensionRedirectUri}?userId=${encodeURIComponent(user.userId)}`;
+        const appToken = createAppToken(user);
+        const finalUrl = `${extensionRedirectUri}?userId=${encodeURIComponent(user.userId)}&token=${encodeURIComponent(appToken)}`;
 
         console.log('Redirecting to extension:', finalUrl);
         console.log('=== TickTick OAuth Flow Complete ===');

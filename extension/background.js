@@ -3,7 +3,7 @@
    ========================================================================= */
 
 // const API_BASE = "https://carefree-alignment-production-7eff.up.railway.app/api/v1";
-const API_BASE = "https://lionfish-app-jxpvk.ondigitalocean.app/api/v1";
+const API_BASE = "http://localhost:3000/api/v1";
 
 // ─── TickTick OAuth ───────────────────────────────────────────────────────────
 
@@ -35,14 +35,19 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
   const redirectBase = chrome.identity.getRedirectURL("ticktick");
   if (!changeInfo.url.startsWith(redirectBase)) return;
 
-  try {
+  try 
+  {
     const url    = new URL(changeInfo.url);
     const userId = url.searchParams.get("userId");
-    if (!userId) return;
+    const token  = url.searchParams.get("token");
 
-    await chrome.storage.local.set({
-      ticktick_userId:    userId,
-      ticktick_connected: true,
+    if (!userId || !token) return;
+
+    await chrome.storage.local.set(
+    {
+        ticktick_userId: userId,
+        ticktick_token: token,
+        ticktick_connected: true,
     });
 
     await chrome.tabs.remove(tabId);
