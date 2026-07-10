@@ -13,7 +13,7 @@ const createAppToken = (user) =>
             expiresIn: process.env.JWT_EXPIRES_IN || "7d"
         }
     );
-    console.log(`\n------------------------${jt}---------------------\n`)
+    // console.log(`\n------------------------${jt}---------------------\n`)
     return jt;
 };
 
