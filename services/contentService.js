@@ -6,6 +6,8 @@ import normalizeTags from "../utils/normTags.js";
 import postContentCreationService from "./postContentCreationService.js";
 
 import {validateContentInput,validateQuizObject} from "../validators/contentValidator.js";
+import { getTickTickProjects } from "../utils/ticktick.js";
+import User from "../Models/User.js";
 
 
 const prepareContentInput = (userInput) =>
@@ -150,6 +152,44 @@ const createContent = async (payload) =>
             mergeSummaryWithContent,
             projectId
         } = payload;
+
+
+        const user = await User.findOne({userId}).select("tickTickAccessToken tickTickConnected");
+
+        if (!user)
+        {
+            const error = new Error(
+                "User not found"
+            );
+
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if (!user.tickTickConnected ||!user.tickTickAccessToken)
+        {
+            const error = new Error("TickTick account is not connected");
+            error.statusCode = 401;
+            throw error;
+        }
+
+
+        console.time("project-validation");
+        const projectIds = await getTickTickProjects(user.tickTickAccessToken);
+        console.timeEnd("project-validation");
+        const projectExists = projectIds.some((project) =>
+        {
+            return String(project.id) === String(projectId);
+        });
+
+        if (!projectExists)
+        {
+            const error = new Error("Selected TickTick project no longer exists");
+
+            error.statusCode = 400;
+            throw error;
+        }
+
 
         const validationError = validateContentInput({
             userId,
