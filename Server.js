@@ -16,6 +16,15 @@ console.log('[DB] DATABASE env variable:', DB ? 'Found' : 'NOT FOUND');
 console.log('[DB] DB value:', DB || 'undefined');
 
 const PORT = process.env.PORT || 3000;
+
+console.log(
+    "[ENV CHECK]",
+    {
+        jwtSecretExists: Boolean(process.env.JWT_SECRET),
+        jwtExpiresIn: process.env.JWT_EXPIRES_IN,
+        nodeEnv: process.env.NODE_ENV
+    }
+);
 mongoose.connect(DB)
 .then((con) =>
 {
