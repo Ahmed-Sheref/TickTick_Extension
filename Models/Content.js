@@ -12,11 +12,11 @@ const quizSchema = new mongoose.Schema(
 
 const articleOptionsSchema = new mongoose.Schema(
     {
-        useSummaryAi: { type: Boolean, default: true },
-        useTagsAi: { type: Boolean, default: true },
-        useQuiz: { type: Boolean, default: true },
-        includeInWeeklyEmail: { type: Boolean, default: true },
-        includeInTelegramQuiz: { type: Boolean, default: true },
+        useSummaryAi: { type: Boolean, default: false },
+        useTagsAi: { type: Boolean, default: false },
+        useQuiz: { type: Boolean, default: false },
+        includeInWeeklyEmail: { type: Boolean, default: false },
+        includeInTelegramQuiz: { type: Boolean, default: false },
         mergeSummaryWithContent: { type: Boolean, default: false }
     },
     { _id: false }
@@ -118,8 +118,6 @@ const contentSchema = new mongoose.Schema(
     timestamps: true
 }
 );
-
-
 
 
 contentSchema.index({ userId: 1, createdAt: -1 });
