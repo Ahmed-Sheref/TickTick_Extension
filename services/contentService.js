@@ -150,9 +150,9 @@ const createContent = async (payload) =>
             use_quiz,
             use_summaryAi,
             mergeSummaryWithContent,
+            projectId = null
         } = payload;
 
-        if (payload.projectId) projectId = payload.projectId;
 
         const user = await User.findOne({userId}).select("tickTickAccessToken tickTickConnected");
 
@@ -285,7 +285,16 @@ const createContent = async (payload) =>
     }
     catch (error)
     {
-        await session.abortTransaction();
+        if (session.inTransaction())
+        {
+            await session.abortTransaction();
+        }
+
+        console.error(
+            "[CONTENT] Create error:",
+            error.message
+        );
+
         throw error;
     }
     finally
