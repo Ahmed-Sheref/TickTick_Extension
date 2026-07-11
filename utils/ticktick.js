@@ -56,63 +56,63 @@ export const exchangeToken = async (code) =>
     }
 };
 
-export async function getProjectIds(accessToken)
-{
-    try
-    {
-        const response = await axios.get(
-            `${TICKTICK_API_URL}/project`,
-            { headers: { 'Authorization': `Bearer ${accessToken}` } }
-        );
-        return response.data;
-    }
-    catch (error)
-    {
-        throw new Error(`Failed to get projects: ${error.message}`);
-    }
-}
+// export async function getProjectIds(accessToken)
+// {
+//     try
+//     {
+//         const response = await axios.get(
+//             `${TICKTICK_API_URL}/project`,
+//             { headers: { 'Authorization': `Bearer ${accessToken}` } }
+//         );
+//         return response.data;
+//     }
+//     catch (error)
+//     {
+//         throw new Error(`Failed to get projects: ${error.message}`);
+//     }
+// }
 
-export async function createProject(accessToken)
-{
-    try
-    {
-        const response = await axios.post(
-            `${TICKTICK_API_URL}/project`,
-            { name: "article", kind: "NOTE" },
-            { headers: { 'Authorization': `Bearer ${accessToken}` } }
-        );
+// export async function createProject(accessToken)
+// {
+//     try
+//     {
+//         const response = await axios.post(
+//             `${TICKTICK_API_URL}/project`,
+//             { name: "article", kind: "NOTE" },
+//             { headers: { 'Authorization': `Bearer ${accessToken}` } }
+//         );
 
-        console.log('[TICKTICK] Project created:', response.data.id);
-        return response.data;
-    }
-    catch (error)
-    {
-        throw new Error(`Failed to create project: ${error.message}`);
-    }
-}
+//         console.log('[TICKTICK] Project created:', response.data.id);
+//         return response.data;
+//     }
+//     catch (error)
+//     {
+//         throw new Error(`Failed to create project: ${error.message}`);
+//     }
+// }
 
-export async function projectExist(accessToken)
-{
-    try
-    {
-        const projects = await getProjectIds(accessToken);
-        const existing = projects.find(p => p.name.toLowerCase() === 'article');
+// export async function projectExist(accessToken)
+// {
+//     try
+//     {
+//         const projects = await getProjectIds(accessToken);
+//         const existing = projects.find(p => p.name.toLowerCase() === 'article');
 
-        if (existing)
-        {
-            console.log('[TICKTICK] Project found:', existing.id);
-            return existing.id;
-        }
+//         if (existing)
+//         {
+//             console.log('[TICKTICK] Project found:', existing.id);
+//             return existing.id;
+//         }
 
-        console.log('[TICKTICK] Project not found, creating...');
-        const newProject = await createProject(accessToken);
-        return newProject.id;
-    }
-    catch (error)
-    {
-        throw new Error(`Failed to check/create project: ${error.message}`);
-    }
-}
+//         console.log('[TICKTICK] Project not found, creating...');
+//         const newProject = await createProject(accessToken);
+//         return newProject.id;
+//     }
+//     catch (error)
+//     {
+//         throw new Error(`Failed to check/create project: ${error.message}`);
+//     }
+// }
 
 export const createTickTickTask = async (accessToken, { title, rawText, tags, projectId }) =>
 {
@@ -149,7 +149,8 @@ export const getTickTickProjects = async (accessToken) =>
     const response = await fetch("https://api.ticktick.com/open/v1/project", 
     {
         method: "GET",
-        headers: {
+        headers: 
+        {
             Authorization: `Bearer ${accessToken}`
         }
     });
@@ -160,4 +161,40 @@ export const getTickTickProjects = async (accessToken) =>
     }
 
     return response.json();
+};
+
+export const createTickTickProject = async (accessToken,projectName) =>
+{
+    const response = await fetch(
+        "https://api.ticktick.com/open/v1/project",
+        {
+            method: "POST",
+
+            headers:
+            {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json"
+            },
+
+            body: JSON.stringify(
+            {
+                name: projectName,
+                color: "#4772FA",
+                viewMode: "list",
+                kind: "NOTE"
+            })
+        }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok)
+    {
+        throw new Error(
+            data?.message ||
+            "Failed to create TickTick project"
+        );
+    }
+
+    return data;
 };

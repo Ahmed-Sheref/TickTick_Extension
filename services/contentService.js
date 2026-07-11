@@ -150,9 +150,9 @@ const createContent = async (payload) =>
             use_quiz,
             use_summaryAi,
             mergeSummaryWithContent,
-            projectId
         } = payload;
 
+        if (payload.projectId) projectId = payload.projectId;
 
         const user = await User.findOne({userId}).select("tickTickAccessToken tickTickConnected");
 
@@ -174,24 +174,26 @@ const createContent = async (payload) =>
         }
 
 
-        console.time("project-validation");
-        const projectIds = await getTickTickProjects(user.tickTickAccessToken);
-        console.timeEnd("project-validation");
-        const projectExists = projectIds.some((project) =>
+        if (projectId)
         {
-            return String(project.id) === String(projectId);
-        });
+            const projects = await getTickTickProjects(user.tickTickAccessToken);
 
-        if (!projectExists)
-        {
-            const error = new Error("Selected TickTick project no longer exists");
+            const projectExists = projects.some((project) =>
+            {
+                return String(project.id) === String(projectId);
+            });
+            if (!projectExists)
+            {
+                const error = new Error("Selected TickTick project no longer exists");
 
-            error.statusCode = 400;
-            throw error;
+                error.statusCode = 400;
+                throw error;
+            }
         }
 
 
-        const validationError = validateContentInput({
+        const validationError = validateContentInput(
+        {
             userId,
             title,
             rawText
