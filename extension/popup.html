@@ -183,7 +183,7 @@
                     </div>
 
 
-                    <!-- TickTick Project -->
+                    <!-- TickTick destination folder -->
                     <div
                         id="projectField"
                         class="form-group compact-form-group"
@@ -192,7 +192,7 @@
                             class="label"
                             for="projectPickerBtn"
                         >
-                            TickTick Project
+                            Save to
                         </label>
 
                         <div class="project-picker-row">
@@ -222,7 +222,7 @@
                                     id="projectPickerLabel"
                                     class="picker-label"
                                 >
-                                    Loading projects...
+                                    Loading lists...
                                 </span>
 
                                 <span class="picker-chevron">
@@ -251,7 +251,7 @@
                                     hidden
                                 >
                                     <option value="">
-                                        Loading projects...
+                                        Loading lists...
                                     </option>
                                 </select>
 
@@ -261,8 +261,8 @@
                                 id="openCreateProjectBtn"
                                 class="project-add-button"
                                 type="button"
-                                title="Create new project"
-                                aria-label="Create new TickTick project"
+                                title="Create new list"
+                                aria-label="Create new TickTick list"
                             >
                                 <svg
                                     viewBox="0 0 24 24"
@@ -287,9 +287,9 @@
                             hidden
                         >
                             <div class="project-create-copy">
-                                <strong>Create a TickTick project</strong>
+                                <strong>Create a TickTick list</strong>
                                 <span>
-                                    The new project will be created in your connected TickTick account.
+                                    The new list will be created in your connected TickTick account.
                                 </span>
                             </div>
 
@@ -298,7 +298,7 @@
                                 class="project-create-input"
                                 type="text"
                                 maxlength="100"
-                                placeholder="Project name"
+                                placeholder="List name"
                                 autocomplete="off"
                                 spellcheck="false"
                             />
@@ -323,7 +323,7 @@
                         </div>
                     </div>
 
-                    <!-- Tags: type or select in the same box -->
+                    <!-- Tags picker -->
                     <div
                         id="tagsField"
                         class="form-group compact-form-group"
@@ -335,33 +335,75 @@
                             Tags
                         </label>
 
-                        <div class="tags-picker">
+                        <div class="picker tags-picker">
 
                             <div
                                 id="tagsInputBox"
-                                class="tags-input-box"
+                                class="picker-control tags-input-box"
+                                role="combobox"
+                                aria-haspopup="listbox"
+                                aria-controls="tagSuggestions"
+                                aria-expanded="false"
                             >
-                                <div
-                                    id="selectedTagsContainer"
-                                    class="selected-tags-container"
-                                ></div>
+                                <span class="picker-leading-icon">
+                                    <svg
+                                        viewBox="0 0 24 24"
+                                        aria-hidden="true"
+                                    >
+                                        <path
+                                            d="M20 13 13 20 4 11V4h7l9 9Z"
+                                        />
+                                        <circle
+                                            cx="8.5"
+                                            cy="8.5"
+                                            r="1.25"
+                                        />
+                                    </svg>
+                                </span>
 
-                                <input
-                                    id="tagInput"
-                                    class="tag-text-input"
-                                    type="text"
-                                    placeholder="Type or select tags"
-                                    autocomplete="off"
-                                    spellcheck="false"
-                                    aria-autocomplete="list"
+                                <div class="tags-picker-value">
+                                    <div
+                                        id="selectedTagsContainer"
+                                        class="selected-tags-container"
+                                    ></div>
+
+                                    <input
+                                        id="tagInput"
+                                        class="tag-text-input"
+                                        type="text"
+                                        placeholder="Type or select tags"
+                                        autocomplete="off"
+                                        spellcheck="false"
+                                        aria-autocomplete="list"
+                                        aria-controls="tagSuggestions"
+                                        aria-expanded="false"
+                                    />
+                                </div>
+
+                                <button
+                                    id="tagPickerToggleBtn"
+                                    class="tag-picker-toggle"
+                                    type="button"
+                                    aria-label="Toggle tag suggestions"
                                     aria-controls="tagSuggestions"
                                     aria-expanded="false"
-                                />
+                                >
+                                    <span class="picker-chevron">
+                                        <svg
+                                            viewBox="0 0 20 20"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                d="m5.75 7.75 4.25 4.25 4.25-4.25"
+                                            />
+                                        </svg>
+                                    </span>
+                                </button>
                             </div>
 
                             <div
                                 id="tagSuggestions"
-                                class="tag-suggestions"
+                                class="picker-menu tag-suggestions"
                                 role="listbox"
                                 style="display: none;"
                             ></div>
@@ -369,7 +411,7 @@
                         </div>
 
                         <p class="hint">
-                            Type a tag and press Enter, comma, or space. The # is added automatically.
+                            Type or choose tags. Press Enter, comma, or space to add.
                         </p>
                     </div>
 
@@ -465,26 +507,6 @@
                             </label>
 
                         </div>
-
-                    </div>
-
-                    <div class="save-actions">
-
-                        <button
-                            id="refreshPageBtn"
-                            class="btn btn-ghost"
-                            type="button"
-                        >
-                            Refresh
-                        </button>
-
-                        <button
-                            id="saveArticleBtn"
-                            class="btn btn-primary"
-                            type="button"
-                        >
-                            Save Article
-                        </button>
 
                     </div>
 
@@ -767,15 +789,53 @@
 
             </main>
 
-            <div
-                id="statusBar"
-                class="status-bar"
-                role="status"
-                aria-live="polite"
-                aria-atomic="true"
+            <footer
+                id="appFooter"
+                class="app-footer"
             >
-                Ready
-            </div>
+                <div
+                    id="saveActions"
+                    class="save-actions"
+                >
+
+                    <button
+                        id="refreshPageBtn"
+                        class="btn btn-ghost"
+                        type="button"
+                    >
+                        Refresh
+                    </button>
+
+                    <button
+                        id="saveArticleBtn"
+                        class="btn btn-primary"
+                        type="button"
+                    >
+                        Save Article
+                    </button>
+
+                </div>
+
+                <div
+                    id="statusBar"
+                    class="status-bar status-bar--info"
+                    role="status"
+                    aria-live="polite"
+                    aria-atomic="true"
+                >
+                    <span
+                        class="status-icon"
+                        aria-hidden="true"
+                    ></span>
+
+                    <span
+                        id="statusText"
+                        class="status-message"
+                    >
+                        Ready
+                    </span>
+                </div>
+            </footer>
 
         </div>
 

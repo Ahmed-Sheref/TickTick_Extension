@@ -33,6 +33,7 @@ const el =
     appView: document.getElementById("appView"),
     mainScroll: document.querySelector(".main-scroll"),
     statusBar: document.getElementById("statusBar"),
+    statusText: document.getElementById("statusText"),
 
     ticktickStatusPill: document.getElementById("ticktickStatusPill"),
     ticktickStatusSecondary: document.getElementById("ticktickStatusSecondary"),
@@ -43,6 +44,7 @@ const el =
     tabSettings: document.getElementById("tabSettings"),
     panelSave: document.getElementById("panelSave"),
     panelSettings: document.getElementById("panelSettings"),
+    saveActions: document.getElementById("saveActions"),
 
     title: document.getElementById("title"),
     url: document.getElementById("url"),
@@ -62,6 +64,7 @@ const el =
 
     tagsField: document.getElementById("tagsField"),
     tagsInputBox: document.getElementById("tagsInputBox"),
+    tagPickerToggleBtn: document.getElementById("tagPickerToggleBtn"),
     tagInput: document.getElementById("tagInput"),
     selectedTagsContainer: document.getElementById("selectedTagsContainer"),
     tagSuggestions: document.getElementById("tagSuggestions"),
@@ -217,43 +220,32 @@ async function toggleTheme()
 
 // ─── Status ──────────────────────────────────────────────────────────────────
 
-function setStatus(
-    message,
-    type = "info",
-    shouldScroll = true
-)
+function setStatus(message, type = "info")
 {
     if (!el.statusBar)
     {
         return;
     }
 
-    el.statusBar.textContent = message;
+    const normalizedMessage =
+        String(message || "Ready");
+
+    if (el.statusText)
+    {
+        el.statusText.textContent =
+            normalizedMessage;
+    }
+    else
+    {
+        el.statusBar.textContent =
+            normalizedMessage;
+    }
+
     el.statusBar.className =
         `status-bar status-bar--${type}`;
 
-    if (!shouldScroll || !message)
-    {
-        return;
-    }
-
-    requestAnimationFrame(() =>
-    {
-        if (el.mainScroll)
-        {
-            el.mainScroll.scrollTo(
-            {
-                top: el.mainScroll.scrollHeight,
-                behavior: "smooth"
-            });
-        }
-
-        el.statusBar.scrollIntoView(
-        {
-            behavior: "smooth",
-            block: "end"
-        });
-    });
+    el.statusBar.title =
+        normalizedMessage;
 }
 
 
@@ -277,6 +269,24 @@ function switchTab(tab)
             isSave
                 ? "none"
                 : "flex";
+    }
+
+    if (el.saveActions)
+    {
+        el.saveActions.style.display =
+            isSave
+                ? "grid"
+                : "none";
+    }
+
+    el.appView?.classList.toggle(
+        "settings-active",
+        !isSave
+    );
+
+    if (el.mainScroll)
+    {
+        el.mainScroll.scrollTop = 0;
     }
 
     el.tabSave?.classList.toggle("active", isSave);
@@ -304,7 +314,7 @@ function setConnectedUI(isConnected)
     {
         el.appView.style.display =
             isConnected
-                ? "block"
+                ? "grid"
                 : "none";
     }
 
@@ -699,7 +709,7 @@ function renderProjects(projects, selectedProjectId = "")
 
         emptyMessage.className = "picker-empty-state";
         emptyMessage.textContent =
-            "No TickTick projects yet. New articles will be saved to Inbox.";
+            "No TickTick lists yet. New articles will be saved to Inbox.";
 
         el.projectMenu.appendChild(emptyMessage);
     }
@@ -741,7 +751,7 @@ async function createTickTickProject()
     if (!projectName)
     {
         setStatus(
-            "Project name is required.",
+            "List name is required.",
             "danger"
         );
 
@@ -761,7 +771,7 @@ async function createTickTickProject()
     if (duplicateExists)
     {
         setStatus(
-            "A project with this name already exists.",
+            "A list with this name already exists.",
             "warning"
         );
 
@@ -788,7 +798,7 @@ async function createTickTickProject()
         }
 
         setStatus(
-            "Creating TickTick project...",
+            "Creating TickTick list...",
             "info"
         );
 
@@ -809,7 +819,7 @@ async function createTickTickProject()
         if (!createdProject?.id)
         {
             throw new Error(
-                "Project was created, but its ID was not returned."
+                "List was created, but its ID was not returned."
             );
         }
 
@@ -840,7 +850,7 @@ async function createTickTickProject()
         hideProjectCreatePanel();
 
         setStatus(
-            "Project created and selected.",
+            `${projectName} was created and selected.`,
             "success"
         );
     }
@@ -848,7 +858,7 @@ async function createTickTickProject()
     {
         setStatus(
             error.message ||
-            "Failed to create project.",
+            "Failed to create list.",
             "danger"
         );
     }
@@ -903,7 +913,7 @@ async function loadTickTickProjects()
             if (el.projectPickerLabel)
             {
                 el.projectPickerLabel.textContent =
-                    "Loading projects...";
+                    "Loading lists...";
             }
 
             el.projectPickerBtn.disabled = true;
@@ -961,7 +971,7 @@ async function loadTickTickProjects()
         }
 
         setStatus(
-            "Could not refresh projects. Showing saved data.",
+            "Could not refresh lists. Showing saved data.",
             "warning"
         );
     }
@@ -1044,6 +1054,20 @@ function hideTagSuggestions()
         "false"
     );
 
+    el.tagsInputBox?.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    el.tagPickerToggleBtn?.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    el.tagsInputBox?.classList.remove(
+        "open"
+    );
+
     activeTagSuggestionIndex = -1;
 }
 
@@ -1120,7 +1144,7 @@ function addTag(tag)
         el.tagInput.focus();
     }
 
-    renderTagSuggestions();
+    hideTagSuggestions();
 }
 
 function removeTag(tag)
@@ -1317,6 +1341,20 @@ function renderTagSuggestions()
     el.tagInput.setAttribute(
         "aria-expanded",
         "true"
+    );
+
+    el.tagsInputBox?.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    el.tagPickerToggleBtn?.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    el.tagsInputBox?.classList.add(
+        "open"
     );
 }
 
@@ -1716,6 +1754,12 @@ async function saveArticle()
         const projectId =
             el.projectSelect?.value || "";
 
+        const destinationName =
+            projectId
+                ? el.projectPickerLabel?.textContent?.trim() ||
+                    "selected project"
+                : "TickTick Inbox";
+
         const tags =
             getTagsForSave();
 
@@ -1797,7 +1841,7 @@ async function saveArticle()
         }
 
         setStatus(
-            "Article saved successfully.",
+            `Saved to ${destinationName} successfully.`,
             "success"
         );
 
@@ -2449,9 +2493,55 @@ function bindEvents()
 
     el.tagsInputBox?.addEventListener(
         "click",
-        () =>
+        (event) =>
         {
+            event.stopPropagation();
+
+            if (
+                event.target.closest(
+                    "#tagPickerToggleBtn"
+                )
+            )
+            {
+                return;
+            }
+
+            hideProjectMenu();
+            hideProjectCreatePanel();
+
             el.tagInput?.focus();
+
+            if (
+                el.tagSuggestions?.style.display !==
+                "block"
+            )
+            {
+                renderTagSuggestions();
+            }
+        }
+    );
+
+    el.tagPickerToggleBtn?.addEventListener(
+        "click",
+        (event) =>
+        {
+            event.stopPropagation();
+
+            const isOpen =
+                el.tagSuggestions?.style.display ===
+                "block";
+
+            if (isOpen)
+            {
+                hideTagSuggestions();
+                return;
+            }
+
+            hideProjectMenu();
+            hideProjectCreatePanel();
+
+            el.tagInput?.focus();
+            renderTagSuggestions();
         }
     );
 
@@ -2542,6 +2632,8 @@ function bindEvents()
 
 async function bootstrap()
 {
+    window.scrollTo(0, 0);
+
     const stored = await storageGet(
     [
         STORAGE_KEYS.userId,
@@ -2593,8 +2685,7 @@ async function bootstrap()
             : "Ready",
         isConnected
             ? "info"
-            : "success",
-        false
+            : "success"
     );
 
     if (isConnected && el.userId)
@@ -2612,8 +2703,7 @@ async function bootstrap()
 
         setStatus(
             "Ready",
-            "success",
-            false
+            "success"
         );
     }
 }
