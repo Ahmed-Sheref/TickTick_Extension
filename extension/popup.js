@@ -31,6 +31,7 @@ const el =
 {
     onboardingView: document.getElementById("onboardingView"),
     appView: document.getElementById("appView"),
+    mainScroll: document.querySelector(".main-scroll"),
     statusBar: document.getElementById("statusBar"),
 
     ticktickStatusPill: document.getElementById("ticktickStatusPill"),
@@ -52,6 +53,7 @@ const el =
     projectPickerBtn: document.getElementById("projectPickerBtn"),
     projectPickerLabel: document.getElementById("projectPickerLabel"),
     projectMenu: document.getElementById("projectMenu"),
+    projectDestinationHint: document.getElementById("projectDestinationHint"),
     openCreateProjectBtn: document.getElementById("openCreateProjectBtn"),
     projectCreatePanel: document.getElementById("projectCreatePanel"),
     projectNameInput: document.getElementById("projectNameInput"),
@@ -215,7 +217,11 @@ async function toggleTheme()
 
 // ─── Status ──────────────────────────────────────────────────────────────────
 
-function setStatus(message, type = "info")
+function setStatus(
+    message,
+    type = "info",
+    shouldScroll = true
+)
 {
     if (!el.statusBar)
     {
@@ -223,7 +229,31 @@ function setStatus(message, type = "info")
     }
 
     el.statusBar.textContent = message;
-    el.statusBar.className = `status-bar status-bar--${type}`;
+    el.statusBar.className =
+        `status-bar status-bar--${type}`;
+
+    if (!shouldScroll || !message)
+    {
+        return;
+    }
+
+    requestAnimationFrame(() =>
+    {
+        if (el.mainScroll)
+        {
+            el.mainScroll.scrollTo(
+            {
+                top: el.mainScroll.scrollHeight,
+                behavior: "smooth"
+            });
+        }
+
+        el.statusBar.scrollIntoView(
+        {
+            behavior: "smooth",
+            block: "end"
+        });
+    });
 }
 
 
@@ -463,10 +493,21 @@ function setSelectedProject(projectId, shouldSave = true)
 
     el.projectSelect.value = normalizedProjectId;
 
+    const destinationName =
+        normalizedProjectId
+            ? option.textContent || "Unnamed Project"
+            : "Inbox";
+
     if (el.projectPickerLabel)
     {
         el.projectPickerLabel.textContent =
-            option.textContent || "Unnamed Project";
+            destinationName;
+    }
+
+    if (el.projectDestinationHint)
+    {
+        el.projectDestinationHint.textContent =
+            `Will be saved to: ${destinationName}`;
     }
 
     if (el.projectMenu)
@@ -504,6 +545,63 @@ function setSelectedProject(projectId, shouldSave = true)
 
     hideProjectMenu();
     hideProjectCreatePanel();
+}
+
+function createInboxOption()
+{
+    const option =
+        document.createElement("option");
+
+    option.value = "";
+    option.textContent = "Inbox";
+
+    el.projectSelect.appendChild(option);
+
+    const button =
+        document.createElement("button");
+
+    button.type = "button";
+    button.className = "picker-option";
+    button.dataset.projectId = "";
+    button.setAttribute("role", "option");
+
+    const icon =
+        document.createElement("span");
+
+    icon.className = "picker-option-icon";
+    icon.innerHTML =
+    `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 5.75A1.75 1.75 0 0 1 5.75 4h12.5A1.75 1.75 0 0 1 20 5.75v12.5A1.75 1.75 0 0 1 18.25 20H5.75A1.75 1.75 0 0 1 4 18.25V5.75Z"/>
+            <path d="M4 14h4l1.5 2h5l1.5-2h4"/>
+        </svg>
+    `;
+
+    const name =
+        document.createElement("span");
+
+    name.className = "picker-option-name";
+    name.textContent = "Inbox";
+
+    const check =
+        document.createElement("span");
+
+    check.className = "picker-option-check";
+    check.textContent = "✓";
+
+    button.appendChild(icon);
+    button.appendChild(name);
+    button.appendChild(check);
+
+    button.addEventListener(
+        "click",
+        () =>
+        {
+            setSelectedProject("");
+        }
+    );
+
+    el.projectMenu.appendChild(button);
 }
 
 function createProjectOption(project)
@@ -587,41 +685,23 @@ function renderProjects(projects, selectedProjectId = "")
     el.projectSelect.innerHTML = "";
     el.projectMenu.innerHTML = "";
 
+    createInboxOption();
+
+    for (const project of availableProjects)
+    {
+        createProjectOption(project);
+    }
+
     if (availableProjects.length === 0)
     {
-        const option =
-            document.createElement("option");
-
-        option.value = "";
-        option.textContent =
-            "Inbox — no projects available";
-
-        el.projectSelect.appendChild(option);
-        el.projectSelect.value = "";
-
-        if (el.projectPickerLabel)
-        {
-            el.projectPickerLabel.textContent =
-                "Inbox — no projects available";
-        }
-
         const emptyMessage =
             document.createElement("div");
 
         emptyMessage.className = "picker-empty-state";
         emptyMessage.textContent =
-            "No TickTick projects yet. Articles can still be saved to Inbox.";
+            "No TickTick projects yet. New articles will be saved to Inbox.";
 
         el.projectMenu.appendChild(emptyMessage);
-        el.projectPickerBtn.disabled = true;
-
-        void storageSet(
-        {
-            [STORAGE_KEYS.selectedProjectId]: ""
-        });
-
-        hideProjectMenu();
-        return;
     }
 
     el.projectPickerBtn.disabled = false;
@@ -639,13 +719,7 @@ function renderProjects(projects, selectedProjectId = "")
     const finalSelectedProjectId =
         selectedProjectExists
             ? normalizedSelectedProjectId
-            : String(availableProjects[0].id);
-
-    for (const project of availableProjects)
-    {
-        createProjectOption(project);
-    }
-
+            : "";
 
     setSelectedProject(
         finalSelectedProjectId,
@@ -1642,16 +1716,6 @@ async function saveArticle()
         const projectId =
             el.projectSelect?.value || "";
 
-        const hasProjects =
-            availableProjects.length > 0;
-
-        if (hasProjects && !projectId)
-        {
-            throw new Error(
-                "Please select a TickTick project."
-            );
-        }
-
         const tags =
             getTagsForSave();
 
@@ -2529,7 +2593,8 @@ async function bootstrap()
             : "Ready",
         isConnected
             ? "info"
-            : "success"
+            : "success",
+        false
     );
 
     if (isConnected && el.userId)
@@ -2547,7 +2612,8 @@ async function bootstrap()
 
         setStatus(
             "Ready",
-            "success"
+            "success",
+            false
         );
     }
 }
