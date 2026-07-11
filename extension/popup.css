@@ -890,6 +890,82 @@ code {
 
 /* Custom project picker */
 
+.project-picker-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.project-picker-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  color: #ffffff;
+  background: var(--blue);
+  border: var(--bw) solid var(--blue);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 4px 12px var(--blue-soft);
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.project-add-button:hover {
+  background: var(--blue-hover);
+  border-color: var(--blue-hover);
+  transform: translateY(-1px);
+}
+
+.project-add-button:focus-visible {
+  box-shadow: 0 0 0 3px var(--blue-soft);
+}
+
+.project-add-button:active {
+  transform: translateY(0);
+}
+
+.project-add-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.project-destination-hint {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 6px 2px 0;
+  color: var(--ink-3);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.project-destination-hint::before {
+  content: "✓";
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .picker,
 .tags-picker {
   position: relative;
@@ -1237,15 +1313,15 @@ code {
 }
 
 .save-actions {
-  position: static;
   display: grid;
   grid-template-columns: 1fr 1.15fr;
   gap: 9px;
+  flex-shrink: 0;
   margin: 0;
-  padding: 2px 0 4px;
-  background: transparent;
-  border-top: 0;
-  z-index: auto;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  z-index: 20;
 }
 
 .save-actions .btn {
@@ -1322,3 +1398,659 @@ code {
   border-color: rgba(74, 114, 245, 0.3);
 }
 
+
+/* =========================================
+   16. CREATE TICKTICK PROJECT
+========================================= */
+
+.picker-empty-state {
+  padding: 10px 9px 7px;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.project-create-panel {
+  margin-top: 7px;
+  padding: 10px;
+  background: var(--surface);
+  border: var(--bw) solid var(--border);
+  border-radius: 11px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+.project-create-panel[hidden] {
+  display: none;
+}
+
+.project-create-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.project-create-copy strong {
+  color: var(--ink-1);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.project-create-copy span {
+  color: var(--ink-3);
+  font-size: 10.25px;
+  line-height: 1.35;
+}
+
+.project-create-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  color: var(--ink-0);
+  background: var(--bg);
+  border: var(--bw) solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 12px;
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.project-create-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-soft);
+}
+
+.project-create-input:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.project-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.project-create-cancel,
+.project-create-confirm {
+  min-width: 70px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.project-create-cancel {
+  color: var(--ink-2);
+  background: transparent;
+  border: var(--bw) solid var(--border);
+}
+
+.project-create-confirm {
+  color: #fff;
+  background: var(--blue);
+  border: var(--bw) solid var(--blue);
+}
+
+.project-create-cancel:hover,
+.project-create-confirm:hover {
+  transform: translateY(-1px);
+}
+
+.project-create-confirm:disabled {
+  cursor: wait;
+  opacity: 0.65;
+  transform: none;
+}
+
+[data-theme="dark"] .project-create-panel {
+  background: var(--bg-3);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="dark"] .project-create-input {
+  background: var(--bg-2);
+}
+
+
+/* Fixed action and message footer */
+.save-actions {
+  box-shadow: 0 -4px 14px rgba(15, 23, 42, 0.04);
+}
+
+[data-theme="dark"] .save-actions {
+  box-shadow: 0 -4px 14px rgba(0, 0, 0, 0.18);
+}
+
+.status-bar {
+  flex-shrink: 0;
+}
+
+/* =========================================
+   17. FINAL STABLE POPUP LAYOUT
+========================================= */
+
+html,
+body
+{
+    width: 380px !important;
+    min-width: 380px !important;
+    max-width: 380px !important;
+
+    height: 600px !important;
+    min-height: 600px !important;
+    max-height: 600px !important;
+
+    overflow: hidden !important;
+}
+
+body
+{
+    display: block !important;
+}
+
+.shell
+{
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+#appView
+{
+    display: grid;
+    grid-template-rows:
+        auto
+        minmax(0, 1fr)
+        auto;
+
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    overflow: hidden !important;
+}
+
+.app-header-two-tier
+{
+    position: relative !important;
+    top: auto !important;
+    z-index: 20 !important;
+
+    grid-row: 1;
+
+    min-height: 0 !important;
+}
+
+.main-scroll
+{
+    grid-row: 2;
+
+    min-height: 0 !important;
+
+    padding: 11px 14px 10px !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+
+    overscroll-behavior: contain;
+}
+
+/* Footer remains inside the 600px popup viewport. */
+.app-footer
+{
+    position: relative !important;
+    inset: auto !important;
+    z-index: 40 !important;
+
+    grid-row: 3;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    width: 100% !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+
+    background: var(--surface) !important;
+    border-top: 1px solid var(--border) !important;
+
+    box-shadow:
+        0 -5px 18px
+        rgba(15, 23, 42, 0.07) !important;
+}
+
+/* Save buttons sit directly above the message bar. */
+.app-footer .save-actions
+{
+    position: static !important;
+
+    display: grid;
+    grid-template-columns:
+        1fr
+        1.35fr;
+
+    gap: 9px;
+
+    width: 100% !important;
+
+    margin: 0 !important;
+    padding: 8px 14px !important;
+
+    background: var(--surface) !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.app-footer .save-actions .btn
+{
+    width: 100% !important;
+
+    height: 36px !important;
+    min-height: 36px !important;
+
+    font-size: 12.5px !important;
+}
+
+/* Status message is always visible below the buttons. */
+.app-footer .status-bar
+{
+    position: static !important;
+
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 8px !important;
+
+    width: 100% !important;
+
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+
+    padding: 0 14px !important;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    border-top:
+        1px solid
+        var(--border) !important;
+
+    box-shadow: none !important;
+}
+
+.app-footer .status-bar::before
+{
+    display: none !important;
+    content: none !important;
+}
+
+.app-footer .status-icon
+{
+    display: block !important;
+    flex: 0 0 7px !important;
+
+    width: 7px !important;
+    height: 7px !important;
+    min-width: 7px !important;
+
+    border-radius: 50% !important;
+
+    background: var(--blue) !important;
+    box-shadow: none !important;
+}
+
+.app-footer .status-icon::before
+{
+    display: none !important;
+    content: none !important;
+}
+
+.app-footer .status-message
+{
+    min-width: 0 !important;
+
+    overflow: hidden !important;
+
+    color: inherit !important;
+
+    font-size: 11.5px !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.app-footer .status-bar--success .status-icon
+{
+    background: var(--green) !important;
+
+    box-shadow:
+        0 0 0 3px
+        var(--green-ring) !important;
+}
+
+.app-footer .status-bar--danger .status-icon
+{
+    background: var(--red) !important;
+
+    box-shadow:
+        0 0 0 3px
+        var(--red-ring) !important;
+}
+
+.app-footer .status-bar--warning .status-icon
+{
+    background: var(--amber) !important;
+
+    box-shadow:
+        0 0 0 3px
+        #fde68a !important;
+}
+
+
+/* =========================================
+   18. SAVE PAGE
+========================================= */
+
+#panelSave
+{
+    gap: 9px !important;
+
+    padding:
+        0
+        0
+        4px !important;
+}
+
+#panelSave .input
+{
+    height: 38px !important;
+}
+
+#panelSave .textarea
+{
+    min-height: 76px !important;
+    max-height: 125px !important;
+}
+
+.project-picker-row
+{
+    align-items: center !important;
+}
+
+.picker-control,
+.tags-input-box.picker-control,
+.project-add-button
+{
+    height: 40px !important;
+    min-height: 40px !important;
+}
+
+.tags-input-box.picker-control
+{
+    padding:
+        4px
+        8px
+        4px
+        10px !important;
+}
+
+.tags-picker-value
+{
+    min-width: 0 !important;
+
+    overflow: hidden !important;
+
+    flex-wrap: nowrap !important;
+}
+
+.tags-input-box .selected-tags-container
+{
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 4px !important;
+
+    flex: 0 1 auto !important;
+
+    max-width: 185px !important;
+
+    overflow-x: auto !important;
+
+    scrollbar-width: none !important;
+}
+
+.tags-input-box
+.selected-tags-container::-webkit-scrollbar
+{
+    display: none !important;
+}
+
+.tags-input-box .tag-text-input
+{
+    flex: 1 1 90px !important;
+
+    width: auto !important;
+    min-width: 78px !important;
+    height: 28px !important;
+
+    padding: 0 !important;
+}
+
+.tag-picker-toggle
+{
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    flex: 0 0 28px !important;
+
+    width: 28px !important;
+    height: 28px !important;
+
+    margin-left: auto !important;
+    padding: 0 !important;
+
+    color: var(--ink-3) !important;
+    background: transparent !important;
+
+    border: 0 !important;
+    border-radius: 7px !important;
+
+    cursor: pointer !important;
+}
+
+.tag-picker-toggle:hover
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+}
+
+.tag-picker-toggle .picker-chevron
+{
+    margin: 0 !important;
+
+    transition:
+        transform
+        0.18s
+        ease !important;
+}
+
+.tags-input-box.open
+.tag-picker-toggle
+.picker-chevron
+{
+    transform:
+        rotate(180deg) !important;
+}
+
+
+/* =========================================
+   19. SETTINGS PAGE
+========================================= */
+
+/* The Settings page uses the full available middle row without scrolling. */
+#appView.settings-active .main-scroll
+{
+    overflow: hidden !important;
+
+    padding:
+        8px
+        12px !important;
+}
+
+#panelSettings
+{
+    display: flex;
+    flex-direction: column;
+
+    height: 100% !important;
+    min-height: 0 !important;
+
+    gap: 7px !important;
+
+    padding: 0 !important;
+}
+
+#panelSettings .settings-group
+{
+    flex: 0 0 auto !important;
+
+    margin: 0 !important;
+    padding: 8px 10px !important;
+
+    border-radius: 10px !important;
+}
+
+#panelSettings .settings-group-label
+{
+    margin-bottom: 5px !important;
+
+    font-size: 10.25px !important;
+}
+
+#panelSettings .form-group
+{
+    margin-bottom: 4px !important;
+}
+
+#panelSettings .input
+{
+    height: 30px !important;
+
+    font-size: 11px !important;
+}
+
+#panelSettings .btn,
+#panelSettings .btn-sm
+{
+    height: 28px !important;
+    min-height: 28px !important;
+
+    padding: 0 8px !important;
+
+    font-size: 10.5px !important;
+}
+
+#panelSettings .connection-row
+{
+    min-height: 26px !important;
+
+    gap: 6px !important;
+}
+
+#panelSettings .status-pill
+{
+    padding: 2px 7px !important;
+
+    font-size: 9.25px !important;
+}
+
+#panelSettings .toggle-row,
+[data-theme="dark"]
+#panelSettings .toggle-row
+{
+    min-height: 26px !important;
+
+    padding: 3px 0 !important;
+
+    font-size: 11px !important;
+}
+
+#panelSettings
+.toggle-row > span:first-child
+{
+    font-size: 11px !important;
+}
+
+#panelSettings #currentEmailContainer
+{
+    margin-top: 5px !important;
+    padding-top: 5px !important;
+}
+
+#panelSettings
+#currentEmailContainer > div:first-child
+{
+    margin-bottom: 3px !important;
+}
+
+#panelSettings #telegramOptions
+{
+    margin-top: 5px !important;
+    padding-top: 5px !important;
+}
+
+#panelSettings .command-block
+{
+    gap: 2px !important;
+
+    padding: 5px 7px !important;
+}
+
+#panelSettings .command-block-label
+{
+    font-size: 8.5px !important;
+}
+
+#panelSettings .command-block code
+{
+    max-width: 210px !important;
+
+    overflow: hidden !important;
+
+    font-size: 9.75px !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#panelSettings
+#telegramOptions > .input-row
+{
+    margin-top: 5px !important;
+}
+
+[data-theme="dark"] .app-footer
+{
+    box-shadow:
+        0 -5px 18px
+        rgba(0, 0, 0, 0.26) !important;
+}

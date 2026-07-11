@@ -1,20 +1,42 @@
 import jwt from "jsonwebtoken";
 
-
 const createAppToken = (user) =>
 {
-    let jt = jwt.sign(
+    const secret = process.env.JWT_SECRET;
+
+    console.log(
+        "[JWT DIRECT CHECK]",
+        {
+            secretExists: Boolean(secret),
+            secretType: typeof secret,
+            secretLength:
+                typeof secret === "string"
+                    ? secret.length
+                    : 0
+        }
+    );
+
+    if (!secret)
+    {
+        throw new Error(
+            "JWT_SECRET is missing inside createAppToken"
+        );
+    }
+
+    return jwt.sign(
         {
             userId: user.userId,
             mongoId: user._id.toString()
         },
-        process.env.JWT_SECRET,
+        secret,
         {
-            expiresIn: process.env.JWT_EXPIRES_IN || "7d"
+            expiresIn:
+                process.env.JWT_EXPIRES_IN || "7d"
         }
     );
-    console.log(`\n------------------------${jt}---------------------\n`)
-    return jt;
 };
 
-export {createAppToken};
+export
+{
+    createAppToken
+};
