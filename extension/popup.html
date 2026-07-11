@@ -195,10 +195,12 @@
                             TickTick Project
                         </label>
 
-                        <div class="picker">
+                        <div class="project-picker-row">
 
-                            <button
-                                id="projectPickerBtn"
+                            <div class="picker project-picker-main">
+
+                                <button
+                                    id="projectPickerBtn"
                                 class="picker-control"
                                 type="button"
                                 aria-haspopup="listbox"
@@ -242,17 +244,75 @@
                                 style="display: none;"
                             ></div>
 
-                            <select
-                                id="projectSelect"
-                                aria-hidden="true"
-                                tabindex="-1"
-                                hidden
-                            >
-                                <option value="">
-                                    Loading projects...
-                                </option>
-                            </select>
+                                <select
+                                    id="projectSelect"
+                                    aria-hidden="true"
+                                    tabindex="-1"
+                                    hidden
+                                >
+                                    <option value="">
+                                        Loading projects...
+                                    </option>
+                                </select>
 
+                            </div>
+
+                            <button
+                                id="openCreateProjectBtn"
+                                class="project-add-button"
+                                type="button"
+                                title="Create new project"
+                                aria-label="Create new TickTick project"
+                            >
+                                <svg
+                                    viewBox="0 0 24 24"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M12 5v14M5 12h14"/>
+                                </svg>
+                            </button>
+
+                        </div>
+
+                        <div
+                            id="projectCreatePanel"
+                            class="project-create-panel"
+                            hidden
+                        >
+                            <div class="project-create-copy">
+                                <strong>Create a TickTick project</strong>
+                                <span>
+                                    The new project will be created in your connected TickTick account.
+                                </span>
+                            </div>
+
+                            <input
+                                id="projectNameInput"
+                                class="project-create-input"
+                                type="text"
+                                maxlength="100"
+                                placeholder="Project name"
+                                autocomplete="off"
+                                spellcheck="false"
+                            />
+
+                            <div class="project-create-actions">
+                                <button
+                                    id="cancelCreateProjectBtn"
+                                    class="project-create-cancel"
+                                    type="button"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    id="confirmCreateProjectBtn"
+                                    class="project-create-confirm"
+                                    type="button"
+                                >
+                                    Create
+                                </button>
+                            </div>
                         </div>
                     </div>
 

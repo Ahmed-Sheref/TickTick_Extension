@@ -890,6 +890,64 @@ code {
 
 /* Custom project picker */
 
+.project-picker-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.project-picker-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.project-add-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  color: #ffffff;
+  background: var(--blue);
+  border: var(--bw) solid var(--blue);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  outline: none;
+  box-shadow: 0 4px 12px var(--blue-soft);
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    transform 0.16s ease;
+}
+
+.project-add-button:hover {
+  background: var(--blue-hover);
+  border-color: var(--blue-hover);
+  transform: translateY(-1px);
+}
+
+.project-add-button:focus-visible {
+  box-shadow: 0 0 0 3px var(--blue-soft);
+}
+
+.project-add-button:active {
+  transform: translateY(0);
+}
+
+.project-add-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .picker,
 .tags-picker {
   position: relative;
@@ -1322,3 +1380,127 @@ code {
   border-color: rgba(74, 114, 245, 0.3);
 }
 
+
+/* =========================================
+   16. CREATE TICKTICK PROJECT
+========================================= */
+
+.picker-empty-state {
+  padding: 10px 9px 7px;
+  color: var(--ink-3);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.project-create-panel {
+  margin-top: 7px;
+  padding: 10px;
+  background: var(--surface);
+  border: var(--bw) solid var(--border);
+  border-radius: 11px;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+.project-create-panel[hidden] {
+  display: none;
+}
+
+.project-create-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.project-create-copy strong {
+  color: var(--ink-1);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.project-create-copy span {
+  color: var(--ink-3);
+  font-size: 10.25px;
+  line-height: 1.35;
+}
+
+.project-create-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  color: var(--ink-0);
+  background: var(--bg);
+  border: var(--bw) solid var(--border);
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 12px;
+  outline: none;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.project-create-input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-soft);
+}
+
+.project-create-input:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.project-create-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 7px;
+  margin-top: 8px;
+}
+
+.project-create-cancel,
+.project-create-confirm {
+  min-width: 70px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-family: var(--font);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    opacity 0.16s ease,
+    transform 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.project-create-cancel {
+  color: var(--ink-2);
+  background: transparent;
+  border: var(--bw) solid var(--border);
+}
+
+.project-create-confirm {
+  color: #fff;
+  background: var(--blue);
+  border: var(--bw) solid var(--blue);
+}
+
+.project-create-cancel:hover,
+.project-create-confirm:hover {
+  transform: translateY(-1px);
+}
+
+.project-create-confirm:disabled {
+  cursor: wait;
+  opacity: 0.65;
+  transform: none;
+}
+
+[data-theme="dark"] .project-create-panel {
+  background: var(--bg-3);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+
+[data-theme="dark"] .project-create-input {
+  background: var(--bg-2);
+}

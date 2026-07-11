@@ -52,6 +52,11 @@ const el =
     projectPickerBtn: document.getElementById("projectPickerBtn"),
     projectPickerLabel: document.getElementById("projectPickerLabel"),
     projectMenu: document.getElementById("projectMenu"),
+    openCreateProjectBtn: document.getElementById("openCreateProjectBtn"),
+    projectCreatePanel: document.getElementById("projectCreatePanel"),
+    projectNameInput: document.getElementById("projectNameInput"),
+    confirmCreateProjectBtn: document.getElementById("confirmCreateProjectBtn"),
+    cancelCreateProjectBtn: document.getElementById("cancelCreateProjectBtn"),
 
     tagsField: document.getElementById("tagsField"),
     tagsInputBox: document.getElementById("tagsInputBox"),
@@ -90,6 +95,7 @@ const el =
 
 // ─── Runtime State ───────────────────────────────────────────────────────────
 
+let availableProjects = [];
 let availableTags = [];
 let selectedTags = [];
 let activeTagSuggestionIndex = -1;
@@ -248,6 +254,7 @@ function switchTab(tab)
 
     hideTagSuggestions();
     hideProjectMenu();
+    hideProjectCreatePanel();
 }
 
 
@@ -398,7 +405,37 @@ function toggleProjectMenu()
     else
     {
         hideTagSuggestions();
+        hideProjectCreatePanel(false);
         showProjectMenu();
+    }
+}
+
+function hideProjectCreatePanel(clearInput = true)
+{
+    if (el.projectCreatePanel)
+    {
+        el.projectCreatePanel.hidden = true;
+    }
+
+    if (clearInput && el.projectNameInput)
+    {
+        el.projectNameInput.value = "";
+    }
+}
+
+function showProjectCreatePanel()
+{
+    hideProjectMenu();
+
+    if (el.projectCreatePanel)
+    {
+        el.projectCreatePanel.hidden = false;
+    }
+
+    if (el.projectNameInput)
+    {
+        el.projectNameInput.focus();
+        el.projectNameInput.select();
     }
 }
 
@@ -409,11 +446,14 @@ function setSelectedProject(projectId, shouldSave = true)
         return;
     }
 
+    const normalizedProjectId =
+        String(projectId || "");
+
     const option =
         Array.from(el.projectSelect.options)
             .find((item) =>
             {
-                return item.value === projectId;
+                return item.value === normalizedProjectId;
             });
 
     if (!option)
@@ -421,7 +461,7 @@ function setSelectedProject(projectId, shouldSave = true)
         return;
     }
 
-    el.projectSelect.value = projectId;
+    el.projectSelect.value = normalizedProjectId;
 
     if (el.projectPickerLabel)
     {
@@ -433,13 +473,13 @@ function setSelectedProject(projectId, shouldSave = true)
     {
         const items =
             el.projectMenu.querySelectorAll(
-                ".picker-option"
+                ".picker-option[data-project-id]"
             );
 
         items.forEach((item) =>
         {
             const isSelected =
-                item.dataset.projectId === projectId;
+                item.dataset.projectId === normalizedProjectId;
 
             item.classList.toggle(
                 "selected",
@@ -458,11 +498,74 @@ function setSelectedProject(projectId, shouldSave = true)
         void storageSet(
         {
             [STORAGE_KEYS.selectedProjectId]:
-                projectId
+                normalizedProjectId
         });
     }
 
     hideProjectMenu();
+    hideProjectCreatePanel();
+}
+
+function createProjectOption(project)
+{
+    const projectId =
+        String(project.id || "");
+
+    const projectName =
+        project.name || "Unnamed Project";
+
+    const option =
+        document.createElement("option");
+
+    option.value = projectId;
+    option.textContent = projectName;
+
+    el.projectSelect.appendChild(option);
+
+    const button =
+        document.createElement("button");
+
+    button.type = "button";
+    button.className = "picker-option";
+    button.dataset.projectId = projectId;
+    button.setAttribute("role", "option");
+
+    const icon =
+        document.createElement("span");
+
+    icon.className = "picker-option-icon";
+    icon.innerHTML =
+    `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"/>
+        </svg>
+    `;
+
+    const name =
+        document.createElement("span");
+
+    name.className = "picker-option-name";
+    name.textContent = projectName;
+
+    const check =
+        document.createElement("span");
+
+    check.className = "picker-option-check";
+    check.textContent = "✓";
+
+    button.appendChild(icon);
+    button.appendChild(name);
+    button.appendChild(check);
+
+    button.addEventListener(
+        "click",
+        () =>
+        {
+            setSelectedProject(projectId);
+        }
+    );
+
+    el.projectMenu.appendChild(button);
 }
 
 function renderProjects(projects, selectedProjectId = "")
@@ -476,105 +579,73 @@ function renderProjects(projects, selectedProjectId = "")
         return;
     }
 
+    availableProjects =
+        Array.isArray(projects)
+            ? projects.filter((project) => project?.id)
+            : [];
+
     el.projectSelect.innerHTML = "";
     el.projectMenu.innerHTML = "";
 
-    if (!Array.isArray(projects) || projects.length === 0)
+    if (availableProjects.length === 0)
     {
         const option =
             document.createElement("option");
 
         option.value = "";
-        option.textContent = "No projects found";
+        option.textContent =
+            "Inbox — no projects available";
 
         el.projectSelect.appendChild(option);
+        el.projectSelect.value = "";
 
         if (el.projectPickerLabel)
         {
             el.projectPickerLabel.textContent =
-                "No projects found";
+                "Inbox — no projects available";
         }
 
-        el.projectPickerBtn.disabled = true;
-        hideProjectMenu();
+        const emptyMessage =
+            document.createElement("div");
 
+        emptyMessage.className = "picker-empty-state";
+        emptyMessage.textContent =
+            "No TickTick projects yet. Articles can still be saved to Inbox.";
+
+        el.projectMenu.appendChild(emptyMessage);
+        el.projectPickerBtn.disabled = true;
+
+        void storageSet(
+        {
+            [STORAGE_KEYS.selectedProjectId]: ""
+        });
+
+        hideProjectMenu();
         return;
     }
 
     el.projectPickerBtn.disabled = false;
 
+    const normalizedSelectedProjectId =
+        String(selectedProjectId || "");
+
     const selectedProjectExists =
-        projects.some((project) =>
+        availableProjects.some((project) =>
         {
-            return project.id === selectedProjectId;
+            return String(project.id) ===
+                normalizedSelectedProjectId;
         });
 
     const finalSelectedProjectId =
         selectedProjectExists
-            ? selectedProjectId
-            : projects[0].id;
+            ? normalizedSelectedProjectId
+            : String(availableProjects[0].id);
 
-    for (const project of projects)
+    for (const project of availableProjects)
     {
-        const projectId =
-            String(project.id || "");
-
-        const projectName =
-            project.name || "Unnamed Project";
-
-        const option =
-            document.createElement("option");
-
-        option.value = projectId;
-        option.textContent = projectName;
-
-        el.projectSelect.appendChild(option);
-
-        const button =
-            document.createElement("button");
-
-        button.type = "button";
-        button.className = "picker-option";
-        button.dataset.projectId = projectId;
-        button.setAttribute("role", "option");
-
-        const icon =
-            document.createElement("span");
-
-        icon.className = "picker-option-icon";
-        icon.innerHTML =
-        `
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"/>
-            </svg>
-        `;
-
-        const name =
-            document.createElement("span");
-
-        name.className = "picker-option-name";
-        name.textContent = projectName;
-
-        const check =
-            document.createElement("span");
-
-        check.className = "picker-option-check";
-        check.textContent = "✓";
-
-        button.appendChild(icon);
-        button.appendChild(name);
-        button.appendChild(check);
-
-        button.addEventListener(
-            "click",
-            () =>
-            {
-                setSelectedProject(projectId);
-            }
-        );
-
-        el.projectMenu.appendChild(button);
+        createProjectOption(project);
     }
+
 
     setSelectedProject(
         finalSelectedProjectId,
@@ -586,6 +657,140 @@ function renderProjects(projects, selectedProjectId = "")
         [STORAGE_KEYS.selectedProjectId]:
             finalSelectedProjectId
     });
+}
+
+async function createTickTickProject()
+{
+    const projectName =
+        el.projectNameInput?.value.trim() || "";
+
+    if (!projectName)
+    {
+        setStatus(
+            "Project name is required.",
+            "danger"
+        );
+
+        el.projectNameInput?.focus();
+        return;
+    }
+
+    const duplicateExists =
+        availableProjects.some((project) =>
+        {
+            return String(project.name || "")
+                .trim()
+                .toLowerCase() ===
+                projectName.toLowerCase();
+        });
+
+    if (duplicateExists)
+    {
+        setStatus(
+            "A project with this name already exists.",
+            "warning"
+        );
+
+        return;
+    }
+
+    const button =
+        el.confirmCreateProjectBtn;
+
+    const originalText =
+        button?.textContent || "Create";
+
+    try
+    {
+        if (button)
+        {
+            button.disabled = true;
+            button.textContent = "Creating...";
+        }
+
+        if (el.projectNameInput)
+        {
+            el.projectNameInput.disabled = true;
+        }
+
+        setStatus(
+            "Creating TickTick project...",
+            "info"
+        );
+
+        const result = await apiFetch(
+            "/content/projects",
+            {
+                method: "POST",
+                body: JSON.stringify(
+                {
+                    name: projectName
+                })
+            }
+        );
+
+        const createdProject =
+            result?.data;
+
+        if (!createdProject?.id)
+        {
+            throw new Error(
+                "Project was created, but its ID was not returned."
+            );
+        }
+
+        availableProjects =
+        [
+            ...availableProjects.filter((project) =>
+            {
+                return String(project.id) !==
+                    String(createdProject.id);
+            }),
+            createdProject
+        ];
+
+        await storageSet(
+        {
+            [STORAGE_KEYS.projects]:
+                availableProjects,
+
+            [STORAGE_KEYS.selectedProjectId]:
+                String(createdProject.id)
+        });
+
+        renderProjects(
+            availableProjects,
+            String(createdProject.id)
+        );
+
+        hideProjectCreatePanel();
+
+        setStatus(
+            "Project created and selected.",
+            "success"
+        );
+    }
+    catch (error)
+    {
+        setStatus(
+            error.message ||
+            "Failed to create project.",
+            "danger"
+        );
+    }
+    finally
+    {
+        if (button)
+        {
+            button.disabled = false;
+            button.textContent = originalText;
+        }
+
+        if (el.projectNameInput)
+        {
+            el.projectNameInput.disabled = false;
+        }
+    }
 }
 
 async function loadTickTickProjects()
@@ -612,10 +817,7 @@ async function loadTickTickProjects()
         const selectedProjectId =
             stored[STORAGE_KEYS.selectedProjectId] || "";
 
-        if (
-            Array.isArray(cachedProjects) &&
-            cachedProjects.length > 0
-        )
+        if (Array.isArray(cachedProjects))
         {
             renderProjects(
                 cachedProjects,
@@ -665,32 +867,28 @@ async function loadTickTickProjects()
 
         const stored = await storageGet(
         [
-            STORAGE_KEYS.projects
+            STORAGE_KEYS.projects,
+            STORAGE_KEYS.selectedProjectId
         ]);
 
         const cachedProjects =
             stored[STORAGE_KEYS.projects];
 
-        if (
-            !Array.isArray(cachedProjects) ||
-            cachedProjects.length === 0
-        )
+        if (Array.isArray(cachedProjects))
         {
-            if (el.projectPickerLabel)
-            {
-                el.projectPickerLabel.textContent =
-                    "Projects unavailable";
-            }
-
-            if (el.projectPickerBtn)
-            {
-                el.projectPickerBtn.disabled = true;
-            }
+            renderProjects(
+                cachedProjects,
+                stored[STORAGE_KEYS.selectedProjectId] || ""
+            );
+        }
+        else
+        {
+            renderProjects([], "");
         }
 
         setStatus(
-            "Failed to load projects.",
-            "danger"
+            "Could not refresh projects. Showing saved data.",
+            "warning"
         );
     }
 }
@@ -1104,12 +1302,14 @@ async function loadTags()
 function handleTagInput()
 {
     hideProjectMenu();
+    hideProjectCreatePanel();
     renderTagSuggestions();
 }
 
 function handleTagFocus()
 {
     hideProjectMenu();
+    hideProjectCreatePanel();
     renderTagSuggestions();
 }
 
@@ -1442,7 +1642,10 @@ async function saveArticle()
         const projectId =
             el.projectSelect?.value || "";
 
-        if (!projectId)
+        const hasProjects =
+            availableProjects.length > 0;
+
+        if (hasProjects && !projectId)
         {
             throw new Error(
                 "Please select a TickTick project."
@@ -1463,7 +1666,8 @@ async function saveArticle()
             rawText:
                 el.rawText?.value.trim(),
 
-            projectId,
+            projectId:
+                projectId || null,
 
             user_input:
                 tags
@@ -2131,6 +2335,54 @@ function bindEvents()
         }
     );
 
+    el.openCreateProjectBtn?.addEventListener(
+        "click",
+        (event) =>
+        {
+            event.stopPropagation();
+
+            if (el.projectCreatePanel?.hidden)
+            {
+                showProjectCreatePanel();
+            }
+            else
+            {
+                hideProjectCreatePanel();
+            }
+        }
+    );
+
+    el.confirmCreateProjectBtn?.addEventListener(
+        "click",
+        createTickTickProject
+    );
+
+    el.cancelCreateProjectBtn?.addEventListener(
+        "click",
+        () =>
+        {
+            hideProjectCreatePanel();
+        }
+    );
+
+    el.projectNameInput?.addEventListener(
+        "keydown",
+        (event) =>
+        {
+            if (event.key === "Enter")
+            {
+                event.preventDefault();
+                void createTickTickProject();
+            }
+
+            if (event.key === "Escape")
+            {
+                event.preventDefault();
+                hideProjectCreatePanel();
+            }
+        }
+    );
+
     el.tagsInputBox?.addEventListener(
         "click",
         () =>
@@ -2180,6 +2432,7 @@ function bindEvents()
             )
             {
                 hideProjectMenu();
+                hideProjectCreatePanel();
             }
         }
     );
