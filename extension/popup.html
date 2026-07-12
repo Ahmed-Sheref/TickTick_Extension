@@ -274,12 +274,6 @@
 
                         </div>
 
-                        <p
-                            id="projectDestinationHint"
-                            class="project-destination-hint"
-                        >
-                            Will be saved to: Inbox
-                        </p>
 
                         <div
                             id="projectCreatePanel"
@@ -515,60 +509,57 @@
                 <!-- Settings Panel -->
                 <section
                     id="panelSettings"
-                    class="panel"
-                    style="display: none;"
+                    class="panel settings-panel"
                 >
 
-                    <div class="settings-group">
+                    <article class="settings-card">
 
-                        <span class="settings-group-label">
-                            Account & Connection
-                        </span>
+                        <div class="settings-card-header">
 
-                        <div
-                            class="form-group"
-                            style="margin-bottom: 8px;"
-                        >
-
-                            <div class="input-row">
-
-                                <input
-                                    id="userId"
-                                    class="input input--mono"
-                                    type="text"
-                                    readonly
-                                    placeholder="User ID"
-                                />
-
-                                <button
-                                    id="copyUserIdBtn"
-                                    class="btn btn-ghost btn-sm"
-                                    type="button"
-                                >
-                                    Copy ID
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                        <div
-                            class="connection-row"
-                            style="margin-bottom: 0;"
-                        >
+                            <h3 class="settings-card-title">
+                                Account &amp; Connection
+                            </h3>
 
                             <div
                                 id="ticktickStatusSecondary"
-                                class="status-pill modern-pill"
+                                class="status-pill status-pill--success"
                             >
                                 <span class="pill-dot"></span>
                                 Connected
                             </div>
 
+                        </div>
+
+                        <div class="settings-control-row">
+
+                            <input
+                                id="userId"
+                                class="input input--mono"
+                                type="text"
+                                readonly
+                                placeholder="User ID"
+                                aria-label="User ID"
+                            />
+
+                            <button
+                                id="copyUserIdBtn"
+                                class="btn btn-secondary btn-sm settings-action-button"
+                                type="button"
+                            >
+                                Copy ID
+                            </button>
+
+                        </div>
+
+                        <div class="settings-secondary-row">
+
+                            <span class="settings-helper">
+                                Connected TickTick account
+                            </span>
+
                             <button
                                 id="reconnectTickTickBtn"
-                                class="btn btn-ghost btn-sm"
-                                style="margin-left: auto;"
+                                class="btn btn-ghost btn-sm settings-action-button"
                                 type="button"
                             >
                                 Reconnect
@@ -576,26 +567,31 @@
 
                         </div>
 
-                    </div>
+                    </article>
 
-                    <div class="settings-group">
+                    <article class="settings-card">
 
-                        <span class="settings-group-label">
-                            Weekly Email Digest
-                        </span>
+                        <div class="settings-card-header">
 
-                        <div class="input-row">
+                            <h3 class="settings-card-title">
+                                Weekly Email Digest
+                            </h3>
+
+                        </div>
+
+                        <div class="settings-control-row">
 
                             <input
                                 id="email"
                                 class="input"
                                 type="email"
                                 placeholder="you@example.com"
+                                aria-label="Delivery email"
                             />
 
                             <button
                                 id="saveEmailSettingsBtn"
-                                class="btn btn-secondary btn-sm"
+                                class="btn btn-secondary btn-sm settings-action-button"
                                 type="button"
                             >
                                 Save
@@ -605,51 +601,28 @@
 
                         <div
                             id="currentEmailContainer"
-                            style="
-                                display: none;
-                                margin-top: 12px;
-                                padding-top: 12px;
-                                border-top: 1px dashed var(--border);
-                            "
+                            class="settings-email-state"
+                            style="display: none;"
                         >
 
-                            <div
-                                style="
-                                    display: flex;
-                                    justify-content: space-between;
-                                    align-items: center;
-                                    margin-bottom: 8px;
-                                "
-                            >
+                            <div class="settings-meta-row">
 
-                                <span
-                                    style="
-                                        font-size: 10.5px;
-                                        color: var(--ink-3);
-                                        font-weight: 700;
-                                        text-transform: uppercase;
-                                    "
-                                >
-                                    Current Email
+                                <span class="settings-meta-label">
+                                    Current email
                                 </span>
 
                                 <span
                                     id="currentEmailDisplay"
-                                    style="
-                                        font-size: 12.5px;
-                                        font-weight: 600;
-                                        color: var(--ink-0);
-                                    "
+                                    class="settings-meta-value"
                                 ></span>
 
                             </div>
 
                             <label
-                                class="toggle-row"
+                                class="toggle-row settings-toggle-row"
                                 for="weeklyEmailToggle"
-                                style="padding: 0; border: none;"
                             >
-                                <span>Enable Weekly Digest</span>
+                                <span>Enable weekly digest</span>
 
                                 <div class="toggle-wrap">
 
@@ -663,37 +636,24 @@
                                     </span>
 
                                 </div>
+
                             </label>
 
                         </div>
 
-                    </div>
+                    </article>
 
-                    <div class="settings-group">
+                    <article class="settings-card settings-card--telegram">
 
-                        <div
-                            style="
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                margin-bottom: 12px;
-                            "
-                        >
+                        <div class="settings-card-header">
 
-                            <span
-                                class="settings-group-label"
-                                style="margin-bottom: 0 !important;"
-                            >
+                            <h3 class="settings-card-title">
                                 Telegram Quiz
-                            </span>
+                            </h3>
 
                             <div
                                 id="telegramStatusPill"
                                 class="status-pill status-pill--danger"
-                                style="
-                                    padding: 2px 8px;
-                                    font-size: 9.5px;
-                                "
                             >
                                 <span class="pill-dot"></span>
 
@@ -705,10 +665,10 @@
                         </div>
 
                         <label
-                            class="toggle-row"
+                            class="toggle-row settings-toggle-row settings-telegram-toggle"
                             for="telegramQuizToggle"
                         >
-                            <span>Enable Telegram Quiz Delivery</span>
+                            <span>Enable Telegram quiz delivery</span>
 
                             <div class="toggle-wrap">
 
@@ -723,39 +683,33 @@
                                 </span>
 
                             </div>
+
                         </label>
 
                         <div
                             id="telegramOptions"
-                            class="telegram-options"
-                            style="
-                                border-top: 1px dashed var(--border);
-                                padding-top: 10px;
-                                margin-top: 10px;
-                            "
+                            class="settings-telegram-options"
+                            style="display: block;"
                         >
 
-                            <div
-                                class="command-block"
-                                style="padding: 8px 10px;"
-                            >
+                            <div class="settings-command-group">
 
-                                <span class="command-block-label">
+                                <span class="settings-command-label">
                                     Start command
                                 </span>
 
-                                <div class="input-row">
+                                <div class="settings-control-row">
 
                                     <code
                                         id="telegramCommand"
-                                        style="flex: 1;"
+                                        class="settings-command"
                                     >
                                         /start ...
                                     </code>
 
                                     <button
                                         id="copyTelegramCommandBtn"
-                                        class="btn btn-ghost btn-sm"
+                                        class="btn btn-secondary btn-sm settings-action-button"
                                         type="button"
                                     >
                                         Copy
@@ -765,25 +719,17 @@
 
                             </div>
 
-                            <div
-                                class="input-row"
-                                style="margin-top: 8px;"
+                            <button
+                                id="openTelegramBotBtn"
+                                class="btn btn-primary btn-sm settings-open-bot"
+                                type="button"
                             >
-
-                                <button
-                                    id="openTelegramBotBtn"
-                                    class="btn btn-primary btn-sm"
-                                    style="width: 100%;"
-                                    type="button"
-                                >
-                                    Open Bot
-                                </button>
-
-                            </div>
+                                Open Bot
+                            </button>
 
                         </div>
 
-                    </div>
+                    </article>
 
                 </section>
 

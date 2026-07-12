@@ -55,7 +55,7 @@ const el =
     projectPickerBtn: document.getElementById("projectPickerBtn"),
     projectPickerLabel: document.getElementById("projectPickerLabel"),
     projectMenu: document.getElementById("projectMenu"),
-    projectDestinationHint: document.getElementById("projectDestinationHint"),
+
     openCreateProjectBtn: document.getElementById("openCreateProjectBtn"),
     projectCreatePanel: document.getElementById("projectCreatePanel"),
     projectNameInput: document.getElementById("projectNameInput"),
@@ -255,30 +255,6 @@ function switchTab(tab)
 {
     const isSave = tab === "save";
 
-    if (el.panelSave)
-    {
-        el.panelSave.style.display =
-            isSave
-                ? "flex"
-                : "none";
-    }
-
-    if (el.panelSettings)
-    {
-        el.panelSettings.style.display =
-            isSave
-                ? "none"
-                : "flex";
-    }
-
-    if (el.saveActions)
-    {
-        el.saveActions.style.display =
-            isSave
-                ? "grid"
-                : "none";
-    }
-
     el.appView?.classList.toggle(
         "settings-active",
         !isSave
@@ -289,8 +265,25 @@ function switchTab(tab)
         el.mainScroll.scrollTop = 0;
     }
 
-    el.tabSave?.classList.toggle("active", isSave);
-    el.tabSettings?.classList.toggle("active", !isSave);
+    el.tabSave?.classList.toggle(
+        "active",
+        isSave
+    );
+
+    el.tabSettings?.classList.toggle(
+        "active",
+        !isSave
+    );
+
+    el.tabSave?.setAttribute(
+        "aria-selected",
+        String(isSave)
+    );
+
+    el.tabSettings?.setAttribute(
+        "aria-selected",
+        String(!isSave)
+    );
 
     hideTagSuggestions();
     hideProjectMenu();
@@ -514,11 +507,6 @@ function setSelectedProject(projectId, shouldSave = true)
             destinationName;
     }
 
-    if (el.projectDestinationHint)
-    {
-        el.projectDestinationHint.textContent =
-            `Will be saved to: ${destinationName}`;
-    }
 
     if (el.projectMenu)
     {
@@ -2624,6 +2612,23 @@ function bindEvents()
     el.themeToggleBtn?.addEventListener(
         "click",
         toggleTheme
+    );
+}
+
+
+// ─── Popup Viewport ──────────────────────────────────────────────────────────
+
+function syncPopupViewportHeight()
+{
+    const viewportHeight =
+        Math.min(
+            window.innerHeight || 600,
+            600
+        );
+
+    document.documentElement.style.setProperty(
+        "--popup-viewport-height",
+        `${viewportHeight}px`
     );
 }
 
