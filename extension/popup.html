@@ -32,9 +32,9 @@
 <div class="brand-wrap">
 <div class="brand-logo"></div>
 <span class="brand-text">TickTick</span>
-<div aria-label="Connected to TickTick" class="header-connection-status header-connection-status--connected" id="ticktickStatusPill" role="status" title="Connected to TickTick"><span aria-hidden="true" class="header-status-dot"></span><span class="sr-only">Connected</span></div></div>
+<div aria-label="Connected to TickTick" class="header-connection-status header-connection-status--connected" id="ticktickStatusPill" role="status" title="Connected to TickTick"><span aria-hidden="true" class="header-status-dot" title="Connected to TickTick"></span><span class="sr-only">Connected</span></div></div>
 <div class="header-actions">
-<button class="theme-toggle-btn" id="themeToggleBtn" title="Toggle Theme" type="button"></button>
+<button aria-label="Toggle theme" class="theme-toggle-btn" data-tooltip="Toggle theme" id="themeToggleBtn" type="button"></button>
 </div>
 </div>
 <div class="header-bottom-row">
@@ -217,7 +217,7 @@
                             </div>
 </div>
 <div class="settings-control-row">
-<input aria-label="User ID" class="input input--mono" id="userId" placeholder="User ID" readonly="" title="Copy to view the full account ID" type="text"/>
+<input aria-label="User ID" class="input input--mono" id="userId" placeholder="User ID" readonly="" title="Full account ID" type="text"/>
 <button class="btn btn-secondary btn-sm settings-action-button" id="copyUserIdBtn" type="button">
                                 Copy ID
                             </button>
@@ -300,7 +300,7 @@
                                     Start command
                                 </span>
 <div class="settings-control-row">
-<code class="settings-command" id="telegramCommand" title="Copy to view the full start command">
+<code class="settings-command" id="telegramCommand" title="Full Telegram start command">
                                         /start ...
                                     </code>
 <button class="btn btn-secondary btn-sm settings-action-button" id="copyTelegramCommandBtn" type="button">

@@ -248,9 +248,12 @@ h1, h2, h3, h4 { line-height: 1.25; }
 .app-header-two-tier {
   display: flex;
   flex-direction: column;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.85)),
-    url("./assets/images/background.webp") right / auto 100% no-repeat;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.88)),
+    url("./assets/images/background.webp");
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   position: sticky;
@@ -262,15 +265,24 @@ h1, h2, h3, h4 { line-height: 1.25; }
 
 /* FIX: dark mode header keeps the background image */
 [data-theme="dark"] .app-header-two-tier {
-  background:
-    linear-gradient(rgba(20, 21, 24, 0.82), rgba(20, 21, 24, 0.92)),
-    url("./assets/images/background.webp") right / auto 100% no-repeat;
+  background-image:
+    linear-gradient(rgba(20, 21, 24, 0.84), rgba(20, 21, 24, 0.93)),
+    url("./assets/images/background.webp");
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
 [data-theme="dark"] .header-bottom-row {
+  background: transparent;
+}
+
+/* Full-width header artwork */
+.header-top-row,
+.header-bottom-row {
   background: transparent;
 }
 
@@ -4920,5 +4932,399 @@ button:disabled
         ) !important;
 
     border-color: var(--blue-ring) !important;
+}
+
+/* =========================================
+   43. INCREMENTAL UX REFINEMENTS — ROUND 3
+   Presentation-only overrides
+========================================= */
+
+/* 43.1 Reconnect is only relevant while disconnected */
+#reconnectTickTickBtn[hidden]
+{
+    display: none !important;
+}
+
+#panelSettings
+.settings-secondary-row--status-only
+{
+    grid-template-columns:
+        minmax(0, 1fr) !important;
+}
+
+
+/* 43.2 Visual middle truncation keeps full values in data-full-value */
+#userId,
+#telegramCommand
+{
+    overflow: hidden !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#userId
+{
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+
+/* 43.3 Popup-contained theme tooltip */
+.app-header-two-tier,
+.header-top-row,
+.header-actions
+{
+    overflow: visible !important;
+}
+
+.header-actions
+{
+    position: relative !important;
+}
+
+.theme-toggle-btn
+{
+    position: relative !important;
+}
+
+.theme-toggle-btn::after
+{
+    content:
+        attr(data-tooltip);
+
+    position: absolute !important;
+
+    top:
+        calc(100% + 5px) !important;
+    right: 0 !important;
+
+    z-index: 1000 !important;
+
+    max-width: 132px !important;
+
+    padding:
+        5px
+        8px !important;
+
+    visibility: hidden !important;
+    opacity: 0 !important;
+
+    color: #ffffff !important;
+    background:
+        rgba(15, 23, 42, 0.94) !important;
+
+    border-radius: 6px !important;
+
+    box-shadow:
+        0
+        5px
+        14px
+        rgba(15, 23, 42, 0.18) !important;
+
+    font-size: 9.5px !important;
+    font-weight: 500 !important;
+    line-height: 1.25 !important;
+
+    pointer-events: none !important;
+
+    transform:
+        translateY(-2px) !important;
+
+    transition:
+        opacity 0.14s ease,
+        transform 0.14s ease,
+        visibility 0.14s ease !important;
+
+    white-space: nowrap !important;
+}
+
+.theme-toggle-btn:hover::after,
+.theme-toggle-btn:focus-visible::after
+{
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    transform:
+        translateY(0) !important;
+}
+
+
+/* 43.4 The dot itself owns the explanatory hover title */
+.header-status-dot
+{
+    cursor: help !important;
+}
+
+
+/* 43.5 Force the existing mono token on Article text */
+#panelSave
+#rawText.textarea
+{
+    font-family:
+        var(--mono) !important;
+
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+
+    tab-size: 4 !important;
+}
+
+/* =========================================
+   44. HEADER BACKGROUND — NEW CUSTOM ARTWORK
+   Uses assets/images/ticktick-header-bg1.png
+========================================= */
+
+/*
+   The asset is exported at 1140 × 234, exactly three times
+   the visible 380 × 78 popup header size.
+*/
+
+.app-header-two-tier
+{
+    isolation: isolate !important;
+
+    overflow: hidden !important;
+
+    background:
+        var(--surface) !important;
+}
+
+.app-header-two-tier::before
+{
+    content: "" !important;
+
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    z-index: -2 !important;
+
+    background-image:
+        url("./assets/images/ticktick-header-bg1.png") !important;
+
+    background-position:
+        center center !important;
+
+    background-size:
+        100% 100% !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    filter:
+        contrast(1.06)
+        saturate(1.08) !important;
+
+    pointer-events: none !important;
+}
+
+.app-header-two-tier::after
+{
+    content: "" !important;
+
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    z-index: -1 !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.04),
+            rgba(255, 255, 255, 0.14)
+        ) !important;
+
+    pointer-events: none !important;
+}
+
+.header-top-row,
+.header-bottom-row
+{
+    position: relative !important;
+
+    z-index: 1 !important;
+
+    width: 100% !important;
+
+    background: transparent !important;
+}
+
+
+/* Balanced compact header */
+
+.header-top-row
+{
+    height: 44px !important;
+    min-height: 44px !important;
+
+    padding:
+        8px
+        14px
+        5px !important;
+}
+
+.header-bottom-row
+{
+    height: 34px !important;
+    min-height: 34px !important;
+
+    padding:
+        0
+        14px !important;
+}
+
+.line-tab
+{
+    height: 34px !important;
+
+    padding:
+        8px
+        0
+        6px !important;
+}
+
+.brand-wrap
+{
+    gap: 7px !important;
+}
+
+.brand-logo
+{
+    width: 21px !important;
+    height: 21px !important;
+}
+
+.brand-text
+{
+    color: #0f172a !important;
+
+    font-size: 15px !important;
+    line-height: 1 !important;
+
+    text-shadow:
+        0
+        1px
+        0
+        rgba(255, 255, 255, 0.50) !important;
+}
+
+.header-actions
+{
+    margin-left: auto !important;
+
+    gap: 8px !important;
+}
+
+.theme-toggle-btn
+{
+    width: 28px !important;
+    height: 28px !important;
+
+    flex:
+        0
+        0
+        28px !important;
+
+    color: #334155 !important;
+
+    background:
+        rgba(255, 255, 255, 0.46) !important;
+}
+
+.theme-toggle-btn:hover
+{
+    color: var(--blue) !important;
+
+    background:
+        rgba(255, 255, 255, 0.82) !important;
+}
+
+
+/* Dark mode */
+
+[data-theme="dark"]
+.app-header-two-tier
+{
+    background:
+        var(--surface) !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier::before
+{
+    filter:
+        brightness(0.48)
+        contrast(1.16)
+        saturate(1.10) !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier::after
+{
+    background:
+        linear-gradient(
+            180deg,
+            rgba(8, 13, 28, 0.28),
+            rgba(8, 13, 28, 0.48)
+        ) !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.brand-text
+{
+    color: #f8fafc !important;
+
+    text-shadow:
+        0
+        1px
+        4px
+        rgba(0, 0, 0, 0.34) !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.line-tab
+{
+    color: #a8b3c7 !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.line-tab:hover
+{
+    color: #dbe7ff !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.line-tab.active
+{
+    color: #7d98ff !important;
+
+    border-bottom-color:
+        #7d98ff !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.theme-toggle-btn
+{
+    color: #e2e8f0 !important;
+
+    background:
+        rgba(15, 23, 42, 0.28) !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.theme-toggle-btn:hover
+{
+    color: #ffffff !important;
+
+    background:
+        rgba(59, 91, 251, 0.24) !important;
 }
 

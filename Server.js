@@ -29,7 +29,7 @@ mongoose.connect(DB)
 .then((con) =>
 {
     console.log('[DB] MongoDB connection successful');
-    startTelegramBot();
+    await startTelegramBot();
     startWeeklyEmailCron();
     startWeeklyQuizCron();
     app.listen(PORT, '0.0.0.0',() =>

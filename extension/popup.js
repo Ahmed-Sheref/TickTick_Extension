@@ -192,10 +192,23 @@ function applyTheme(theme)
 
     if (el.themeToggleBtn)
     {
+        const tooltip =
+            theme === "dark"
+                ? "Switch to light theme"
+                : "Switch to dark theme";
+
         el.themeToggleBtn.innerHTML =
             theme === "dark"
                 ? ICONS.sun
                 : ICONS.moon;
+
+        el.themeToggleBtn.dataset.tooltip =
+            tooltip;
+
+        el.themeToggleBtn.setAttribute(
+            "aria-label",
+            tooltip
+        );
     }
 }
 
@@ -307,7 +320,7 @@ function setConnectedUI(isConnected)
     {
         el.appView.style.display =
             isConnected
-                ? "grid"
+                ? "flex"
                 : "none";
     }
 
@@ -349,6 +362,7 @@ function setConnectedUI(isConnected)
                 <span
                     class="header-status-dot"
                     aria-hidden="true"
+                    title="${tooltip}"
                 ></span>
 
                 <span class="sr-only">
@@ -361,6 +375,27 @@ function setConnectedUI(isConnected)
     {
         el.ticktickStatusSecondary.className = className;
         el.ticktickStatusSecondary.innerHTML = inner;
+    }
+
+    if (el.reconnectTickTickBtn)
+    {
+        el.reconnectTickTickBtn.hidden =
+            isConnected;
+
+        el.reconnectTickTickBtn.disabled =
+            isConnected;
+
+        el.reconnectTickTickBtn.setAttribute(
+            "aria-hidden",
+            String(isConnected)
+        );
+
+        el.reconnectTickTickBtn
+            .closest(".settings-secondary-row")
+            ?.classList.toggle(
+                "settings-secondary-row--status-only",
+                isConnected
+            );
     }
 }
 
@@ -1543,21 +1578,86 @@ function getTagsForSave()
 
 // ─── Telegram ────────────────────────────────────────────────────────────────
 
+function truncateMiddle(value, visibleStart = 9, visibleEnd = 4)
+{
+    const text =
+        String(value || "");
+
+    const minimumLength =
+        visibleStart + visibleEnd + 3;
+
+    if (text.length <= minimumLength)
+    {
+        return text;
+    }
+
+    return (
+        text.slice(0, visibleStart)
+        + "..."
+        + text.slice(-visibleEnd)
+    );
+}
+
+function setUserIdDisplay(userId)
+{
+    if (!el.userId)
+    {
+        return;
+    }
+
+    const fullUserId =
+        String(userId || "");
+
+    el.userId.dataset.fullValue =
+        fullUserId;
+
+    el.userId.value =
+        truncateMiddle(fullUserId);
+
+    el.userId.title =
+        fullUserId || "User ID";
+}
+
+function getFullUserId()
+{
+    return (
+        el.userId?.dataset?.fullValue?.trim()
+        || el.userId?.value?.trim()
+        || ""
+    );
+}
+
 function fillTelegramCommand(userId)
 {
-    if (el.telegramCommand)
+    if (!el.telegramCommand)
     {
-        el.telegramCommand.textContent =
-            userId
-                ? `/start ${userId}`
-                : "/start";
+        return;
     }
+
+    const fullCommand =
+        userId
+            ? `/start ${userId}`
+            : "/start";
+
+    const visibleCommand =
+        userId
+            ? `/start ${truncateMiddle(userId)}`
+            : "/start";
+
+    el.telegramCommand.dataset.fullValue =
+        fullCommand;
+
+    el.telegramCommand.textContent =
+        visibleCommand;
+
+    el.telegramCommand.title =
+        fullCommand;
 }
 
 function openTelegramBot()
 {
     const userId =
-        el.userId?.value?.trim();
+        getFullUserId();
 
     const url =
         userId
@@ -1634,15 +1734,20 @@ async function copyToClipboardWithFeedback(text, button)
 async function copyUserId(event)
 {
     await copyToClipboardWithFeedback(
-        el.userId?.value?.trim(),
+        getFullUserId(),
         event.target || el.copyUserIdBtn
     );
 }
 
 async function copyTelegramCommand(event)
 {
+    const fullCommand =
+        el.telegramCommand?.dataset?.fullValue?.trim()
+        || el.telegramCommand?.textContent?.trim()
+        || "";
+
     await copyToClipboardWithFeedback(
-        el.telegramCommand?.textContent?.trim(),
+        fullCommand,
         event.target || el.copyTelegramCommandBtn
     );
 }
@@ -1662,6 +1767,9 @@ function showCurrentEmail(email, isEnabled)
     {
         el.currentEmailDisplay.textContent =
             email;
+
+        el.currentEmailDisplay.title =
+            email || "No email configured";
     }
 
     if (el.weeklyEmailToggle)
@@ -1829,6 +1937,10 @@ async function saveArticle()
             button.disabled = true;
             button.textContent = "Saving...";
             button.style.opacity = "0.8";
+            button.setAttribute(
+                "aria-busy",
+                "true"
+            );
         }
 
         hideTagSuggestions();
@@ -1853,6 +1965,9 @@ async function saveArticle()
             button.style.backgroundColor = "var(--green)";
             button.style.borderColor = "var(--green)";
             button.style.opacity = "1";
+            button.removeAttribute(
+                "aria-busy"
+            );
         }
 
         setStatus(
@@ -1906,6 +2021,9 @@ async function saveArticle()
             button.disabled = false;
             button.textContent = originalText;
             button.style.opacity = "1";
+            button.removeAttribute(
+                "aria-busy"
+            );
         }
 
         setStatus(
@@ -2722,8 +2840,7 @@ async function bootstrap()
 
     if (isConnected && el.userId)
     {
-        el.userId.value =
-            userId;
+        setUserIdDisplay(userId);
 
         await Promise.allSettled(
         [
