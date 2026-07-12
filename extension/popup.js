@@ -316,6 +316,11 @@ function setConnectedUI(isConnected)
             ? "Connected"
             : "Not Connected";
 
+    const tooltip =
+        isConnected
+            ? "Connected to TickTick"
+            : "Not connected to TickTick";
+
     const className =
         isConnected
             ? "status-pill status-pill--success"
@@ -326,8 +331,30 @@ function setConnectedUI(isConnected)
 
     if (el.ticktickStatusPill)
     {
-        el.ticktickStatusPill.className = className;
-        el.ticktickStatusPill.innerHTML = inner;
+        el.ticktickStatusPill.className =
+            isConnected
+                ? "header-connection-status header-connection-status--connected"
+                : "header-connection-status header-connection-status--disconnected";
+
+        el.ticktickStatusPill.title =
+            tooltip;
+
+        el.ticktickStatusPill.setAttribute(
+            "aria-label",
+            tooltip
+        );
+
+        el.ticktickStatusPill.innerHTML =
+            `
+                <span
+                    class="header-status-dot"
+                    aria-hidden="true"
+                ></span>
+
+                <span class="sr-only">
+                    ${text}
+                </span>
+            `;
     }
 
     if (el.ticktickStatusSecondary)
