@@ -54,6 +54,8 @@ const el =
     projectSelect: document.getElementById("projectSelect"),
     projectPickerBtn: document.getElementById("projectPickerBtn"),
     projectPickerLabel: document.getElementById("projectPickerLabel"),
+    projectSearchInput: document.getElementById("projectSearchInput"),
+    projectPickerToggleBtn: document.getElementById("projectPickerToggleBtn"),
     projectMenu: document.getElementById("projectMenu"),
 
     openCreateProjectBtn: document.getElementById("openCreateProjectBtn"),
@@ -104,6 +106,7 @@ let availableProjects = [];
 let availableTags = [];
 let selectedTags = [];
 let activeTagSuggestionIndex = -1;
+let activeProjectSuggestionIndex = -1;
 
 
 // ─── Storage Helpers ─────────────────────────────────────────────────────────
@@ -299,7 +302,7 @@ function switchTab(tab)
     );
 
     hideTagSuggestions();
-    hideProjectMenu();
+    hideProjectMenu(false);
     hideProjectCreatePanel();
 }
 
@@ -344,31 +347,17 @@ function setConnectedUI(isConnected)
 
     if (el.ticktickStatusPill)
     {
-        el.ticktickStatusPill.className =
-            isConnected
-                ? "header-connection-status header-connection-status--connected"
-                : "header-connection-status header-connection-status--disconnected";
-
-        el.ticktickStatusPill.title =
-            tooltip;
+        el.ticktickStatusPill.hidden =
+            true;
 
         el.ticktickStatusPill.setAttribute(
-            "aria-label",
-            tooltip
+            "aria-hidden",
+            "true"
         );
 
-        el.ticktickStatusPill.innerHTML =
-            `
-                <span
-                    class="header-status-dot"
-                    aria-hidden="true"
-                    title="${tooltip}"
-                ></span>
-
-                <span class="sr-only">
-                    ${text}
-                </span>
-            `;
+        el.ticktickStatusPill.removeAttribute(
+            "title"
+        );
     }
 
     if (el.ticktickStatusSecondary)
@@ -455,7 +444,69 @@ async function apiFetch(path, options = {})
 
 // ─── Projects ────────────────────────────────────────────────────────────────
 
-function hideProjectMenu()
+function getSelectedProjectName()
+{
+    const selectedOption =
+        el.projectSelect?.selectedOptions?.[0];
+
+    return (
+        selectedOption?.textContent?.trim()
+        || el.projectPickerLabel?.textContent?.trim()
+        || "Inbox"
+    );
+}
+
+function setProjectPickerDisabled(isDisabled)
+{
+    el.projectPickerBtn?.setAttribute(
+        "aria-disabled",
+        String(isDisabled)
+    );
+
+    el.projectPickerBtn?.classList.toggle(
+        "disabled",
+        isDisabled
+    );
+
+    if (el.projectSearchInput)
+    {
+        el.projectSearchInput.disabled =
+            isDisabled;
+    }
+
+    if (el.projectPickerToggleBtn)
+    {
+        el.projectPickerToggleBtn.disabled =
+            isDisabled;
+    }
+}
+
+function restoreProjectSearchValue()
+{
+    if (!el.projectSearchInput)
+    {
+        return;
+    }
+
+    const selectedProjectId =
+        String(
+            el.projectSelect?.value || ""
+        );
+
+    el.projectSearchInput.value =
+        selectedProjectId
+            ? getSelectedProjectName()
+            : "";
+
+    el.projectSearchInput.placeholder =
+        "Search or choose a list…";
+
+    el.projectSearchInput.removeAttribute(
+        "title"
+    );
+}
+
+function hideProjectMenu(restoreValue = true)
 {
     if (!el.projectMenu || !el.projectPickerBtn)
     {
@@ -463,23 +514,178 @@ function hideProjectMenu()
     }
 
     el.projectMenu.style.display = "none";
-    el.projectPickerBtn.setAttribute("aria-expanded", "false");
+
+    el.projectPickerBtn.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    el.projectSearchInput?.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    el.projectPickerToggleBtn?.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
     el.projectPickerBtn.classList.remove("open");
+
+    activeProjectSuggestionIndex = -1;
+
+    if (restoreValue)
+    {
+        restoreProjectSearchValue();
+    }
 }
 
-function showProjectMenu()
+function getVisibleProjectOptions()
+{
+    if (!el.projectMenu)
+    {
+        return [];
+    }
+
+    return Array.from(
+        el.projectMenu.querySelectorAll(
+            ".picker-option[data-project-id]:not([hidden])"
+        )
+    );
+}
+
+function updateActiveProjectOption(items)
+{
+    items.forEach((item, index) =>
+    {
+        item.classList.toggle(
+            "active",
+            index === activeProjectSuggestionIndex
+        );
+    });
+
+    const activeItem =
+        items[activeProjectSuggestionIndex];
+
+    activeItem?.scrollIntoView(
+    {
+        block: "nearest"
+    });
+}
+
+function filterProjectOptions(query = "")
+{
+    if (!el.projectMenu)
+    {
+        return;
+    }
+
+    const normalizedQuery =
+        String(query || "")
+            .trim()
+            .toLowerCase();
+
+    const options =
+        Array.from(
+            el.projectMenu.querySelectorAll(
+                ".picker-option[data-project-id]"
+            )
+        );
+
+    let visibleCount = 0;
+
+    options.forEach((option) =>
+    {
+        const name =
+            option.querySelector(
+                ".picker-option-name"
+            )
+            ?.textContent
+            ?.trim()
+            ?.toLowerCase()
+            || "";
+
+        const isVisible =
+            !normalizedQuery
+            || name.includes(normalizedQuery);
+
+        option.hidden =
+            !isVisible;
+
+        if (isVisible)
+        {
+            visibleCount += 1;
+        }
+    });
+
+    el.projectMenu
+        .querySelectorAll(
+            ".project-search-empty"
+        )
+        .forEach((element) =>
+        {
+            element.remove();
+        });
+
+    el.projectMenu
+        .querySelectorAll(
+            ".picker-empty-state:not(.project-search-empty)"
+        )
+        .forEach((element) =>
+        {
+            element.hidden =
+                Boolean(normalizedQuery);
+        });
+
+    if (visibleCount === 0)
+    {
+        const empty =
+            document.createElement("div");
+
+        empty.className =
+            "picker-empty-state project-search-empty";
+
+        empty.textContent =
+            `No lists match "${query.trim()}".`;
+
+        el.projectMenu.appendChild(empty);
+    }
+
+    activeProjectSuggestionIndex = -1;
+}
+
+function showProjectMenu(query = "")
 {
     if (
         !el.projectMenu ||
         !el.projectPickerBtn ||
-        el.projectPickerBtn.disabled
+        el.projectPickerBtn.getAttribute(
+            "aria-disabled"
+        ) === "true"
     )
     {
         return;
     }
 
+    filterProjectOptions(query);
+
     el.projectMenu.style.display = "block";
-    el.projectPickerBtn.setAttribute("aria-expanded", "true");
+
+    el.projectPickerBtn.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    el.projectSearchInput?.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    el.projectPickerToggleBtn?.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
     el.projectPickerBtn.classList.add("open");
 }
 
@@ -496,12 +702,95 @@ function toggleProjectMenu()
     if (isOpen)
     {
         hideProjectMenu();
+        return;
     }
-    else
+
+    hideTagSuggestions();
+    hideProjectCreatePanel(false);
+
+    restoreProjectSearchValue();
+
+    el.projectSearchInput?.focus();
+
+    showProjectMenu("");
+}
+
+function handleProjectSearchInput()
+{
+    const query =
+        el.projectSearchInput?.value || "";
+
+    showProjectMenu(query);
+}
+
+function handleProjectSearchFocus()
+{
+    hideTagSuggestions();
+    hideProjectCreatePanel(false);
+
+    showProjectMenu("");
+}
+
+function handleProjectSearchKeyDown(event)
+{
+    const items =
+        getVisibleProjectOptions();
+
+    if (
+        event.key === "ArrowDown"
+        || event.key === "ArrowUp"
+    )
     {
-        hideTagSuggestions();
-        hideProjectCreatePanel(false);
-        showProjectMenu();
+        event.preventDefault();
+
+        if (items.length === 0)
+        {
+            return;
+        }
+
+        const direction =
+            event.key === "ArrowDown"
+                ? 1
+                : -1;
+
+        activeProjectSuggestionIndex =
+            (
+                activeProjectSuggestionIndex
+                + direction
+                + items.length
+            )
+            % items.length;
+
+        updateActiveProjectOption(items);
+        return;
+    }
+
+    if (event.key === "Enter")
+    {
+        if (items.length === 0)
+        {
+            return;
+        }
+
+        event.preventDefault();
+
+        const selectedItem =
+            activeProjectSuggestionIndex >= 0
+                ? items[activeProjectSuggestionIndex]
+                : items.length === 1
+                    ? items[0]
+                    : null;
+
+        selectedItem?.click();
+        return;
+    }
+
+    if (event.key === "Escape")
+    {
+        event.preventDefault();
+
+        hideProjectMenu();
+        el.projectSearchInput?.blur();
     }
 }
 
@@ -567,6 +856,21 @@ function setSelectedProject(projectId, shouldSave = true)
     {
         el.projectPickerLabel.textContent =
             destinationName;
+    }
+
+    if (el.projectSearchInput)
+    {
+        el.projectSearchInput.value =
+            normalizedProjectId
+                ? destinationName
+                : "";
+
+        el.projectSearchInput.placeholder =
+            "Search or choose a list…";
+
+        el.projectSearchInput.removeAttribute(
+            "title"
+        );
     }
 
 
@@ -764,7 +1068,7 @@ function renderProjects(projects, selectedProjectId = "")
         el.projectMenu.appendChild(emptyMessage);
     }
 
-    el.projectPickerBtn.disabled = false;
+    setProjectPickerDisabled(false);
 
     const normalizedSelectedProjectId =
         String(selectedProjectId || "");
@@ -966,7 +1270,13 @@ async function loadTickTickProjects()
                     "Loading lists...";
             }
 
-            el.projectPickerBtn.disabled = true;
+            if (el.projectSearchInput)
+            {
+                el.projectSearchInput.value =
+                    "Loading lists...";
+            }
+
+            setProjectPickerDisabled(true);
         }
 
         const result = await apiFetch(
@@ -1650,8 +1960,9 @@ function fillTelegramCommand(userId)
     el.telegramCommand.textContent =
         visibleCommand;
 
-    el.telegramCommand.title =
-        fullCommand;
+    el.telegramCommand.removeAttribute(
+        "title"
+    );
 }
 
 function openTelegramBot()
@@ -2564,6 +2875,46 @@ function bindEvents()
         (event) =>
         {
             event.stopPropagation();
+
+            if (
+                event.target.closest(
+                    "#projectPickerToggleBtn"
+                )
+            )
+            {
+                return;
+            }
+
+            if (
+                event.target !==
+                el.projectSearchInput
+            )
+            {
+                el.projectSearchInput?.focus();
+            }
+        }
+    );
+
+    el.projectSearchInput?.addEventListener(
+        "input",
+        handleProjectSearchInput
+    );
+
+    el.projectSearchInput?.addEventListener(
+        "focus",
+        handleProjectSearchFocus
+    );
+
+    el.projectSearchInput?.addEventListener(
+        "keydown",
+        handleProjectSearchKeyDown
+    );
+
+    el.projectPickerToggleBtn?.addEventListener(
+        "click",
+        (event) =>
+        {
+            event.stopPropagation();
             toggleProjectMenu();
         }
     );
@@ -2701,27 +3052,117 @@ function bindEvents()
         }
     );
 
+    function isPointerInsideElement(
+        event,
+        element
+    )
+    {
+        if (
+            !element
+            || element.hidden
+        )
+        {
+            return false;
+        }
+
+        const style =
+            window.getComputedStyle(element);
+
+        if (
+            style.display === "none"
+            || style.visibility === "hidden"
+        )
+        {
+            return false;
+        }
+
+        const rect =
+            element.getBoundingClientRect();
+
+        return (
+            event.clientX >= rect.left
+            && event.clientX <= rect.right
+            && event.clientY >= rect.top
+            && event.clientY <= rect.bottom
+        );
+    }
+
     document.addEventListener(
-        "click",
+        "pointerdown",
         (event) =>
         {
+            const pointerInsideTagsControl =
+                isPointerInsideElement(
+                    event,
+                    el.tagsInputBox
+                );
+
+            const pointerInsideTagMenu =
+                isPointerInsideElement(
+                    event,
+                    el.tagSuggestions
+                );
+
             if (
-                el.tagsField &&
-                !el.tagsField.contains(event.target)
+                !pointerInsideTagsControl
+                && !pointerInsideTagMenu
             )
             {
                 hideTagSuggestions();
+
+                if (
+                    document.activeElement ===
+                    el.tagInput
+                )
+                {
+                    el.tagInput.blur();
+                }
             }
 
+            const pointerInsideProjectControl =
+                isPointerInsideElement(
+                    event,
+                    el.projectPickerBtn
+                );
+
+            const pointerInsideProjectMenu =
+                isPointerInsideElement(
+                    event,
+                    el.projectMenu
+                );
+
+            const pointerInsideProjectCreatePanel =
+                isPointerInsideElement(
+                    event,
+                    el.projectCreatePanel
+                );
+
+            const pointerInsideCreateButton =
+                isPointerInsideElement(
+                    event,
+                    el.openCreateProjectBtn
+                );
+
             if (
-                el.projectField &&
-                !el.projectField.contains(event.target)
+                !pointerInsideProjectControl
+                && !pointerInsideProjectMenu
+                && !pointerInsideProjectCreatePanel
+                && !pointerInsideCreateButton
             )
             {
                 hideProjectMenu();
                 hideProjectCreatePanel();
+
+                if (
+                    document.activeElement ===
+                    el.projectSearchInput
+                )
+                {
+                    el.projectSearchInput.blur();
+                }
             }
-        }
+        },
+        true
     );
 
     el.copyUserIdBtn?.addEventListener(

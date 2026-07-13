@@ -32,7 +32,7 @@
 <div class="brand-wrap">
 <div class="brand-logo"></div>
 <span class="brand-text">TickTick</span>
-<div aria-label="Connected to TickTick" class="header-connection-status header-connection-status--connected" id="ticktickStatusPill" role="status" title="Connected to TickTick"><span aria-hidden="true" class="header-status-dot" title="Connected to TickTick"></span><span class="sr-only">Connected</span></div></div>
+<div aria-hidden="true" aria-label="Connected to TickTick" class="header-connection-status header-connection-status--connected" hidden="" id="ticktickStatusPill" role="status"><span aria-hidden="true" class="header-status-dot"></span><span class="sr-only">Connected</span></div></div>
 <div class="header-actions">
 <button aria-label="Toggle theme" class="theme-toggle-btn" data-tooltip="Toggle theme" id="themeToggleBtn" type="button"></button>
 </div>
@@ -72,26 +72,29 @@
 </div>
 <!-- TickTick destination folder -->
 <div class="form-group compact-form-group" id="projectField">
-<label class="label" for="projectPickerBtn">
+<label class="label" id="projectFieldLabel">
                             Save to
                         </label>
 <div class="project-picker-row">
 <div class="picker project-picker-main">
-<button aria-controls="projectMenu" aria-expanded="false" aria-haspopup="listbox" class="picker-control" id="projectPickerBtn" type="button">
-<span class="picker-leading-icon">
-<svg aria-hidden="true" viewbox="0 0 24 24">
+<div aria-controls="projectMenu" aria-disabled="false" aria-expanded="false" aria-haspopup="listbox" class="picker-control project-search-box" id="projectPickerBtn" role="combobox">
+<span aria-hidden="true" class="picker-leading-icon">
+<svg viewbox="0 0 24 24">
 <path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"></path>
 </svg>
 </span>
-<span class="picker-label" id="projectPickerLabel">
-                                    Loading lists...
-                                </span>
+<span class="sr-only" id="projectPickerLabel">
+            Loading lists...
+        </span>
+<input aria-autocomplete="list" aria-controls="projectMenu" aria-describedby="projectSearchHint" aria-expanded="false" aria-labelledby="projectFieldLabel" autocomplete="off" class="project-search-input" id="projectSearchInput" placeholder="Search or choose a list…" spellcheck="false" type="text"/>
+<button aria-controls="projectMenu" aria-expanded="false" aria-label="Toggle TickTick lists" class="project-picker-toggle" id="projectPickerToggleBtn" type="button">
 <span class="picker-chevron">
 <svg aria-hidden="true" viewbox="0 0 20 20">
 <path d="m5.75 7.75 4.25 4.25 4.25-4.25"></path>
 </svg>
 </span>
 </button>
+</div>
 <div class="picker-menu" id="projectMenu" role="listbox" style="display: none;"></div>
 <select aria-hidden="true" hidden="" id="projectSelect" tabindex="-1">
 <option value="">
@@ -104,7 +107,7 @@
 <path d="M12 5v14M5 12h14"></path>
 </svg>
 </button>
-</div>
+</div><p class="hint project-search-hint" id="projectSearchHint">If no list is selected, the article will be saved to Inbox.</p>
 <div class="project-create-panel" hidden="" id="projectCreatePanel">
 <div class="project-create-copy">
 <strong>Create a TickTick list</strong>
@@ -125,7 +128,7 @@
 </div>
 <!-- Tags picker -->
 <div class="form-group compact-form-group" id="tagsField">
-<label class="label" for="tagInput">
+<label class="label" id="tagsFieldLabel">
                             Tags
                         </label>
 <div class="picker tags-picker">
@@ -138,7 +141,7 @@
 </span>
 <div class="tags-picker-value">
 <div class="selected-tags-container" id="selectedTagsContainer"></div>
-<input aria-autocomplete="list" aria-controls="tagSuggestions" aria-expanded="false" autocomplete="off" class="tag-text-input" id="tagInput" placeholder="Add tags…" spellcheck="false" type="text"/>
+<input aria-autocomplete="list" aria-controls="tagSuggestions" aria-expanded="false" aria-labelledby="tagsFieldLabel" autocomplete="off" class="tag-text-input" id="tagInput" placeholder="Add tags…" spellcheck="false" type="text"/>
 </div>
 <button aria-controls="tagSuggestions" aria-expanded="false" aria-label="Toggle tag suggestions" class="tag-picker-toggle" id="tagPickerToggleBtn" type="button">
 <span class="picker-chevron">
@@ -291,24 +294,18 @@
 </span>
 </div>
 </label>
-<div class="settings-telegram-options" id="telegramOptions" style="display: block;">
-<button class="btn btn-primary btn-sm settings-open-bot" id="openTelegramBotBtn" type="button">
+<div class="settings-telegram-options" id="telegramOptions" style="display: block;"><div class="telegram-action-row telegram-open-row"><button class="btn btn-primary btn-sm settings-open-bot settings-action-button" id="openTelegramBotBtn" type="button">
                                 Open Bot
-                            </button>
-<div class="settings-command-group">
-<span class="settings-command-label">
-                                    Start command
-                                </span>
+                            </button></div><div class="settings-command-group" hidden="">
 <div class="settings-control-row">
-<code class="settings-command" id="telegramCommand" title="Full Telegram start command">
+<code aria-label="Telegram connection command" class="settings-command" id="telegramCommand">
                                         /start ...
                                     </code>
 <button class="btn btn-secondary btn-sm settings-action-button" id="copyTelegramCommandBtn" type="button">
                                         Copy
                                     </button>
 </div>
-</div>
-</div>
+</div></div>
 </article>
 </section>
 </main>

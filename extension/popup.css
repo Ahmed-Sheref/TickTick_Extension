@@ -5328,3 +5328,776 @@ button:disabled
         rgba(59, 91, 251, 0.24) !important;
 }
 
+/* =========================================
+   45. SEARCHABLE LIST PICKER + TELEGRAM POLISH
+========================================= */
+
+/* Save To now follows the same searchable combobox system as Tags */
+
+#projectField
+.project-search-box
+{
+    display: grid !important;
+
+    grid-template-columns:
+        18px
+        minmax(0, 1fr)
+        28px !important;
+
+    align-items: center !important;
+
+    gap: 7px !important;
+
+    height: 40px !important;
+    min-height: 40px !important;
+
+    padding:
+        5px
+        6px
+        5px
+        10px !important;
+
+    cursor: text !important;
+}
+
+#projectField
+.project-search-box.disabled
+{
+    cursor: not-allowed !important;
+
+    opacity: 0.68 !important;
+}
+
+#projectField
+.project-search-input
+{
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 28px !important;
+
+    padding: 0 !important;
+
+    overflow: hidden !important;
+
+    color: var(--ink-0) !important;
+    background: transparent !important;
+
+    border: 0 !important;
+    outline: 0 !important;
+
+    font-family: var(--font) !important;
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#projectField
+.project-search-input::placeholder
+{
+    color: var(--ink-4) !important;
+
+    opacity: 1 !important;
+}
+
+#projectField
+.project-picker-toggle
+{
+    width: 28px !important;
+    height: 28px !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding: 0 !important;
+
+    color: var(--ink-3) !important;
+    background: transparent !important;
+
+    border: 0 !important;
+    border-radius: 8px !important;
+
+    cursor: pointer !important;
+}
+
+#projectField
+.project-picker-toggle:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+}
+
+#projectField
+.project-picker-toggle:focus-visible
+{
+    outline:
+        2px solid
+        var(--blue) !important;
+
+    outline-offset: 1px !important;
+}
+
+#projectField
+.project-search-box.open
+.project-picker-toggle
+.picker-chevron
+{
+    transform:
+        rotate(180deg) !important;
+}
+
+#projectField
+.picker-option[hidden],
+#projectField
+.picker-empty-state[hidden]
+{
+    display: none !important;
+}
+
+#projectField
+.picker-option.active
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+}
+
+#projectField
+.project-search-empty
+{
+    padding:
+        10px
+        9px !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 10.5px !important;
+    text-align: center !important;
+}
+
+[data-theme="dark"]
+#projectField
+.project-search-input
+{
+    color: var(--ink-0) !important;
+}
+
+
+/* Telegram Quiz card: compact, structured, and consistent with the other cards */
+
+#panelSettings
+.settings-card--telegram
+{
+    padding:
+        13px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-card-header
+{
+    margin-bottom: 9px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-telegram-toggle
+{
+    min-height: 40px !important;
+
+    margin:
+        0
+        0
+        10px !important;
+
+    padding:
+        8px
+        10px !important;
+
+    background:
+        color-mix(
+            in srgb,
+            var(--bg) 76%,
+            var(--surface)
+        ) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    border-radius: 9px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-telegram-toggle
+> span:first-child
+{
+    font-size: 10.75px !important;
+    font-weight: 550 !important;
+}
+
+#panelSettings
+.settings-telegram-options[style*="display: block"]
+{
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 10px !important;
+}
+
+#panelSettings
+.telegram-helper
+{
+    margin: 0 !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 9.75px !important;
+    line-height: 1.4 !important;
+}
+
+#panelSettings
+.telegram-action-row
+{
+    display: grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        96px !important;
+
+    align-items: center !important;
+
+    gap: 10px !important;
+
+    width: 100% !important;
+
+    padding:
+        9px
+        0 !important;
+
+    border-top:
+        1px solid
+        var(--border-soft) !important;
+
+    border-bottom:
+        1px solid
+        var(--border-soft) !important;
+}
+
+#panelSettings
+.telegram-action-copy
+{
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 2px !important;
+
+    min-width: 0 !important;
+}
+
+#panelSettings
+.telegram-action-title
+{
+    color: var(--ink-1) !important;
+
+    font-size: 10.75px !important;
+    font-weight: 650 !important;
+    line-height: 1.25 !important;
+}
+
+#panelSettings
+.telegram-action-description
+{
+    overflow: hidden !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 9.5px !important;
+    line-height: 1.25 !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-open-bot
+{
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+
+    height: 36px !important;
+    min-height: 36px !important;
+
+    margin: 0 !important;
+
+    justify-self: end !important;
+
+    border-radius: 9px !important;
+
+    font-size: 10px !important;
+    font-weight: 650 !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-command-group
+{
+    width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-command-label
+{
+    display: block !important;
+
+    margin:
+        0
+        0
+        5px !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 9.5px !important;
+    font-weight: 650 !important;
+    line-height: 1.25 !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-control-row
+{
+    grid-template-columns:
+        minmax(0, 1fr)
+        96px !important;
+
+    gap: 8px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-command
+{
+    height: 36px !important;
+    min-height: 36px !important;
+
+    padding:
+        0
+        10px !important;
+
+    color: var(--ink-1) !important;
+    background: var(--bg) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    border-radius: 9px !important;
+
+    font-size: 9.5px !important;
+}
+
+[data-theme="dark"]
+#panelSettings
+.settings-card--telegram
+.settings-telegram-toggle,
+[data-theme="dark"]
+#panelSettings
+.settings-card--telegram
+.settings-command
+{
+    background: var(--bg-3) !important;
+}
+
+/* =========================================
+   46. FOLDER SEARCH CLARITY + COMPACT TELEGRAM
+========================================= */
+
+/* Make the whole Save To field feel interactive, not only the arrow. */
+
+#projectField
+.project-search-box
+{
+    transition:
+        border-color 0.16s ease,
+        background-color 0.16s ease,
+        box-shadow 0.16s ease !important;
+}
+
+#projectField
+.project-search-box:hover:not(.disabled)
+{
+    background: var(--surface) !important;
+
+    border-color:
+        color-mix(
+            in srgb,
+            var(--blue) 32%,
+            var(--border)
+        ) !important;
+
+    box-shadow:
+        0
+        0
+        0
+        2px
+        color-mix(
+            in srgb,
+            var(--blue-soft) 64%,
+            transparent
+        ) !important;
+}
+
+#projectField
+.project-search-box:focus-within,
+#projectField
+.project-search-box.open
+{
+    background: var(--surface) !important;
+
+    border-color: var(--blue) !important;
+
+    box-shadow:
+        0
+        0
+        0
+        3px
+        var(--blue-soft) !important;
+}
+
+#projectField
+.project-search-input
+{
+    cursor: text !important;
+}
+
+#projectField
+.project-search-input::placeholder
+{
+    color:
+        color-mix(
+            in srgb,
+            var(--ink-3) 86%,
+            var(--ink-4)
+        ) !important;
+
+    font-weight: 450 !important;
+}
+
+#projectField
+.project-picker-toggle:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background: transparent !important;
+}
+
+#projectField
+.project-picker-toggle:active:not(:disabled)
+{
+    background: transparent !important;
+}
+
+#projectField
+.project-search-hint
+{
+    margin:
+        5px
+        2px
+        0 !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 10px !important;
+    line-height: 1.35 !important;
+}
+
+
+/* Telegram: keep only the toggle, Open Bot action, and copyable command. */
+
+#panelSettings
+.settings-card--telegram
+.settings-telegram-options[style*="display: block"]
+{
+    gap: 8px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-telegram-toggle
+{
+    margin-bottom: 8px !important;
+}
+
+#panelSettings
+.telegram-open-row
+{
+    display: block !important;
+
+    width: 100% !important;
+
+    padding: 0 !important;
+
+    border: 0 !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-open-bot
+{
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+
+    height: 36px !important;
+    min-height: 36px !important;
+
+    justify-self: stretch !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-command-group
+{
+    margin-top: 1px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-control-row
+{
+    align-items: center !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-command
+{
+    font-size: 9.75px !important;
+}
+
+[data-theme="dark"]
+#projectField
+.project-search-box:hover:not(.disabled),
+[data-theme="dark"]
+#projectField
+.project-search-box:focus-within,
+[data-theme="dark"]
+#projectField
+.project-search-box.open
+{
+    background: var(--bg-3) !important;
+}
+
+/* =========================================
+   47. FINAL LIST PLACEHOLDER CLARITY
+========================================= */
+
+#projectField
+.project-search-input::placeholder
+{
+    color: var(--ink-3) !important;
+
+    opacity: 0.88 !important;
+}
+
+#projectField
+.project-search-hint
+{
+    color:
+        color-mix(
+            in srgb,
+            var(--ink-3) 90%,
+            var(--ink-2)
+        ) !important;
+}
+
+/* =========================================
+   48. PRECISE DROPDOWN CLICK BOUNDARIES
+========================================= */
+
+/* Keep the Telegram command/copy controls in the DOM for JS safety,
+   but remove them from the visible Settings UI. */
+
+#panelSettings
+.settings-card--telegram
+.settings-command-group[hidden]
+{
+    display: none !important;
+}
+
+
+/* The actual visible controls define the open interaction area.
+   Labels, helper text, and surrounding form whitespace are not part
+   of the dropdown hit area anymore. */
+
+#projectField
+.project-search-box,
+#tagsField
+.tags-input-box
+{
+    position: relative !important;
+}
+
+#projectField
+.project-search-box::after,
+#tagsField
+.tags-input-box::after
+{
+    content: none !important;
+}
+
+/* =========================================
+   49. REMOVE HEADER DOT + EXACT HIT AREAS
+========================================= */
+
+/* Preserve the existing element for JS compatibility but remove it visually. */
+
+#ticktickStatusPill,
+#ticktickStatusPill[hidden]
+{
+    display: none !important;
+}
+
+
+/*
+   The visual input rectangles are the only trigger hit areas.
+   Parent form groups, labels, hints, and surrounding whitespace do not
+   participate in dropdown open/close detection.
+*/
+
+#projectField
+.project-search-box,
+#tagsField
+.tags-input-box
+{
+    pointer-events: auto !important;
+}
+
+/* =========================================
+   50. STABLE OUTSIDE-CLICK CLOSING
+========================================= */
+
+/*
+   These labels remain accessible through aria-labelledby, but they are no
+   longer native activation targets for the searchable controls. Clicking
+   the label or nearby whitespace now closes the open dropdown and cannot
+   immediately focus/reopen it.
+*/
+
+#projectFieldLabel,
+#tagsFieldLabel
+{
+    cursor: default !important;
+
+    user-select: none;
+}
+
+/* =========================================
+   51. PROJECT DROPDOWN ARROW HOVER
+========================================= */
+
+/* Match the compact rounded hover used by the Tags dropdown arrow. */
+
+#projectField
+.project-picker-toggle:hover:not(:disabled),
+#projectField
+.project-search-box.open
+.project-picker-toggle
+{
+    color: var(--blue) !important;
+
+    background: var(--blue-soft) !important;
+
+    border-radius: 8px !important;
+}
+
+#projectField
+.project-picker-toggle:active:not(:disabled)
+{
+    color: var(--blue-hover) !important;
+
+    background:
+        color-mix(
+            in srgb,
+            var(--blue) 18%,
+            transparent
+        ) !important;
+}
+
+[data-theme="dark"]
+#projectField
+.project-picker-toggle:hover:not(:disabled),
+[data-theme="dark"]
+#projectField
+.project-search-box.open
+.project-picker-toggle
+{
+    color: #dbe7ff !important;
+
+    background:
+        rgba(74, 114, 245, 0.18) !important;
+}
+
+/* =========================================
+   52. CENTER PROJECT DROPDOWN ARROW
+========================================= */
+
+/*
+   The shared .picker-chevron rule uses margin-left: auto for normal
+   dropdown layouts. Inside the square Project arrow button that margin
+   pushes the chevron off-center, so reset it only for this button.
+*/
+
+#projectField
+.project-picker-toggle
+{
+    line-height: 0 !important;
+}
+
+#projectField
+.project-picker-toggle
+.picker-chevron
+{
+    width: 100% !important;
+    height: 100% !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    margin: 0 !important;
+
+    line-height: 0 !important;
+}
+
+#projectField
+.project-picker-toggle
+.picker-chevron
+svg
+{
+    width: 16px !important;
+    height: 16px !important;
+
+    display: block !important;
+
+    margin: 0 !important;
+
+    transform: none !important;
+}
+
+#projectField
+.project-search-box.open
+.project-picker-toggle
+.picker-chevron
+{
+    transform:
+        rotate(180deg) !important;
+}
+
