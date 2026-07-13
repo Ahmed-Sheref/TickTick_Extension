@@ -21,18 +21,27 @@ const router = express.Router();
 // ↓
 // Telegram sends reply to user
 
-router.post('/webhook', (req, res) =>
-{
-    try
+router.post(
+    "/webhook",
+    async (req, res) =>
     {
-        bot.processUpdate(req.body);
-        res.sendStatus(200);
+        console.log("[TELEGRAM] Webhook reached:",req.body?.update_id,req.body?.message?.text);
+
+        try
+        {
+            await bot.processUpdate(req.body);
+            return res.sendStatus(200);
+        }
+        catch (error)
+        {
+            console.error(
+                "[TELEGRAM] Webhook error:",
+                error
+            );
+
+            return res.sendStatus(500);
+        }
     }
-    catch (error)
-    {
-        console.error('[TELEGRAM] Webhook error:', error.message);
-        res.sendStatus(500);
-    }
-});
+);
 
 export default router;
