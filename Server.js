@@ -25,22 +25,29 @@ console.log(
         nodeEnv: process.env.NODE_ENV
     }
 );
-mongoose.connect(DB)
-.then((con) =>
+mongoose.connect(DB).then(async (con) =>
 {
-    console.log('[DB] MongoDB connection successful');
-    startTelegramBot();
+    console.log("[DB] MongoDB connection successful");
+
+    await startTelegramBot();
+
     startWeeklyEmailCron();
     startWeeklyQuizCron();
-    app.listen(PORT, '0.0.0.0',() =>
-    {
-        console.log(`[SERVER] Server is running on port ${PORT}`);
-        console.log(`Ahmed Sheref hello`);
-    });
+    app.listen(
+        PORT,
+        "0.0.0.0",
+        () =>
+        {
+            console.log(`[SERVER] Server is running on port ${PORT}`);
+        }
+    );
 })
-.catch((err) => 
+.catch((error) =>
 {
-    console.error('[DB] Connection Error:', err);
+    console.error(
+        "[DB] Connection Error:",
+        error
+    );
     process.exit(1);
 });
 

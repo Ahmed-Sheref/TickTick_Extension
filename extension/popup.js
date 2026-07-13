@@ -54,8 +54,10 @@ const el =
     projectSelect: document.getElementById("projectSelect"),
     projectPickerBtn: document.getElementById("projectPickerBtn"),
     projectPickerLabel: document.getElementById("projectPickerLabel"),
+    projectSearchInput: document.getElementById("projectSearchInput"),
+    projectPickerToggleBtn: document.getElementById("projectPickerToggleBtn"),
     projectMenu: document.getElementById("projectMenu"),
-    projectDestinationHint: document.getElementById("projectDestinationHint"),
+
     openCreateProjectBtn: document.getElementById("openCreateProjectBtn"),
     projectCreatePanel: document.getElementById("projectCreatePanel"),
     projectNameInput: document.getElementById("projectNameInput"),
@@ -104,6 +106,7 @@ let availableProjects = [];
 let availableTags = [];
 let selectedTags = [];
 let activeTagSuggestionIndex = -1;
+let activeProjectSuggestionIndex = -1;
 
 
 // ─── Storage Helpers ─────────────────────────────────────────────────────────
@@ -192,10 +195,23 @@ function applyTheme(theme)
 
     if (el.themeToggleBtn)
     {
+        const tooltip =
+            theme === "dark"
+                ? "Switch to light theme"
+                : "Switch to dark theme";
+
         el.themeToggleBtn.innerHTML =
             theme === "dark"
                 ? ICONS.sun
                 : ICONS.moon;
+
+        el.themeToggleBtn.dataset.tooltip =
+            tooltip;
+
+        el.themeToggleBtn.setAttribute(
+            "aria-label",
+            tooltip
+        );
     }
 }
 
@@ -255,30 +271,6 @@ function switchTab(tab)
 {
     const isSave = tab === "save";
 
-    if (el.panelSave)
-    {
-        el.panelSave.style.display =
-            isSave
-                ? "flex"
-                : "none";
-    }
-
-    if (el.panelSettings)
-    {
-        el.panelSettings.style.display =
-            isSave
-                ? "none"
-                : "flex";
-    }
-
-    if (el.saveActions)
-    {
-        el.saveActions.style.display =
-            isSave
-                ? "grid"
-                : "none";
-    }
-
     el.appView?.classList.toggle(
         "settings-active",
         !isSave
@@ -289,11 +281,28 @@ function switchTab(tab)
         el.mainScroll.scrollTop = 0;
     }
 
-    el.tabSave?.classList.toggle("active", isSave);
-    el.tabSettings?.classList.toggle("active", !isSave);
+    el.tabSave?.classList.toggle(
+        "active",
+        isSave
+    );
+
+    el.tabSettings?.classList.toggle(
+        "active",
+        !isSave
+    );
+
+    el.tabSave?.setAttribute(
+        "aria-selected",
+        String(isSave)
+    );
+
+    el.tabSettings?.setAttribute(
+        "aria-selected",
+        String(!isSave)
+    );
 
     hideTagSuggestions();
-    hideProjectMenu();
+    hideProjectMenu(false);
     hideProjectCreatePanel();
 }
 
@@ -314,7 +323,7 @@ function setConnectedUI(isConnected)
     {
         el.appView.style.display =
             isConnected
-                ? "grid"
+                ? "flex"
                 : "none";
     }
 
@@ -322,6 +331,11 @@ function setConnectedUI(isConnected)
         isConnected
             ? "Connected"
             : "Not Connected";
+
+    const tooltip =
+        isConnected
+            ? "Connected to TickTick"
+            : "Not connected to TickTick";
 
     const className =
         isConnected
@@ -333,14 +347,44 @@ function setConnectedUI(isConnected)
 
     if (el.ticktickStatusPill)
     {
-        el.ticktickStatusPill.className = className;
-        el.ticktickStatusPill.innerHTML = inner;
+        el.ticktickStatusPill.hidden =
+            true;
+
+        el.ticktickStatusPill.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+
+        el.ticktickStatusPill.removeAttribute(
+            "title"
+        );
     }
 
     if (el.ticktickStatusSecondary)
     {
         el.ticktickStatusSecondary.className = className;
         el.ticktickStatusSecondary.innerHTML = inner;
+    }
+
+    if (el.reconnectTickTickBtn)
+    {
+        el.reconnectTickTickBtn.hidden =
+            isConnected;
+
+        el.reconnectTickTickBtn.disabled =
+            isConnected;
+
+        el.reconnectTickTickBtn.setAttribute(
+            "aria-hidden",
+            String(isConnected)
+        );
+
+        el.reconnectTickTickBtn
+            .closest(".settings-secondary-row")
+            ?.classList.toggle(
+                "settings-secondary-row--status-only",
+                isConnected
+            );
     }
 }
 
@@ -400,7 +444,69 @@ async function apiFetch(path, options = {})
 
 // ─── Projects ────────────────────────────────────────────────────────────────
 
-function hideProjectMenu()
+function getSelectedProjectName()
+{
+    const selectedOption =
+        el.projectSelect?.selectedOptions?.[0];
+
+    return (
+        selectedOption?.textContent?.trim()
+        || el.projectPickerLabel?.textContent?.trim()
+        || "Inbox"
+    );
+}
+
+function setProjectPickerDisabled(isDisabled)
+{
+    el.projectPickerBtn?.setAttribute(
+        "aria-disabled",
+        String(isDisabled)
+    );
+
+    el.projectPickerBtn?.classList.toggle(
+        "disabled",
+        isDisabled
+    );
+
+    if (el.projectSearchInput)
+    {
+        el.projectSearchInput.disabled =
+            isDisabled;
+    }
+
+    if (el.projectPickerToggleBtn)
+    {
+        el.projectPickerToggleBtn.disabled =
+            isDisabled;
+    }
+}
+
+function restoreProjectSearchValue()
+{
+    if (!el.projectSearchInput)
+    {
+        return;
+    }
+
+    const selectedProjectId =
+        String(
+            el.projectSelect?.value || ""
+        );
+
+    el.projectSearchInput.value =
+        selectedProjectId
+            ? getSelectedProjectName()
+            : "";
+
+    el.projectSearchInput.placeholder =
+        "Search or choose a list…";
+
+    el.projectSearchInput.removeAttribute(
+        "title"
+    );
+}
+
+function hideProjectMenu(restoreValue = true)
 {
     if (!el.projectMenu || !el.projectPickerBtn)
     {
@@ -408,23 +514,178 @@ function hideProjectMenu()
     }
 
     el.projectMenu.style.display = "none";
-    el.projectPickerBtn.setAttribute("aria-expanded", "false");
+
+    el.projectPickerBtn.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    el.projectSearchInput?.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
+    el.projectPickerToggleBtn?.setAttribute(
+        "aria-expanded",
+        "false"
+    );
+
     el.projectPickerBtn.classList.remove("open");
+
+    activeProjectSuggestionIndex = -1;
+
+    if (restoreValue)
+    {
+        restoreProjectSearchValue();
+    }
 }
 
-function showProjectMenu()
+function getVisibleProjectOptions()
+{
+    if (!el.projectMenu)
+    {
+        return [];
+    }
+
+    return Array.from(
+        el.projectMenu.querySelectorAll(
+            ".picker-option[data-project-id]:not([hidden])"
+        )
+    );
+}
+
+function updateActiveProjectOption(items)
+{
+    items.forEach((item, index) =>
+    {
+        item.classList.toggle(
+            "active",
+            index === activeProjectSuggestionIndex
+        );
+    });
+
+    const activeItem =
+        items[activeProjectSuggestionIndex];
+
+    activeItem?.scrollIntoView(
+    {
+        block: "nearest"
+    });
+}
+
+function filterProjectOptions(query = "")
+{
+    if (!el.projectMenu)
+    {
+        return;
+    }
+
+    const normalizedQuery =
+        String(query || "")
+            .trim()
+            .toLowerCase();
+
+    const options =
+        Array.from(
+            el.projectMenu.querySelectorAll(
+                ".picker-option[data-project-id]"
+            )
+        );
+
+    let visibleCount = 0;
+
+    options.forEach((option) =>
+    {
+        const name =
+            option.querySelector(
+                ".picker-option-name"
+            )
+            ?.textContent
+            ?.trim()
+            ?.toLowerCase()
+            || "";
+
+        const isVisible =
+            !normalizedQuery
+            || name.includes(normalizedQuery);
+
+        option.hidden =
+            !isVisible;
+
+        if (isVisible)
+        {
+            visibleCount += 1;
+        }
+    });
+
+    el.projectMenu
+        .querySelectorAll(
+            ".project-search-empty"
+        )
+        .forEach((element) =>
+        {
+            element.remove();
+        });
+
+    el.projectMenu
+        .querySelectorAll(
+            ".picker-empty-state:not(.project-search-empty)"
+        )
+        .forEach((element) =>
+        {
+            element.hidden =
+                Boolean(normalizedQuery);
+        });
+
+    if (visibleCount === 0)
+    {
+        const empty =
+            document.createElement("div");
+
+        empty.className =
+            "picker-empty-state project-search-empty";
+
+        empty.textContent =
+            `No lists match "${query.trim()}".`;
+
+        el.projectMenu.appendChild(empty);
+    }
+
+    activeProjectSuggestionIndex = -1;
+}
+
+function showProjectMenu(query = "")
 {
     if (
         !el.projectMenu ||
         !el.projectPickerBtn ||
-        el.projectPickerBtn.disabled
+        el.projectPickerBtn.getAttribute(
+            "aria-disabled"
+        ) === "true"
     )
     {
         return;
     }
 
+    filterProjectOptions(query);
+
     el.projectMenu.style.display = "block";
-    el.projectPickerBtn.setAttribute("aria-expanded", "true");
+
+    el.projectPickerBtn.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    el.projectSearchInput?.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
+    el.projectPickerToggleBtn?.setAttribute(
+        "aria-expanded",
+        "true"
+    );
+
     el.projectPickerBtn.classList.add("open");
 }
 
@@ -441,12 +702,95 @@ function toggleProjectMenu()
     if (isOpen)
     {
         hideProjectMenu();
+        return;
     }
-    else
+
+    hideTagSuggestions();
+    hideProjectCreatePanel(false);
+
+    restoreProjectSearchValue();
+
+    el.projectSearchInput?.focus();
+
+    showProjectMenu("");
+}
+
+function handleProjectSearchInput()
+{
+    const query =
+        el.projectSearchInput?.value || "";
+
+    showProjectMenu(query);
+}
+
+function handleProjectSearchFocus()
+{
+    hideTagSuggestions();
+    hideProjectCreatePanel(false);
+
+    showProjectMenu("");
+}
+
+function handleProjectSearchKeyDown(event)
+{
+    const items =
+        getVisibleProjectOptions();
+
+    if (
+        event.key === "ArrowDown"
+        || event.key === "ArrowUp"
+    )
     {
-        hideTagSuggestions();
-        hideProjectCreatePanel(false);
-        showProjectMenu();
+        event.preventDefault();
+
+        if (items.length === 0)
+        {
+            return;
+        }
+
+        const direction =
+            event.key === "ArrowDown"
+                ? 1
+                : -1;
+
+        activeProjectSuggestionIndex =
+            (
+                activeProjectSuggestionIndex
+                + direction
+                + items.length
+            )
+            % items.length;
+
+        updateActiveProjectOption(items);
+        return;
+    }
+
+    if (event.key === "Enter")
+    {
+        if (items.length === 0)
+        {
+            return;
+        }
+
+        event.preventDefault();
+
+        const selectedItem =
+            activeProjectSuggestionIndex >= 0
+                ? items[activeProjectSuggestionIndex]
+                : items.length === 1
+                    ? items[0]
+                    : null;
+
+        selectedItem?.click();
+        return;
+    }
+
+    if (event.key === "Escape")
+    {
+        event.preventDefault();
+
+        hideProjectMenu();
+        el.projectSearchInput?.blur();
     }
 }
 
@@ -514,11 +858,21 @@ function setSelectedProject(projectId, shouldSave = true)
             destinationName;
     }
 
-    if (el.projectDestinationHint)
+    if (el.projectSearchInput)
     {
-        el.projectDestinationHint.textContent =
-            `Will be saved to: ${destinationName}`;
+        el.projectSearchInput.value =
+            normalizedProjectId
+                ? destinationName
+                : "";
+
+        el.projectSearchInput.placeholder =
+            "Search or choose a list…";
+
+        el.projectSearchInput.removeAttribute(
+            "title"
+        );
     }
+
 
     if (el.projectMenu)
     {
@@ -714,7 +1068,7 @@ function renderProjects(projects, selectedProjectId = "")
         el.projectMenu.appendChild(emptyMessage);
     }
 
-    el.projectPickerBtn.disabled = false;
+    setProjectPickerDisabled(false);
 
     const normalizedSelectedProjectId =
         String(selectedProjectId || "");
@@ -916,7 +1270,13 @@ async function loadTickTickProjects()
                     "Loading lists...";
             }
 
-            el.projectPickerBtn.disabled = true;
+            if (el.projectSearchInput)
+            {
+                el.projectSearchInput.value =
+                    "Loading lists...";
+            }
+
+            setProjectPickerDisabled(true);
         }
 
         const result = await apiFetch(
@@ -1528,21 +1888,87 @@ function getTagsForSave()
 
 // ─── Telegram ────────────────────────────────────────────────────────────────
 
+function truncateMiddle(value, visibleStart = 9, visibleEnd = 4)
+{
+    const text =
+        String(value || "");
+
+    const minimumLength =
+        visibleStart + visibleEnd + 3;
+
+    if (text.length <= minimumLength)
+    {
+        return text;
+    }
+
+    return (
+        text.slice(0, visibleStart)
+        + "..."
+        + text.slice(-visibleEnd)
+    );
+}
+
+function setUserIdDisplay(userId)
+{
+    if (!el.userId)
+    {
+        return;
+    }
+
+    const fullUserId =
+        String(userId || "");
+
+    el.userId.dataset.fullValue =
+        fullUserId;
+
+    el.userId.value =
+        truncateMiddle(fullUserId);
+
+    el.userId.title =
+        fullUserId || "User ID";
+}
+
+function getFullUserId()
+{
+    return (
+        el.userId?.dataset?.fullValue?.trim()
+        || el.userId?.value?.trim()
+        || ""
+    );
+}
+
 function fillTelegramCommand(userId)
 {
-    if (el.telegramCommand)
+    if (!el.telegramCommand)
     {
-        el.telegramCommand.textContent =
-            userId
-                ? `/start ${userId}`
-                : "/start";
+        return;
     }
+
+    const fullCommand =
+        userId
+            ? `/start ${userId}`
+            : "/start";
+
+    const visibleCommand =
+        userId
+            ? `/start ${truncateMiddle(userId)}`
+            : "/start";
+
+    el.telegramCommand.dataset.fullValue =
+        fullCommand;
+
+    el.telegramCommand.textContent =
+        visibleCommand;
+
+    el.telegramCommand.removeAttribute(
+        "title"
+    );
 }
 
 function openTelegramBot()
 {
     const userId =
-        el.userId?.value?.trim();
+        getFullUserId();
 
     const url =
         userId
@@ -1619,15 +2045,20 @@ async function copyToClipboardWithFeedback(text, button)
 async function copyUserId(event)
 {
     await copyToClipboardWithFeedback(
-        el.userId?.value?.trim(),
+        getFullUserId(),
         event.target || el.copyUserIdBtn
     );
 }
 
 async function copyTelegramCommand(event)
 {
+    const fullCommand =
+        el.telegramCommand?.dataset?.fullValue?.trim()
+        || el.telegramCommand?.textContent?.trim()
+        || "";
+
     await copyToClipboardWithFeedback(
-        el.telegramCommand?.textContent?.trim(),
+        fullCommand,
         event.target || el.copyTelegramCommandBtn
     );
 }
@@ -1647,6 +2078,9 @@ function showCurrentEmail(email, isEnabled)
     {
         el.currentEmailDisplay.textContent =
             email;
+
+        el.currentEmailDisplay.title =
+            email || "No email configured";
     }
 
     if (el.weeklyEmailToggle)
@@ -1814,6 +2248,10 @@ async function saveArticle()
             button.disabled = true;
             button.textContent = "Saving...";
             button.style.opacity = "0.8";
+            button.setAttribute(
+                "aria-busy",
+                "true"
+            );
         }
 
         hideTagSuggestions();
@@ -1838,6 +2276,9 @@ async function saveArticle()
             button.style.backgroundColor = "var(--green)";
             button.style.borderColor = "var(--green)";
             button.style.opacity = "1";
+            button.removeAttribute(
+                "aria-busy"
+            );
         }
 
         setStatus(
@@ -1891,6 +2332,9 @@ async function saveArticle()
             button.disabled = false;
             button.textContent = originalText;
             button.style.opacity = "1";
+            button.removeAttribute(
+                "aria-busy"
+            );
         }
 
         setStatus(
@@ -2431,6 +2875,46 @@ function bindEvents()
         (event) =>
         {
             event.stopPropagation();
+
+            if (
+                event.target.closest(
+                    "#projectPickerToggleBtn"
+                )
+            )
+            {
+                return;
+            }
+
+            if (
+                event.target !==
+                el.projectSearchInput
+            )
+            {
+                el.projectSearchInput?.focus();
+            }
+        }
+    );
+
+    el.projectSearchInput?.addEventListener(
+        "input",
+        handleProjectSearchInput
+    );
+
+    el.projectSearchInput?.addEventListener(
+        "focus",
+        handleProjectSearchFocus
+    );
+
+    el.projectSearchInput?.addEventListener(
+        "keydown",
+        handleProjectSearchKeyDown
+    );
+
+    el.projectPickerToggleBtn?.addEventListener(
+        "click",
+        (event) =>
+        {
+            event.stopPropagation();
             toggleProjectMenu();
         }
     );
@@ -2568,27 +3052,117 @@ function bindEvents()
         }
     );
 
+    function isPointerInsideElement(
+        event,
+        element
+    )
+    {
+        if (
+            !element
+            || element.hidden
+        )
+        {
+            return false;
+        }
+
+        const style =
+            window.getComputedStyle(element);
+
+        if (
+            style.display === "none"
+            || style.visibility === "hidden"
+        )
+        {
+            return false;
+        }
+
+        const rect =
+            element.getBoundingClientRect();
+
+        return (
+            event.clientX >= rect.left
+            && event.clientX <= rect.right
+            && event.clientY >= rect.top
+            && event.clientY <= rect.bottom
+        );
+    }
+
     document.addEventListener(
-        "click",
+        "pointerdown",
         (event) =>
         {
+            const pointerInsideTagsControl =
+                isPointerInsideElement(
+                    event,
+                    el.tagsInputBox
+                );
+
+            const pointerInsideTagMenu =
+                isPointerInsideElement(
+                    event,
+                    el.tagSuggestions
+                );
+
             if (
-                el.tagsField &&
-                !el.tagsField.contains(event.target)
+                !pointerInsideTagsControl
+                && !pointerInsideTagMenu
             )
             {
                 hideTagSuggestions();
+
+                if (
+                    document.activeElement ===
+                    el.tagInput
+                )
+                {
+                    el.tagInput.blur();
+                }
             }
 
+            const pointerInsideProjectControl =
+                isPointerInsideElement(
+                    event,
+                    el.projectPickerBtn
+                );
+
+            const pointerInsideProjectMenu =
+                isPointerInsideElement(
+                    event,
+                    el.projectMenu
+                );
+
+            const pointerInsideProjectCreatePanel =
+                isPointerInsideElement(
+                    event,
+                    el.projectCreatePanel
+                );
+
+            const pointerInsideCreateButton =
+                isPointerInsideElement(
+                    event,
+                    el.openCreateProjectBtn
+                );
+
             if (
-                el.projectField &&
-                !el.projectField.contains(event.target)
+                !pointerInsideProjectControl
+                && !pointerInsideProjectMenu
+                && !pointerInsideProjectCreatePanel
+                && !pointerInsideCreateButton
             )
             {
                 hideProjectMenu();
                 hideProjectCreatePanel();
+
+                if (
+                    document.activeElement ===
+                    el.projectSearchInput
+                )
+                {
+                    el.projectSearchInput.blur();
+                }
             }
-        }
+        },
+        true
     );
 
     el.copyUserIdBtn?.addEventListener(
@@ -2624,6 +3198,23 @@ function bindEvents()
     el.themeToggleBtn?.addEventListener(
         "click",
         toggleTheme
+    );
+}
+
+
+// ─── Popup Viewport ──────────────────────────────────────────────────────────
+
+function syncPopupViewportHeight()
+{
+    const viewportHeight =
+        Math.min(
+            window.innerHeight || 600,
+            600
+        );
+
+    document.documentElement.style.setProperty(
+        "--popup-viewport-height",
+        `${viewportHeight}px`
     );
 }
 
@@ -2690,8 +3281,7 @@ async function bootstrap()
 
     if (isConnected && el.userId)
     {
-        el.userId.value =
-            userId;
+        setUserIdDisplay(userId);
 
         await Promise.allSettled(
         [

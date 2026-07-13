@@ -1,846 +1,332 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    />
-
-    <title>TickTick Extension</title>
-
-    <link
-        rel="preconnect"
-        href="https://fonts.googleapis.com"
-    />
-
-    <link
-        rel="preconnect"
-        href="https://fonts.gstatic.com"
-        crossorigin
-    />
-
-    <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap"
-        rel="stylesheet"
-    />
-
-    <link
-        rel="stylesheet"
-        href="popup.css"
-    />
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>TickTick Extension</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&amp;family=DM+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="popup.css" rel="stylesheet"/>
 </head>
-
 <body>
-    <div class="shell">
-
-        <!-- Onboarding -->
-        <div
-            id="onboardingView"
-            class="full-screen-center"
-        >
-            <div class="onboard-container">
-
-                <div class="tt-icon-large"></div>
-
-                <h1>Welcome to TickTick</h1>
-
-                <p>
+<div class="shell">
+<!-- Onboarding -->
+<div class="full-screen-center" id="onboardingView">
+<div class="onboard-container">
+<div class="tt-icon-large"></div>
+<h1>Welcome to TickTick</h1>
+<p>
                     Sign in to sync your articles and tasks.
                 </p>
-
-                <button
-                    id="connectTickTickBtn"
-                    type="button"
-                >
+<button id="connectTickTickBtn" type="button">
                     Connect Now
                 </button>
-
-            </div>
-        </div>
-
-        <!-- Main App -->
-        <div
-            id="appView"
-            style="display: none;"
-        >
-
-            <header class="app-header-two-tier">
-
-                <div class="header-top-row">
-
-                    <div class="brand-wrap">
-                        <div class="brand-logo"></div>
-                        <span class="brand-text">TickTick</span>
-                    </div>
-
-                    <div class="header-actions">
-
-                        <div
-                            id="ticktickStatusPill"
-                            class="status-pill outline-pill"
-                        >
-                            <span class="pill-dot"></span>
-                            Connected
-                        </div>
-
-                        <button
-                            id="themeToggleBtn"
-                            class="theme-toggle-btn"
-                            type="button"
-                            title="Toggle Theme"
-                        ></button>
-
-                    </div>
-
-                </div>
-
-                <div class="header-bottom-row">
-
-                    <button
-                        id="tabSave"
-                        class="line-tab active"
-                        type="button"
-                    >
+</div>
+</div>
+<!-- Main App -->
+<div id="appView" style="display: none;">
+<header class="app-header-two-tier">
+<div class="header-top-row">
+<div class="brand-wrap">
+<div class="brand-logo"></div>
+<span class="brand-text">TickTick</span>
+<div aria-hidden="true" aria-label="Connected to TickTick" class="header-connection-status header-connection-status--connected" hidden="" id="ticktickStatusPill" role="status"><span aria-hidden="true" class="header-status-dot"></span><span class="sr-only">Connected</span></div></div>
+<div class="header-actions">
+<button aria-label="Toggle theme" class="theme-toggle-btn" data-tooltip="Toggle theme" id="themeToggleBtn" type="button"></button>
+</div>
+</div>
+<div class="header-bottom-row">
+<button class="line-tab active" id="tabSave" type="button">
                         Save
                     </button>
-
-                    <button
-                        id="tabSettings"
-                        class="line-tab"
-                        type="button"
-                    >
+<button class="line-tab" id="tabSettings" type="button">
                         Settings
                     </button>
-
-                </div>
-
-            </header>
-
-            <main class="main-scroll">
-
-                <!-- Save Panel -->
-                <section
-                    id="panelSave"
-                    class="panel"
-                >
-
-                    <div class="form-group">
-
-                        <label
-                            class="label"
-                            for="title"
-                        >
+</div>
+</header>
+<main class="main-scroll">
+<!-- Save Panel -->
+<section class="panel" id="panelSave">
+<div class="form-group">
+<label class="label" for="title">
                             Title
                         </label>
-
-                        <input
-                            id="title"
-                            class="input"
-                            type="text"
-                            placeholder="Article title"
-                            dir="auto"
-                        />
-
-                    </div>
-
-                    <div class="form-group">
-
-                        <label
-                            class="label"
-                            for="url"
-                        >
+<input class="input" dir="auto" id="title" placeholder="Article title" type="text"/>
+</div>
+<div class="form-group">
+<label class="label" for="url">
                             URL
                         </label>
-
-                        <input
-                            id="url"
-                            class="input"
-                            type="text"
-                            placeholder="https://example.com/article"
-                        />
-
-                    </div>
-
-                    <div class="form-group">
-
-                        <label
-                            class="label"
-                            for="rawText"
-                        >
-                            Article Text
-                        </label>
-
-                        <textarea
-                            id="rawText"
-                            class="textarea"
-                            rows="4"
-                            placeholder="Paste article content here..."
-                            dir="auto"
-                        ></textarea>
-
-                    </div>
-
-
-                    <!-- TickTick destination folder -->
-                    <div
-                        id="projectField"
-                        class="form-group compact-form-group"
-                    >
-                        <label
-                            class="label"
-                            for="projectPickerBtn"
-                        >
+<input class="input" id="url" placeholder="https://example.com/article" type="text"/>
+</div>
+<div class="form-group">
+<label class="label label-with-meta" for="rawText">
+<span>Article text</span>
+<span class="field-meta">
+                                Auto-detected — editable
+                            </span>
+</label>
+<textarea class="textarea" dir="auto" id="rawText" placeholder="Paste article content here..." rows="4"></textarea>
+</div>
+<!-- TickTick destination folder -->
+<div class="form-group compact-form-group" id="projectField">
+<label class="label" id="projectFieldLabel">
                             Save to
                         </label>
-
-                        <div class="project-picker-row">
-
-                            <div class="picker project-picker-main">
-
-                                <button
-                                    id="projectPickerBtn"
-                                class="picker-control"
-                                type="button"
-                                aria-haspopup="listbox"
-                                aria-controls="projectMenu"
-                                aria-expanded="false"
-                            >
-                                <span class="picker-leading-icon">
-                                    <svg
-                                        viewBox="0 0 24 24"
-                                        aria-hidden="true"
-                                    >
-                                        <path
-                                            d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"
-                                        />
-                                    </svg>
-                                </span>
-
-                                <span
-                                    id="projectPickerLabel"
-                                    class="picker-label"
-                                >
-                                    Loading lists...
-                                </span>
-
-                                <span class="picker-chevron">
-                                    <svg
-                                        viewBox="0 0 20 20"
-                                        aria-hidden="true"
-                                    >
-                                        <path
-                                            d="m5.75 7.75 4.25 4.25 4.25-4.25"
-                                        />
-                                    </svg>
-                                </span>
-                            </button>
-
-                            <div
-                                id="projectMenu"
-                                class="picker-menu"
-                                role="listbox"
-                                style="display: none;"
-                            ></div>
-
-                                <select
-                                    id="projectSelect"
-                                    aria-hidden="true"
-                                    tabindex="-1"
-                                    hidden
-                                >
-                                    <option value="">
+<div class="project-picker-row">
+<div class="picker project-picker-main">
+<div aria-controls="projectMenu" aria-disabled="false" aria-expanded="false" aria-haspopup="listbox" class="picker-control project-search-box" id="projectPickerBtn" role="combobox">
+<span aria-hidden="true" class="picker-leading-icon">
+<svg viewbox="0 0 24 24">
+<path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"></path>
+</svg>
+</span>
+<span class="sr-only" id="projectPickerLabel">
+            Loading lists...
+        </span>
+<input aria-autocomplete="list" aria-controls="projectMenu" aria-describedby="projectSearchHint" aria-expanded="false" aria-labelledby="projectFieldLabel" autocomplete="off" class="project-search-input" id="projectSearchInput" placeholder="Search or choose a list…" spellcheck="false" type="text"/>
+<button aria-controls="projectMenu" aria-expanded="false" aria-label="Toggle TickTick lists" class="project-picker-toggle" id="projectPickerToggleBtn" type="button">
+<span class="picker-chevron">
+<svg aria-hidden="true" viewbox="0 0 20 20">
+<path d="m5.75 7.75 4.25 4.25 4.25-4.25"></path>
+</svg>
+</span>
+</button>
+</div>
+<div class="picker-menu" id="projectMenu" role="listbox" style="display: none;"></div>
+<select aria-hidden="true" hidden="" id="projectSelect" tabindex="-1">
+<option value="">
                                         Loading lists...
                                     </option>
-                                </select>
-
-                            </div>
-
-                            <button
-                                id="openCreateProjectBtn"
-                                class="project-add-button"
-                                type="button"
-                                title="Create new list"
-                                aria-label="Create new TickTick list"
-                            >
-                                <svg
-                                    viewBox="0 0 24 24"
-                                    aria-hidden="true"
-                                >
-                                    <path d="M12 5v14M5 12h14"/>
-                                </svg>
-                            </button>
-
-                        </div>
-
-                        <p
-                            id="projectDestinationHint"
-                            class="project-destination-hint"
-                        >
-                            Will be saved to: Inbox
-                        </p>
-
-                        <div
-                            id="projectCreatePanel"
-                            class="project-create-panel"
-                            hidden
-                        >
-                            <div class="project-create-copy">
-                                <strong>Create a TickTick list</strong>
-                                <span>
+</select>
+</div>
+<button aria-label="Add new list" class="project-add-button" id="openCreateProjectBtn" title="Add new list" type="button">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M12 5v14M5 12h14"></path>
+</svg>
+</button>
+</div><p class="hint project-search-hint" id="projectSearchHint">If no list is selected, the article will be saved to Inbox.</p>
+<div class="project-create-panel" hidden="" id="projectCreatePanel">
+<div class="project-create-copy">
+<strong>Create a TickTick list</strong>
+<span>
                                     The new list will be created in your connected TickTick account.
                                 </span>
-                            </div>
-
-                            <input
-                                id="projectNameInput"
-                                class="project-create-input"
-                                type="text"
-                                maxlength="100"
-                                placeholder="List name"
-                                autocomplete="off"
-                                spellcheck="false"
-                            />
-
-                            <div class="project-create-actions">
-                                <button
-                                    id="cancelCreateProjectBtn"
-                                    class="project-create-cancel"
-                                    type="button"
-                                >
+</div>
+<input autocomplete="off" class="project-create-input" id="projectNameInput" maxlength="100" placeholder="List name" spellcheck="false" type="text"/>
+<div class="project-create-actions">
+<button class="project-create-cancel" id="cancelCreateProjectBtn" type="button">
                                     Cancel
                                 </button>
-
-                                <button
-                                    id="confirmCreateProjectBtn"
-                                    class="project-create-confirm"
-                                    type="button"
-                                >
+<button class="project-create-confirm" id="confirmCreateProjectBtn" type="button">
                                     Create
                                 </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Tags picker -->
-                    <div
-                        id="tagsField"
-                        class="form-group compact-form-group"
-                    >
-                        <label
-                            class="label"
-                            for="tagInput"
-                        >
+</div>
+</div>
+</div>
+<!-- Tags picker -->
+<div class="form-group compact-form-group" id="tagsField">
+<label class="label" id="tagsFieldLabel">
                             Tags
                         </label>
-
-                        <div class="picker tags-picker">
-
-                            <div
-                                id="tagsInputBox"
-                                class="picker-control tags-input-box"
-                                role="combobox"
-                                aria-haspopup="listbox"
-                                aria-controls="tagSuggestions"
-                                aria-expanded="false"
-                            >
-                                <span class="picker-leading-icon">
-                                    <svg
-                                        viewBox="0 0 24 24"
-                                        aria-hidden="true"
-                                    >
-                                        <path
-                                            d="M20 13 13 20 4 11V4h7l9 9Z"
-                                        />
-                                        <circle
-                                            cx="8.5"
-                                            cy="8.5"
-                                            r="1.25"
-                                        />
-                                    </svg>
-                                </span>
-
-                                <div class="tags-picker-value">
-                                    <div
-                                        id="selectedTagsContainer"
-                                        class="selected-tags-container"
-                                    ></div>
-
-                                    <input
-                                        id="tagInput"
-                                        class="tag-text-input"
-                                        type="text"
-                                        placeholder="Type or select tags"
-                                        autocomplete="off"
-                                        spellcheck="false"
-                                        aria-autocomplete="list"
-                                        aria-controls="tagSuggestions"
-                                        aria-expanded="false"
-                                    />
-                                </div>
-
-                                <button
-                                    id="tagPickerToggleBtn"
-                                    class="tag-picker-toggle"
-                                    type="button"
-                                    aria-label="Toggle tag suggestions"
-                                    aria-controls="tagSuggestions"
-                                    aria-expanded="false"
-                                >
-                                    <span class="picker-chevron">
-                                        <svg
-                                            viewBox="0 0 20 20"
-                                            aria-hidden="true"
-                                        >
-                                            <path
-                                                d="m5.75 7.75 4.25 4.25 4.25-4.25"
-                                            />
-                                        </svg>
-                                    </span>
-                                </button>
-                            </div>
-
-                            <div
-                                id="tagSuggestions"
-                                class="picker-menu tag-suggestions"
-                                role="listbox"
-                                style="display: none;"
-                            ></div>
-
-                        </div>
-
-                        <p class="hint">
-                            Type or choose tags. Press Enter, comma, or space to add.
+<div class="picker tags-picker">
+<div aria-controls="tagSuggestions" aria-expanded="false" aria-haspopup="listbox" class="picker-control tags-input-box" id="tagsInputBox" role="combobox">
+<span class="picker-leading-icon">
+<svg aria-hidden="true" viewbox="0 0 24 24">
+<path d="M20 13 13 20 4 11V4h7l9 9Z"></path>
+<circle cx="8.5" cy="8.5" r="1.25"></circle>
+</svg>
+</span>
+<div class="tags-picker-value">
+<div class="selected-tags-container" id="selectedTagsContainer"></div>
+<input aria-autocomplete="list" aria-controls="tagSuggestions" aria-expanded="false" aria-labelledby="tagsFieldLabel" autocomplete="off" class="tag-text-input" id="tagInput" placeholder="Add tags…" spellcheck="false" type="text"/>
+</div>
+<button aria-controls="tagSuggestions" aria-expanded="false" aria-label="Toggle tag suggestions" class="tag-picker-toggle" id="tagPickerToggleBtn" type="button">
+<span class="picker-chevron">
+<svg aria-hidden="true" viewbox="0 0 20 20">
+<path d="m5.75 7.75 4.25 4.25 4.25-4.25"></path>
+</svg>
+</span>
+</button>
+</div>
+<div class="picker-menu tag-suggestions" id="tagSuggestions" role="listbox" style="display: none;"></div>
+</div>
+<p class="hint">
+                            Press Enter, comma, or space to add.
                         </p>
-                    </div>
-
-                    <div class="ai-block">
-
-                        <span class="ai-block-label">
+</div>
+<div class="ai-block">
+<span class="ai-block-label">
                             AI Processing
                         </span>
-
-                        <div class="ai-options-grid">
-
-                            <label
-                                class="toggle-row"
-                                for="useSummaryAi"
-                            >
-                                <span>Weekly Email</span>
-
-                                <div class="toggle-wrap">
-
-                                    <input
-                                        id="useSummaryAi"
-                                        type="checkbox"
-                                        
-                                    />
-
-                                    <span class="toggle-track">
-                                        <span class="toggle-thumb"></span>
-                                    </span>
-
-                                </div>
-                            </label>
-
-                            <label
-                                class="toggle-row"
-                                for="useTagsAi"
-                            >
-                                <span>AI Tags</span>
-
-                                <div class="toggle-wrap">
-
-                                    <input
-                                        id="useTagsAi"
-                                        type="checkbox"
-                                        
-                                    />
-
-                                    <span class="toggle-track">
-                                        <span class="toggle-thumb"></span>
-                                    </span>
-
-                                </div>
-                            </label>
-
-                            <label
-                                class="toggle-row"
-                                for="useQuiz"
-                            >
-                                <span>Telegram Quiz</span>
-
-                                <div class="toggle-wrap">
-
-                                    <input
-                                        id="useQuiz"
-                                        type="checkbox"
-                                        
-                                    />
-
-                                    <span class="toggle-track">
-                                        <span class="toggle-thumb"></span>
-                                    </span>
-
-                                </div>
-                            </label>
-
-                            <label
-                                class="toggle-row"
-                                for="mergeSummaryWithContent"
-                            >
-                                <span>Append Summary</span>
-
-                                <div class="toggle-wrap">
-
-                                    <input
-                                        id="mergeSummaryWithContent"
-                                        type="checkbox"
-                                    />
-
-                                    <span class="toggle-track">
-                                        <span class="toggle-thumb"></span>
-                                    </span>
-
-                                </div>
-                            </label>
-
-                        </div>
-
-                    </div>
-
-                </section>
-
-                <!-- Settings Panel -->
-                <section
-                    id="panelSettings"
-                    class="panel"
-                    style="display: none;"
-                >
-
-                    <div class="settings-group">
-
-                        <span class="settings-group-label">
-                            Account & Connection
-                        </span>
-
-                        <div
-                            class="form-group"
-                            style="margin-bottom: 8px;"
-                        >
-
-                            <div class="input-row">
-
-                                <input
-                                    id="userId"
-                                    class="input input--mono"
-                                    type="text"
-                                    readonly
-                                    placeholder="User ID"
-                                />
-
-                                <button
-                                    id="copyUserIdBtn"
-                                    class="btn btn-ghost btn-sm"
-                                    type="button"
-                                >
-                                    Copy ID
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                        <div
-                            class="connection-row"
-                            style="margin-bottom: 0;"
-                        >
-
-                            <div
-                                id="ticktickStatusSecondary"
-                                class="status-pill modern-pill"
-                            >
-                                <span class="pill-dot"></span>
+<div class="ai-options-grid">
+<label class="toggle-row" for="useSummaryAi">
+<span>Weekly Email</span>
+<div class="toggle-wrap">
+<input id="useSummaryAi" type="checkbox"/>
+<span class="toggle-track">
+<span class="toggle-thumb"></span>
+</span>
+</div>
+</label>
+<label class="toggle-row" for="useTagsAi">
+<span>AI Tags</span>
+<div class="toggle-wrap">
+<input id="useTagsAi" type="checkbox"/>
+<span class="toggle-track">
+<span class="toggle-thumb"></span>
+</span>
+</div>
+</label>
+<label class="toggle-row" for="useQuiz">
+<span>Telegram Quiz</span>
+<div class="toggle-wrap">
+<input id="useQuiz" type="checkbox"/>
+<span class="toggle-track">
+<span class="toggle-thumb"></span>
+</span>
+</div>
+</label>
+<label class="toggle-row" for="mergeSummaryWithContent">
+<span>Append Summary</span>
+<div class="toggle-wrap">
+<input id="mergeSummaryWithContent" type="checkbox"/>
+<span class="toggle-track">
+<span class="toggle-thumb"></span>
+</span>
+</div>
+</label>
+</div>
+</div>
+</section>
+<!-- Settings Panel -->
+<section class="panel settings-panel" id="panelSettings">
+<article class="settings-card settings-card--account">
+<div class="settings-card-header">
+<h3 class="settings-card-title">
+<span aria-hidden="true" class="settings-title-icon">
+<svg viewbox="0 0 24 24">
+<circle cx="12" cy="8" r="3.5"></circle>
+<path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6"></path>
+</svg>
+</span>
+<span>Account &amp; Connection</span>
+</h3>
+<div class="status-pill status-pill--success" id="ticktickStatusSecondary">
+<span class="pill-dot"></span>
                                 Connected
                             </div>
-
-                            <button
-                                id="reconnectTickTickBtn"
-                                class="btn btn-ghost btn-sm"
-                                style="margin-left: auto;"
-                                type="button"
-                            >
-                                Reconnect
+</div>
+<div class="settings-control-row">
+<input aria-label="User ID" class="input input--mono" id="userId" placeholder="User ID" readonly="" title="Full account ID" type="text"/>
+<button class="btn btn-secondary btn-sm settings-action-button" id="copyUserIdBtn" type="button">
+                                Copy ID
                             </button>
-
-                        </div>
-
-                    </div>
-
-                    <div class="settings-group">
-
-                        <span class="settings-group-label">
-                            Weekly Email Digest
-                        </span>
-
-                        <div class="input-row">
-
-                            <input
-                                id="email"
-                                class="input"
-                                type="email"
-                                placeholder="you@example.com"
-                            />
-
-                            <button
-                                id="saveEmailSettingsBtn"
-                                class="btn btn-secondary btn-sm"
-                                type="button"
-                            >
+</div>
+<div class="settings-secondary-row">
+<span class="settings-helper">
+                                Connected TickTick account
+                            </span>
+<button aria-label="Reconnect TickTick account" class="btn btn-ghost btn-sm settings-action-button" id="reconnectTickTickBtn" title="Reconnect TickTick account" type="button">Reconnect</button>
+</div>
+</article>
+<article class="settings-card settings-card--email">
+<div class="settings-card-header">
+<h3 class="settings-card-title">
+<span aria-hidden="true" class="settings-title-icon">
+<svg viewbox="0 0 24 24">
+<rect height="13" rx="2" width="17" x="3.5" y="5.5"></rect>
+<path d="m5 8 7 5 7-5"></path>
+</svg>
+</span>
+<span>Weekly Email Digest</span>
+</h3>
+</div>
+<div class="settings-control-row">
+<input aria-label="Delivery email" class="input" id="email" placeholder="you@example.com" type="email"/>
+<button class="btn btn-secondary btn-sm settings-action-button" id="saveEmailSettingsBtn" type="button">
                                 Save
                             </button>
-
-                        </div>
-
-                        <div
-                            id="currentEmailContainer"
-                            style="
-                                display: none;
-                                margin-top: 12px;
-                                padding-top: 12px;
-                                border-top: 1px dashed var(--border);
-                            "
-                        >
-
-                            <div
-                                style="
-                                    display: flex;
-                                    justify-content: space-between;
-                                    align-items: center;
-                                    margin-bottom: 8px;
-                                "
-                            >
-
-                                <span
-                                    style="
-                                        font-size: 10.5px;
-                                        color: var(--ink-3);
-                                        font-weight: 700;
-                                        text-transform: uppercase;
-                                    "
-                                >
-                                    Current Email
+</div>
+<div class="settings-email-state" id="currentEmailContainer" style="display: none;">
+<div class="settings-meta-row">
+<span class="settings-meta-label">
+                                    Current email
                                 </span>
-
-                                <span
-                                    id="currentEmailDisplay"
-                                    style="
-                                        font-size: 12.5px;
-                                        font-weight: 600;
-                                        color: var(--ink-0);
-                                    "
-                                ></span>
-
-                            </div>
-
-                            <label
-                                class="toggle-row"
-                                for="weeklyEmailToggle"
-                                style="padding: 0; border: none;"
-                            >
-                                <span>Enable Weekly Digest</span>
-
-                                <div class="toggle-wrap">
-
-                                    <input
-                                        id="weeklyEmailToggle"
-                                        type="checkbox"
-                                    />
-
-                                    <span class="toggle-track">
-                                        <span class="toggle-thumb"></span>
-                                    </span>
-
-                                </div>
-                            </label>
-
-                        </div>
-
-                    </div>
-
-                    <div class="settings-group">
-
-                        <div
-                            style="
-                                display: flex;
-                                justify-content: space-between;
-                                align-items: center;
-                                margin-bottom: 12px;
-                            "
-                        >
-
-                            <span
-                                class="settings-group-label"
-                                style="margin-bottom: 0 !important;"
-                            >
-                                Telegram Quiz
-                            </span>
-
-                            <div
-                                id="telegramStatusPill"
-                                class="status-pill status-pill--danger"
-                                style="
-                                    padding: 2px 8px;
-                                    font-size: 9.5px;
-                                "
-                            >
-                                <span class="pill-dot"></span>
-
-                                <span id="telegramStatusText">
+<span class="settings-meta-value" id="currentEmailDisplay"></span>
+</div>
+<label class="toggle-row settings-toggle-row" for="weeklyEmailToggle">
+<span>Enable weekly digest</span>
+<div class="toggle-wrap">
+<input id="weeklyEmailToggle" type="checkbox"/>
+<span class="toggle-track">
+<span class="toggle-thumb"></span>
+</span>
+</div>
+</label>
+</div>
+</article>
+<article class="settings-card settings-card--telegram">
+<div class="settings-card-header">
+<h3 class="settings-card-title">
+<span aria-hidden="true" class="settings-title-icon">
+<svg viewbox="0 0 24 24">
+<path d="m21 4-3 16-6-4-3 3 .7-5.2L18 7.5 7.5 12 3 10.5 21 4Z"></path>
+</svg>
+</span>
+<span>Telegram Quiz</span>
+</h3>
+<div class="status-pill status-pill--danger" id="telegramStatusPill">
+<span class="pill-dot"></span>
+<span id="telegramStatusText">
                                     Not Connected
                                 </span>
-                            </div>
-
-                        </div>
-
-                        <label
-                            class="toggle-row"
-                            for="telegramQuizToggle"
-                        >
-                            <span>Enable Telegram Quiz Delivery</span>
-
-                            <div class="toggle-wrap">
-
-                                <input
-                                    id="telegramQuizToggle"
-                                    type="checkbox"
-                                    checked
-                                />
-
-                                <span class="toggle-track">
-                                    <span class="toggle-thumb"></span>
-                                </span>
-
-                            </div>
-                        </label>
-
-                        <div
-                            id="telegramOptions"
-                            class="telegram-options"
-                            style="
-                                border-top: 1px dashed var(--border);
-                                padding-top: 10px;
-                                margin-top: 10px;
-                            "
-                        >
-
-                            <div
-                                class="command-block"
-                                style="padding: 8px 10px;"
-                            >
-
-                                <span class="command-block-label">
-                                    Start command
-                                </span>
-
-                                <div class="input-row">
-
-                                    <code
-                                        id="telegramCommand"
-                                        style="flex: 1;"
-                                    >
+</div>
+</div>
+<label class="toggle-row settings-toggle-row settings-telegram-toggle" for="telegramQuizToggle">
+<span>Enable Telegram quiz delivery</span>
+<div class="toggle-wrap">
+<input checked="" id="telegramQuizToggle" type="checkbox"/>
+<span class="toggle-track">
+<span class="toggle-thumb"></span>
+</span>
+</div>
+</label>
+<div class="settings-telegram-options" id="telegramOptions" style="display: block;"><div class="telegram-action-row telegram-open-row"><button class="btn btn-primary btn-sm settings-open-bot settings-action-button" id="openTelegramBotBtn" type="button">
+                                Open Bot
+                            </button></div><div class="settings-command-group" hidden="">
+<div class="settings-control-row">
+<code aria-label="Telegram connection command" class="settings-command" id="telegramCommand">
                                         /start ...
                                     </code>
-
-                                    <button
-                                        id="copyTelegramCommandBtn"
-                                        class="btn btn-ghost btn-sm"
-                                        type="button"
-                                    >
+<button class="btn btn-secondary btn-sm settings-action-button" id="copyTelegramCommandBtn" type="button">
                                         Copy
                                     </button>
-
-                                </div>
-
-                            </div>
-
-                            <div
-                                class="input-row"
-                                style="margin-top: 8px;"
-                            >
-
-                                <button
-                                    id="openTelegramBotBtn"
-                                    class="btn btn-primary btn-sm"
-                                    style="width: 100%;"
-                                    type="button"
-                                >
-                                    Open Bot
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </div>
-
-                </section>
-
-            </main>
-
-            <footer
-                id="appFooter"
-                class="app-footer"
-            >
-                <div
-                    id="saveActions"
-                    class="save-actions"
-                >
-
-                    <button
-                        id="refreshPageBtn"
-                        class="btn btn-ghost"
-                        type="button"
-                    >
+</div>
+</div></div>
+</article>
+</section>
+</main>
+<footer class="app-footer" id="appFooter">
+<div class="save-actions" id="saveActions">
+<button class="btn btn-ghost" id="refreshPageBtn" type="button">
                         Refresh
                     </button>
-
-                    <button
-                        id="saveArticleBtn"
-                        class="btn btn-primary"
-                        type="button"
-                    >
+<button class="btn btn-primary" id="saveArticleBtn" type="button">
                         Save Article
                     </button>
-
-                </div>
-
-                <div
-                    id="statusBar"
-                    class="status-bar status-bar--info"
-                    role="status"
-                    aria-live="polite"
-                    aria-atomic="true"
-                >
-                    <span
-                        class="status-icon"
-                        aria-hidden="true"
-                    ></span>
-
-                    <span
-                        id="statusText"
-                        class="status-message"
-                    >
+</div>
+<div aria-atomic="true" aria-live="polite" class="status-bar status-bar--info" id="statusBar" role="status">
+<span aria-hidden="true" class="status-icon"></span>
+<span class="status-message" id="statusText">
                         Ready
                     </span>
-                </div>
-            </footer>
-
-        </div>
-
-    </div>
-
-    <script src="popup.js"></script>
+</div>
+</footer>
+</div>
+</div>
+<script src="popup.js"></script>
 </body>
 </html>

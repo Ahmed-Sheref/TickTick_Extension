@@ -248,9 +248,12 @@ h1, h2, h3, h4 { line-height: 1.25; }
 .app-header-two-tier {
   display: flex;
   flex-direction: column;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0.85)),
-    url("./assets/images/background.webp") right / auto 100% no-repeat;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.88)),
+    url("./assets/images/background.webp");
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   position: sticky;
@@ -262,15 +265,24 @@ h1, h2, h3, h4 { line-height: 1.25; }
 
 /* FIX: dark mode header keeps the background image */
 [data-theme="dark"] .app-header-two-tier {
-  background:
-    linear-gradient(rgba(20, 21, 24, 0.82), rgba(20, 21, 24, 0.92)),
-    url("./assets/images/background.webp") right / auto 100% no-repeat;
+  background-image:
+    linear-gradient(rgba(20, 21, 24, 0.84), rgba(20, 21, 24, 0.93)),
+    url("./assets/images/background.webp");
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
 
 [data-theme="dark"] .header-bottom-row {
+  background: transparent;
+}
+
+/* Full-width header artwork */
+.header-top-row,
+.header-bottom-row {
   background: transparent;
 }
 
@@ -1538,8 +1550,16 @@ code {
 }
 
 /* =========================================
-   17. FINAL STABLE POPUP LAYOUT
+   17. FIXED POPUP VIEWPORT
 ========================================= */
+
+/*
+   One viewport and one scrollable region.
+
+   Header: fixed at the top.
+   Main content: the only area allowed to scroll.
+   Footer dock: fixed at the bottom and always visible.
+*/
 
 html,
 body
@@ -1552,7 +1572,11 @@ body
     min-height: 600px !important;
     max-height: 600px !important;
 
+    margin: 0 !important;
+    padding: 0 !important;
+
     overflow: hidden !important;
+    background: transparent !important;
 }
 
 body
@@ -1562,20 +1586,27 @@ body
 
 .shell
 {
-    width: 100% !important;
-    height: 100% !important;
-    min-height: 0 !important;
+    position: relative !important;
+
+    width: 380px !important;
+    height: 600px !important;
+    min-height: 600px !important;
+    max-height: 600px !important;
 
     overflow: hidden !important;
+
+    background: var(--bg) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+
+    box-shadow:
+        0 14px 34px
+        rgba(15, 23, 42, 0.13) !important;
 }
 
 #appView
 {
-    display: grid;
-    grid-template-rows:
-        auto
-        minmax(0, 1fr)
-        auto;
+    position: relative !important;
 
     width: 100% !important;
     height: 100% !important;
@@ -1584,193 +1615,465 @@ body
     overflow: hidden !important;
 }
 
+
+/* =========================================
+   18. FIXED HEADER
+========================================= */
+
 .app-header-two-tier
 {
-    position: relative !important;
-    top: auto !important;
-    z-index: 20 !important;
+    position: fixed !important;
 
-    grid-row: 1;
+    top: 0 !important;
+    left: 0 !important;
 
-    min-height: 0 !important;
+    z-index: 300 !important;
+
+    width: 380px !important;
+    height: 78px !important;
+    min-height: 78px !important;
+    max-height: 78px !important;
+
+    overflow: hidden !important;
+
+    border-radius:
+        13px
+        13px
+        0
+        0 !important;
 }
+
+.header-top-row
+{
+    height: 43px !important;
+    min-height: 43px !important;
+
+    padding:
+        8px
+        14px
+        4px !important;
+}
+
+.header-bottom-row
+{
+    height: 35px !important;
+    min-height: 35px !important;
+
+    padding:
+        0
+        14px !important;
+
+    gap: 20px !important;
+}
+
+.line-tab
+{
+    height: 35px !important;
+
+    padding:
+        8px
+        0
+        7px !important;
+}
+
+
+/* =========================================
+   19. ONLY SCROLLABLE REGION
+========================================= */
 
 .main-scroll
 {
-    grid-row: 2;
+    position: fixed !important;
 
+    top: 78px !important;
+    right: auto !important;
+    bottom: 102px !important;
+    left: 0 !important;
+
+    z-index: 100 !important;
+
+    width: 380px !important;
+    height: auto !important;
     min-height: 0 !important;
 
-    padding: 11px 14px 10px !important;
+    margin: 0 !important;
+
+    padding:
+        10px
+        14px
+        12px !important;
 
     overflow-x: hidden !important;
     overflow-y: auto !important;
 
-    overscroll-behavior: contain;
+    overscroll-behavior: contain !important;
 }
 
-/* Footer remains inside the 600px popup viewport. */
-.app-footer
+
+/* =========================================
+   20. FIXED ACTION + MESSAGE DOCK
+========================================= */
+
+#appFooter
 {
-    position: relative !important;
-    inset: auto !important;
-    z-index: 40 !important;
+    position: fixed !important;
 
-    grid-row: 3;
+    right: auto !important;
+    bottom: 0 !important;
+    left: 0 !important;
 
-    display: flex !important;
-    flex-direction: column !important;
+    z-index: 400 !important;
 
-    width: 100% !important;
-    min-height: 0 !important;
+    display: grid !important;
 
-    margin: 0 !important;
-
-    background: var(--surface) !important;
-    border-top: 1px solid var(--border) !important;
-
-    box-shadow:
-        0 -5px 18px
-        rgba(15, 23, 42, 0.07) !important;
-}
-
-/* Save buttons sit directly above the message bar. */
-.app-footer .save-actions
-{
-    position: static !important;
-
-    display: grid;
-    grid-template-columns:
-        1fr
-        1.35fr;
-
-    gap: 9px;
-
-    width: 100% !important;
-
-    margin: 0 !important;
-    padding: 8px 14px !important;
-
-    background: var(--surface) !important;
-    border: 0 !important;
-    box-shadow: none !important;
-}
-
-.app-footer .save-actions .btn
-{
-    width: 100% !important;
-
-    height: 36px !important;
-    min-height: 36px !important;
-
-    font-size: 12.5px !important;
-}
-
-/* Status message is always visible below the buttons. */
-.app-footer .status-bar
-{
-    position: static !important;
-
-    display: flex !important;
-    align-items: center !important;
+    grid-template-rows:
+        38px
+        38px !important;
 
     gap: 8px !important;
 
-    width: 100% !important;
+    width: 380px !important;
+    height: 102px !important;
+    min-height: 102px !important;
+    max-height: 102px !important;
 
-    height: 34px !important;
-    min-height: 34px !important;
-    max-height: 34px !important;
+    box-sizing: border-box !important;
 
-    padding: 0 14px !important;
+    margin: 0 !important;
 
-    visibility: visible !important;
-    opacity: 1 !important;
+    padding:
+        8px
+        12px !important;
+
+    overflow: hidden !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            color-mix(
+                in srgb,
+                var(--surface) 96%,
+                var(--bg)
+            ),
+            var(--surface)
+        ) !important;
 
     border-top:
         1px solid
         var(--border) !important;
 
+    border-radius:
+        0
+        0
+        13px
+        13px !important;
+
+    box-shadow:
+        0 -8px 22px
+        rgba(15, 23, 42, 0.09) !important;
+}
+
+[data-theme="dark"] #appFooter
+{
+    box-shadow:
+        0 -8px 22px
+        rgba(0, 0, 0, 0.30) !important;
+}
+
+
+/* =========================================
+   21. TAB VISIBILITY
+========================================= */
+
+#appView:not(.settings-active)
+#panelSave
+{
+    display: flex !important;
+}
+
+#appView:not(.settings-active)
+#panelSettings
+{
+    display: none !important;
+}
+
+#appView.settings-active
+#panelSave
+{
+    display: none !important;
+}
+
+#appView.settings-active
+#panelSettings
+{
+    display: grid !important;
+}
+
+#appView:not(.settings-active)
+#saveActions
+{
+    display: grid !important;
+}
+
+#appView.settings-active
+#saveActions
+{
+    display: none !important;
+}
+
+
+/* =========================================
+   22. SAVE BUTTONS
+========================================= */
+
+#saveActions
+{
+    position: static !important;
+
+    grid-row: 1 !important;
+
+    grid-template-columns:
+        minmax(0, 0.88fr)
+        minmax(0, 1.32fr) !important;
+
+    gap: 10px !important;
+
+    width: 100% !important;
+    height: 38px !important;
+    min-height: 38px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    background: transparent !important;
+    border: 0 !important;
     box-shadow: none !important;
 }
 
-.app-footer .status-bar::before
+#saveActions .btn
+{
+    width: 100% !important;
+
+    height: 38px !important;
+    min-height: 38px !important;
+
+    margin: 0 !important;
+
+    padding:
+        0
+        14px !important;
+
+    border-radius: 10px !important;
+
+    font-size: 12.5px !important;
+    font-weight: 650 !important;
+}
+
+#saveActions .btn-ghost
+{
+    color: var(--ink-2) !important;
+    background: var(--surface) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+}
+
+#saveActions .btn-primary
+{
+    box-shadow:
+        0 7px 16px
+        rgba(59, 91, 251, 0.20) !important;
+}
+
+
+/* =========================================
+   23. MESSAGE BOX
+========================================= */
+
+#statusBar
+{
+    --status-accent: var(--blue);
+    --status-soft: var(--blue-soft);
+
+    position: static !important;
+
+    grid-row: 2 !important;
+
+    display: grid !important;
+
+    grid-template-columns:
+        20px
+        minmax(0, 1fr) !important;
+
+    align-items: center !important;
+
+    gap: 8px !important;
+
+    width: 100% !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+
+    margin: 0 !important;
+
+    padding:
+        6px
+        10px !important;
+
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    color: var(--ink-2) !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            color-mix(
+                in srgb,
+                var(--status-soft) 58%,
+                var(--surface)
+            ),
+            var(--surface)
+        ) !important;
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            var(--status-accent) 18%,
+            var(--border)
+        ) !important;
+
+    border-radius: 10px !important;
+
+    box-shadow:
+        inset 3px 0 0
+        var(--status-accent),
+        0 3px 10px
+        rgba(15, 23, 42, 0.045) !important;
+}
+
+#statusBar::before
 {
     display: none !important;
     content: none !important;
 }
 
-.app-footer .status-icon
+#statusBar .status-icon
 {
+    position: relative !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 20px !important;
+    height: 20px !important;
+
+    background: var(--status-soft) !important;
+
+    border-radius: 7px !important;
+}
+
+#statusBar .status-icon::before
+{
+    content: "" !important;
+
     display: block !important;
-    flex: 0 0 7px !important;
 
     width: 7px !important;
     height: 7px !important;
-    min-width: 7px !important;
+
+    background: var(--status-accent) !important;
+
+    border-radius: 50% !important;
+}
+
+#statusBar .status-icon::after
+{
+    content: "" !important;
+
+    position: absolute !important;
+
+    inset: 4px !important;
+
+    border:
+        1px solid
+        var(--status-accent) !important;
 
     border-radius: 50% !important;
 
-    background: var(--blue) !important;
-    box-shadow: none !important;
+    animation:
+        fixedStatusPulse
+        1.8s
+        ease-out
+        infinite !important;
 }
 
-.app-footer .status-icon::before
+@keyframes fixedStatusPulse
 {
-    display: none !important;
-    content: none !important;
+    0%
+    {
+        opacity: 0.45;
+        transform: scale(0.7);
+    }
+
+    75%,
+    100%
+    {
+        opacity: 0;
+        transform: scale(1.5);
+    }
 }
 
-.app-footer .status-message
+#statusBar .status-message
 {
     min-width: 0 !important;
 
     overflow: hidden !important;
 
-    color: inherit !important;
-
     font-size: 11.5px !important;
-    font-weight: 600 !important;
+    font-weight: 650 !important;
     line-height: 1.2 !important;
 
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
 }
 
-.app-footer .status-bar--success .status-icon
+#statusBar.status-bar--success
 {
-    background: var(--green) !important;
+    --status-accent: var(--green);
+    --status-soft: var(--green-soft);
 
-    box-shadow:
-        0 0 0 3px
-        var(--green-ring) !important;
+    color: var(--green) !important;
 }
 
-.app-footer .status-bar--danger .status-icon
+#statusBar.status-bar--danger
 {
-    background: var(--red) !important;
+    --status-accent: var(--red);
+    --status-soft: var(--red-soft);
 
-    box-shadow:
-        0 0 0 3px
-        var(--red-ring) !important;
+    color: var(--red) !important;
 }
 
-.app-footer .status-bar--warning .status-icon
+#statusBar.status-bar--warning
 {
-    background: var(--amber) !important;
+    --status-accent: var(--amber);
+    --status-soft: var(--amber-soft);
 
-    box-shadow:
-        0 0 0 3px
-        #fde68a !important;
+    color: var(--amber) !important;
 }
 
 
 /* =========================================
-   18. SAVE PAGE
+   24. SAVE PAGE
 ========================================= */
 
 #panelSave
 {
+    flex-direction: column !important;
+
     gap: 9px !important;
 
     padding:
@@ -1779,41 +2082,150 @@ body
         4px !important;
 }
 
+#panelSave .form-group
+{
+    margin: 0 !important;
+}
+
+#panelSave .label
+{
+    margin-bottom: 5px !important;
+
+    font-size: 10.5px !important;
+}
+
 #panelSave .input
 {
-    height: 38px !important;
+    height: 39px !important;
+
+    padding:
+        0
+        12px !important;
+
+    border-radius: 10px !important;
 }
 
 #panelSave .textarea
 {
-    min-height: 76px !important;
-    max-height: 125px !important;
+    min-height: 80px !important;
+    max-height: 116px !important;
+
+    padding:
+        10px
+        12px !important;
+
+    border-radius: 10px !important;
+}
+
+#projectField,
+#tagsField
+{
+    gap: 0 !important;
+}
+
+.project-destination-hint
+{
+    display: none !important;
 }
 
 .project-picker-row
 {
     align-items: center !important;
+
+    gap: 9px !important;
 }
 
-.picker-control,
-.tags-input-box.picker-control,
+.project-picker-main
+{
+    min-width: 0 !important;
+}
+
 .project-add-button
 {
-    height: 40px !important;
-    min-height: 40px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+
+    height: 42px !important;
+    min-height: 42px !important;
+
+    border-radius: 11px !important;
+}
+
+#panelSave .hint
+{
+    margin-top: 5px !important;
+
+    font-size: 10.25px !important;
+    line-height: 1.35 !important;
+}
+
+.ai-block
+{
+    margin-top: 1px !important;
+
+    padding:
+        10px
+        12px !important;
+
+    border-radius: 12px !important;
+}
+
+
+/* =========================================
+   25. TAG PICKER
+========================================= */
+
+.tags-picker
+{
+    width: 100% !important;
 }
 
 .tags-input-box.picker-control
 {
+    display: grid !important;
+
+    grid-template-columns:
+        18px
+        minmax(0, 1fr)
+        30px !important;
+
+    align-items: center !important;
+
+    width: 100% !important;
+    height: 42px !important;
+    min-height: 42px !important;
+
+    gap: 8px !important;
+
     padding:
-        4px
-        8px
-        4px
-        10px !important;
+        0
+        7px
+        0
+        11px !important;
+
+    overflow: hidden !important;
+
+    border-radius: 10px !important;
+}
+
+.tags-input-box
+.picker-leading-icon
+{
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 18px !important;
+    height: 18px !important;
 }
 
 .tags-picker-value
 {
+    display: flex !important;
+    align-items: center !important;
+
+    gap: 5px !important;
+
     min-width: 0 !important;
 
     overflow: hidden !important;
@@ -1821,18 +2233,23 @@ body
     flex-wrap: nowrap !important;
 }
 
-.tags-input-box .selected-tags-container
+.tags-input-box
+.selected-tags-container
 {
     display: flex !important;
     align-items: center !important;
 
     gap: 4px !important;
 
-    flex: 0 1 auto !important;
+    flex:
+        0
+        1
+        auto !important;
 
-    max-width: 185px !important;
+    max-width: 190px !important;
 
     overflow-x: auto !important;
+    overflow-y: hidden !important;
 
     scrollbar-width: none !important;
 }
@@ -1843,15 +2260,25 @@ body
     display: none !important;
 }
 
-.tags-input-box .tag-text-input
+.tags-input-box
+.tag-text-input
 {
-    flex: 1 1 90px !important;
+    flex:
+        1
+        1
+        92px !important;
 
     width: auto !important;
-    min-width: 78px !important;
-    height: 28px !important;
+    min-width: 82px !important;
+
+    height: 30px !important;
 
     padding: 0 !important;
+
+    background: transparent !important;
+
+    border: 0 !important;
+    outline: 0 !important;
 }
 
 .tag-picker-toggle
@@ -1860,19 +2287,18 @@ body
     align-items: center !important;
     justify-content: center !important;
 
-    flex: 0 0 28px !important;
-
     width: 28px !important;
+    min-width: 28px !important;
     height: 28px !important;
 
-    margin-left: auto !important;
+    margin: 0 !important;
     padding: 0 !important;
 
     color: var(--ink-3) !important;
     background: transparent !important;
 
     border: 0 !important;
-    border-radius: 7px !important;
+    border-radius: 8px !important;
 
     cursor: pointer !important;
 }
@@ -1883,8 +2309,16 @@ body
     background: var(--blue-soft) !important;
 }
 
-.tag-picker-toggle .picker-chevron
+.tag-picker-toggle
+.picker-chevron
 {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    width: 18px !important;
+    height: 18px !important;
+
     margin: 0 !important;
 
     transition:
@@ -1903,107 +2337,179 @@ body
 
 
 /* =========================================
-   19. SETTINGS PAGE
+   26. SETTINGS PAGE
 ========================================= */
 
-/* The Settings page uses the full available middle row without scrolling. */
-#appView.settings-active .main-scroll
+/*
+   Settings uses the same fixed header and fixed message footer.
+   Its middle section never scrolls.
+*/
+
+#appView.settings-active
+.main-scroll
 {
-    overflow: hidden !important;
+    top: 78px !important;
+    bottom: 54px !important;
 
     padding:
         8px
         12px !important;
+
+    overflow: hidden !important;
 }
 
+#appView.settings-active
+#appFooter
+{
+    grid-template-rows:
+        38px !important;
+
+    height: 54px !important;
+    min-height: 54px !important;
+    max-height: 54px !important;
+}
+
+#appView.settings-active
+#statusBar
+{
+    grid-row: 1 !important;
+}
+
+#appView.settings-active
 #panelSettings
 {
-    display: flex;
-    flex-direction: column;
+    grid-template-rows:
+        104px
+        122px
+        minmax(0, 1fr) !important;
 
+    width: 100% !important;
     height: 100% !important;
     min-height: 0 !important;
 
-    gap: 7px !important;
-
-    padding: 0 !important;
-}
-
-#panelSettings .settings-group
-{
-    flex: 0 0 auto !important;
+    gap: 8px !important;
 
     margin: 0 !important;
-    padding: 8px 10px !important;
+    padding: 0 !important;
 
-    border-radius: 10px !important;
+    overflow: hidden !important;
 }
 
-#panelSettings .settings-group-label
+#panelSettings
+.settings-group
+{
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+
+    min-height: 0 !important;
+
+    margin: 0 !important;
+
+    padding:
+        9px
+        11px !important;
+
+    border-radius: 12px !important;
+
+    overflow: hidden !important;
+}
+
+#panelSettings
+> .settings-group:nth-child(3)
+{
+    justify-content: space-between !important;
+}
+
+#panelSettings
+.settings-group-label
 {
     margin-bottom: 5px !important;
 
     font-size: 10.25px !important;
 }
 
-#panelSettings .form-group
+#panelSettings
+.form-group
 {
     margin-bottom: 4px !important;
 }
 
-#panelSettings .input
+#panelSettings
+.input-row
+{
+    gap: 7px !important;
+}
+
+#panelSettings
+.input
 {
     height: 30px !important;
 
-    font-size: 11px !important;
+    padding:
+        0
+        9px !important;
+
+    border-radius: 8px !important;
+
+    font-size: 10.75px !important;
 }
 
-#panelSettings .btn,
-#panelSettings .btn-sm
+#panelSettings
+.btn,
+#panelSettings
+.btn-sm
 {
     height: 28px !important;
     min-height: 28px !important;
 
-    padding: 0 8px !important;
+    padding:
+        0
+        8px !important;
 
-    font-size: 10.5px !important;
+    border-radius: 8px !important;
+
+    font-size: 10.25px !important;
 }
 
-#panelSettings .connection-row
+#panelSettings
+.connection-row
 {
-    min-height: 26px !important;
+    min-height: 24px !important;
 
     gap: 6px !important;
 }
 
-#panelSettings .status-pill
+#panelSettings
+.status-pill
 {
-    padding: 2px 7px !important;
+    padding:
+        2px
+        7px !important;
 
     font-size: 9.25px !important;
 }
 
-#panelSettings .toggle-row,
+#panelSettings
+.toggle-row,
 [data-theme="dark"]
-#panelSettings .toggle-row
+#panelSettings
+.toggle-row
 {
-    min-height: 26px !important;
+    min-height: 24px !important;
 
-    padding: 3px 0 !important;
+    padding:
+        2px
+        0 !important;
 
-    font-size: 11px !important;
+    font-size: 10.75px !important;
 }
 
 #panelSettings
-.toggle-row > span:first-child
+#currentEmailContainer
 {
-    font-size: 11px !important;
-}
-
-#panelSettings #currentEmailContainer
-{
-    margin-top: 5px !important;
-    padding-top: 5px !important;
+    margin-top: 4px !important;
+    padding-top: 4px !important;
 }
 
 #panelSettings
@@ -2012,31 +2518,69 @@ body
     margin-bottom: 3px !important;
 }
 
-#panelSettings #telegramOptions
+#panelSettings
+#currentEmailDisplay
 {
-    margin-top: 5px !important;
-    padding-top: 5px !important;
+    max-width: 200px !important;
+
+    overflow: hidden !important;
+
+    font-size: 10.5px !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
 }
 
-#panelSettings .command-block
+#panelSettings
+.settings-group > div[style*="margin-bottom: 12px"]
+{
+    margin-bottom: 5px !important;
+}
+
+#panelSettings
+#telegramOptions
+{
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+
+    flex:
+        1
+        1
+        auto !important;
+
+    min-height: 0 !important;
+
+    margin-top: 4px !important;
+    padding-top: 4px !important;
+}
+
+#panelSettings
+.command-block
 {
     gap: 2px !important;
 
-    padding: 5px 7px !important;
+    padding:
+        5px
+        7px !important;
+
+    border-radius: 8px !important;
 }
 
-#panelSettings .command-block-label
+#panelSettings
+.command-block-label
 {
     font-size: 8.5px !important;
 }
 
-#panelSettings .command-block code
+#panelSettings
+.command-block code
 {
-    max-width: 210px !important;
+    max-width: 205px !important;
 
     overflow: hidden !important;
 
-    font-size: 9.75px !important;
+    font-size: 9.35px !important;
 
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
@@ -2045,12 +2589,3515 @@ body
 #panelSettings
 #telegramOptions > .input-row
 {
-    margin-top: 5px !important;
+    margin-top: 4px !important;
 }
 
-[data-theme="dark"] .app-footer
+
+/* =========================================
+   27. SCROLLBAR OWNERSHIP
+========================================= */
+
+html,
+body,
+.shell,
+#appView,
+#appFooter
+{
+    scrollbar-width: none !important;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+.shell::-webkit-scrollbar,
+#appView::-webkit-scrollbar,
+#appFooter::-webkit-scrollbar
+{
+    display: none !important;
+}
+
+#appView:not(.settings-active)
+.main-scroll
+{
+    scrollbar-width: thin !important;
+
+    scrollbar-color:
+        rgba(148, 163, 184, 0.50)
+        transparent !important;
+}
+
+
+/* =========================================
+   28. BOTTOM ACTION AREA — VISUAL POLISH
+========================================= */
+
+/*
+   Layout behavior is unchanged.
+   These rules only improve the appearance of:
+   - Footer dock
+   - Refresh / Save buttons
+   - Status message
+*/
+
+#appFooter
+{
+    gap: 9px !important;
+
+    padding:
+        9px
+        12px !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            color-mix(
+                in srgb,
+                var(--surface) 98%,
+                var(--bg)
+            ),
+            var(--surface)
+        ) !important;
+
+    border-top:
+        1px solid
+        color-mix(
+            in srgb,
+            var(--border) 86%,
+            transparent
+        ) !important;
+
+    box-shadow:
+        0 -10px 26px
+        rgba(15, 23, 42, 0.085) !important;
+}
+
+[data-theme="dark"] #appFooter
+{
+    background:
+        linear-gradient(
+            180deg,
+            color-mix(
+                in srgb,
+                var(--surface) 94%,
+                var(--bg)
+            ),
+            var(--surface)
+        ) !important;
+
+    box-shadow:
+        0 -10px 26px
+        rgba(0, 0, 0, 0.32) !important;
+}
+
+
+/* Action buttons */
+
+#saveActions
+{
+    gap: 10px !important;
+}
+
+#saveActions .btn
+{
+    height: 39px !important;
+    min-height: 39px !important;
+
+    border-radius: 12px !important;
+
+    font-size: 12.5px !important;
+    font-weight: 650 !important;
+
+    transition:
+        transform 0.16s ease,
+        box-shadow 0.16s ease,
+        background 0.16s ease,
+        border-color 0.16s ease !important;
+}
+
+#saveActions .btn:hover:not(:disabled)
+{
+    transform: translateY(-1px) !important;
+}
+
+#saveActions .btn:active:not(:disabled)
+{
+    transform: translateY(0) scale(0.985) !important;
+}
+
+#saveActions .btn-ghost
+{
+    color: var(--ink-2) !important;
+
+    background:
+        color-mix(
+            in srgb,
+            var(--surface) 92%,
+            var(--bg)
+        ) !important;
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            var(--border) 92%,
+            var(--ink-4)
+        ) !important;
+
+    box-shadow:
+        0 3px 9px
+        rgba(15, 23, 42, 0.04) !important;
+}
+
+#saveActions .btn-ghost:hover:not(:disabled)
+{
+    color: var(--ink-1) !important;
+    background: var(--surface) !important;
+    border-color:
+        color-mix(
+            in srgb,
+            var(--blue) 24%,
+            var(--border)
+        ) !important;
+}
+
+#saveActions .btn-primary
+{
+    background:
+        linear-gradient(
+            135deg,
+            var(--blue),
+            color-mix(
+                in srgb,
+                var(--blue) 82%,
+                #7c8dff
+            )
+        ) !important;
+
+    box-shadow:
+        0 8px 18px
+        color-mix(
+            in srgb,
+            var(--blue) 25%,
+            transparent
+        ) !important;
+}
+
+#saveActions .btn-primary:hover:not(:disabled)
+{
+    background:
+        linear-gradient(
+            135deg,
+            var(--blue-hover),
+            var(--blue)
+        ) !important;
+
+    box-shadow:
+        0 10px 22px
+        color-mix(
+            in srgb,
+            var(--blue) 31%,
+            transparent
+        ) !important;
+}
+
+
+/* Modern animated feedback card */
+
+#statusBar
+{
+    --status-accent: var(--blue);
+    --status-soft: var(--blue-soft);
+
+    position: relative !important;
+
+    grid-template-columns:
+        24px
+        minmax(0, 1fr) !important;
+
+    gap: 9px !important;
+
+    height: 39px !important;
+    min-height: 39px !important;
+    max-height: 39px !important;
+
+    padding:
+        7px
+        11px !important;
+
+    overflow: hidden !important;
+
+    color: var(--ink-2) !important;
+
+    background:
+        linear-gradient(
+            105deg,
+            color-mix(
+                in srgb,
+                var(--status-soft) 42%,
+                var(--surface)
+            ),
+            var(--surface) 72%
+        ) !important;
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            var(--status-accent) 16%,
+            var(--border)
+        ) !important;
+
+    border-radius: 12px !important;
+
+    box-shadow:
+        0 5px 14px
+        rgba(15, 23, 42, 0.045),
+        inset 0 1px 0
+        rgba(255, 255, 255, 0.48) !important;
+}
+
+/* Soft animated shine */
+#statusBar::after
+{
+    content: "" !important;
+
+    position: absolute !important;
+
+    top: 0 !important;
+    bottom: 0 !important;
+    left: -42% !important;
+
+    width: 34% !important;
+
+    pointer-events: none !important;
+
+    background:
+        linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.46),
+            transparent
+        ) !important;
+
+    transform: skewX(-18deg) !important;
+
+    animation:
+        statusShine
+        3.2s
+        ease-in-out
+        infinite !important;
+}
+
+@keyframes statusShine
+{
+    0%,
+    52%
+    {
+        left: -42%;
+        opacity: 0;
+    }
+
+    58%
+    {
+        opacity: 0.75;
+    }
+
+    82%
+    {
+        left: 112%;
+        opacity: 0;
+    }
+
+    100%
+    {
+        left: 112%;
+        opacity: 0;
+    }
+}
+
+#statusBar .status-icon
+{
+    position: relative !important;
+
+    width: 24px !important;
+    height: 24px !important;
+
+    background:
+        color-mix(
+            in srgb,
+            var(--status-soft) 78%,
+            var(--surface)
+        ) !important;
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            var(--status-accent) 18%,
+            transparent
+        ) !important;
+
+    border-radius: 8px !important;
+
+    box-shadow:
+        0 3px 8px
+        rgba(15, 23, 42, 0.06) !important;
+}
+
+#statusBar .status-icon::before
+{
+    width: 7px !important;
+    height: 7px !important;
+
+    background: var(--status-accent) !important;
+
+    border-radius: 50% !important;
+}
+
+#statusBar .status-icon::after
+{
+    inset: 5px !important;
+
+    border:
+        1px solid
+        var(--status-accent) !important;
+
+    animation:
+        refinedStatusPulse
+        1.9s
+        ease-out
+        infinite !important;
+}
+
+@keyframes refinedStatusPulse
+{
+    0%
+    {
+        opacity: 0.48;
+        transform: scale(0.65);
+    }
+
+    72%,
+    100%
+    {
+        opacity: 0;
+        transform: scale(1.65);
+    }
+}
+
+#statusBar .status-message
+{
+    position: relative !important;
+    z-index: 2 !important;
+
+    font-size: 11.5px !important;
+    font-weight: 650 !important;
+    letter-spacing: 0.005em !important;
+}
+
+
+/* Status-specific appearance */
+
+#statusBar.status-bar--success
+{
+    --status-accent: var(--green);
+    --status-soft: var(--green-soft);
+
+    color: var(--green) !important;
+}
+
+#statusBar.status-bar--danger
+{
+    --status-accent: var(--red);
+    --status-soft: var(--red-soft);
+
+    color: var(--red) !important;
+}
+
+#statusBar.status-bar--warning
+{
+    --status-accent: var(--amber);
+    --status-soft: var(--amber-soft);
+
+    color: var(--amber) !important;
+}
+
+
+/* Settings only shows the message card */
+#appView.settings-active #appFooter
+{
+    padding:
+        8px
+        12px !important;
+}
+
+#appView.settings-active #statusBar
+{
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+}
+
+
+/* Respect users who disable animations */
+@media (prefers-reduced-motion: reduce)
+{
+    #statusBar::after,
+    #statusBar .status-icon::after
+    {
+        animation: none !important;
+    }
+
+    #saveActions .btn
+    {
+        transition: none !important;
+    }
+}
+
+
+/* =========================================
+   29. CLEANER COMPACT BOTTOM AREA
+========================================= */
+
+/*
+   Keep the working fixed layout.
+   Only simplify the visual design:
+   - Smaller buttons
+   - Less shadow
+   - One simple status dot
+   - No nested square/circle animation
+*/
+
+.main-scroll
+{
+    bottom: 88px !important;
+}
+
+#appFooter
+{
+    grid-template-rows:
+        34px
+        34px !important;
+
+    gap: 6px !important;
+
+    height: 88px !important;
+    min-height: 88px !important;
+    max-height: 88px !important;
+
+    padding:
+        7px
+        12px !important;
+
+    background: var(--surface) !important;
+
+    border-top:
+        1px solid
+        var(--border) !important;
+
+    box-shadow:
+        0 -6px 18px
+        rgba(15, 23, 42, 0.065) !important;
+}
+
+[data-theme="dark"] #appFooter
 {
     box-shadow:
-        0 -5px 18px
-        rgba(0, 0, 0, 0.26) !important;
+        0 -6px 18px
+        rgba(0, 0, 0, 0.24) !important;
 }
+
+
+/* Smaller and calmer buttons */
+
+#saveActions
+{
+    height: 34px !important;
+    min-height: 34px !important;
+
+    gap: 8px !important;
+}
+
+#saveActions .btn
+{
+    height: 34px !important;
+    min-height: 34px !important;
+
+    border-radius: 9px !important;
+
+    font-size: 12px !important;
+    font-weight: 600 !important;
+
+    box-shadow: none !important;
+}
+
+#saveActions .btn:hover:not(:disabled)
+{
+    transform: none !important;
+}
+
+#saveActions .btn:active:not(:disabled)
+{
+    transform: scale(0.985) !important;
+}
+
+#saveActions .btn-primary
+{
+    background: var(--blue) !important;
+
+    box-shadow:
+        0 4px 10px
+        rgba(59, 91, 251, 0.16) !important;
+}
+
+#saveActions .btn-primary:hover:not(:disabled)
+{
+    background: var(--blue-hover) !important;
+
+    box-shadow:
+        0 5px 12px
+        rgba(59, 91, 251, 0.20) !important;
+}
+
+#saveActions .btn-ghost
+{
+    background: var(--surface) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    box-shadow: none !important;
+}
+
+
+/* Simple feedback box: dot + text only */
+
+#statusBar
+{
+    grid-template-columns:
+        10px
+        minmax(0, 1fr) !important;
+
+    gap: 8px !important;
+
+    height: 34px !important;
+    min-height: 34px !important;
+    max-height: 34px !important;
+
+    padding:
+        6px
+        10px !important;
+
+    background:
+        color-mix(
+            in srgb,
+            var(--status-soft) 30%,
+            var(--surface)
+        ) !important;
+
+    border:
+        1px solid
+        color-mix(
+            in srgb,
+            var(--status-accent) 14%,
+            var(--border)
+        ) !important;
+
+    border-radius: 9px !important;
+
+    box-shadow: none !important;
+}
+
+#statusBar::after
+{
+    display: none !important;
+    content: none !important;
+}
+
+#statusBar .status-icon
+{
+    width: 10px !important;
+    height: 10px !important;
+
+    background: transparent !important;
+
+    border: 0 !important;
+    border-radius: 50% !important;
+
+    box-shadow: none !important;
+}
+
+#statusBar .status-icon::before
+{
+    width: 7px !important;
+    height: 7px !important;
+
+    background: var(--status-accent) !important;
+
+    border-radius: 50% !important;
+
+    animation:
+        simpleStatusPulse
+        1.8s
+        ease-in-out
+        infinite !important;
+}
+
+#statusBar .status-icon::after
+{
+    display: none !important;
+    content: none !important;
+}
+
+@keyframes simpleStatusPulse
+{
+    0%,
+    100%
+    {
+        opacity: 1;
+    }
+
+    50%
+    {
+        opacity: 0.45;
+    }
+}
+
+#statusBar .status-message
+{
+    font-size: 11.25px !important;
+    font-weight: 600 !important;
+    letter-spacing: 0 !important;
+}
+
+
+/* Settings footer only contains the status row */
+
+#appView.settings-active
+.main-scroll
+{
+    bottom: 48px !important;
+}
+
+#appView.settings-active
+#appFooter
+{
+    grid-template-rows:
+        34px !important;
+
+    height: 48px !important;
+    min-height: 48px !important;
+    max-height: 48px !important;
+
+    padding:
+        7px
+        12px !important;
+}
+
+@media (prefers-reduced-motion: reduce)
+{
+    #statusBar .status-icon::before
+    {
+        animation: none !important;
+    }
+}
+
+/* =========================================
+   30. SETTINGS PAGE — FINAL SIZE SYSTEM
+========================================= */
+
+/*
+   Available Settings area:
+   600px popup
+   - 78px header
+   - 48px status footer
+   = 474px
+
+   The inner 458px is distributed as:
+   - Account: 110px
+   - Email: 128px
+   - Telegram: remaining space
+*/
+
+#appView.settings-active .main-scroll
+{
+    top: 78px !important;
+    bottom: 48px !important;
+
+    padding:
+        8px
+        12px !important;
+
+    overflow: hidden !important;
+
+    background: var(--bg) !important;
+}
+
+#appView.settings-active #panelSettings
+{
+    display: grid !important;
+
+    grid-template-rows:
+        110px
+        128px
+        minmax(0, 1fr) !important;
+
+    gap: 8px !important;
+
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    overflow: hidden !important;
+}
+
+
+/* =========================================
+   31. UNIFIED CARDS
+========================================= */
+
+.settings-card
+{
+    display: flex !important;
+    flex-direction: column !important;
+
+    min-height: 0 !important;
+
+    margin: 0 !important;
+
+    padding:
+        9px
+        10px !important;
+
+    background: var(--surface) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    border-radius: 11px !important;
+
+    box-shadow:
+        0 2px 8px
+        rgba(15, 23, 42, 0.035) !important;
+
+    overflow: hidden !important;
+}
+
+[data-theme="dark"] .settings-card
+{
+    background: var(--surface) !important;
+    box-shadow: none !important;
+}
+
+
+/* =========================================
+   32. CARD HEADERS
+========================================= */
+
+.settings-card-header
+{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    gap: 8px !important;
+
+    min-height: 20px !important;
+
+    margin:
+        0
+        0
+        6px !important;
+}
+
+.settings-card-title
+{
+    min-width: 0 !important;
+
+    color: var(--ink-2) !important;
+
+    font-size: 10.25px !important;
+    font-weight: 700 !important;
+    line-height: 1.15 !important;
+    letter-spacing: 0.045em !important;
+    text-transform: uppercase !important;
+}
+
+.settings-card-header .status-pill
+{
+    flex:
+        0
+        0
+        auto !important;
+
+    min-height: 20px !important;
+    max-width: 116px !important;
+
+    padding:
+        2px
+        7px !important;
+
+    overflow: hidden !important;
+
+    font-size: 8.75px !important;
+    line-height: 1 !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+
+/* =========================================
+   33. INPUTS AND ACTION BUTTONS
+========================================= */
+
+.settings-control-row
+{
+    display: grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        80px !important;
+
+    align-items: center !important;
+
+    gap: 7px !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+.settings-control-row .input,
+.settings-command
+{
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 30px !important;
+    min-height: 30px !important;
+
+    padding:
+        0
+        9px !important;
+
+    color: var(--ink-1) !important;
+    background: var(--bg) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    border-radius: 8px !important;
+
+    font-size: 10.25px !important;
+
+    box-shadow: none !important;
+}
+
+.settings-control-row .input:focus
+{
+    background: var(--surface) !important;
+    border-color: var(--blue) !important;
+
+    box-shadow:
+        0 0 0 3px
+        var(--blue-soft) !important;
+}
+
+.settings-action-button
+{
+    width: 80px !important;
+
+    height: 30px !important;
+    min-height: 30px !important;
+
+    margin: 0 !important;
+
+    padding:
+        0
+        7px !important;
+
+    border-radius: 8px !important;
+
+    font-size: 9.75px !important;
+    font-weight: 600 !important;
+}
+
+.settings-action-button.btn-secondary,
+.settings-action-button.btn-ghost
+{
+    color: var(--ink-2) !important;
+    background: var(--surface) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    box-shadow: none !important;
+}
+
+.settings-action-button:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+    border-color: var(--blue-ring) !important;
+}
+
+
+/* =========================================
+   34. ACCOUNT CARD
+========================================= */
+
+.settings-secondary-row
+{
+    display: grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        80px !important;
+
+    align-items: center !important;
+
+    gap: 7px !important;
+
+    margin-top: 6px !important;
+}
+
+.settings-helper
+{
+    min-width: 0 !important;
+
+    overflow: hidden !important;
+
+    color: var(--ink-4) !important;
+
+    font-size: 8.75px !important;
+    line-height: 1.15 !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+
+/* =========================================
+   35. EMAIL CARD
+========================================= */
+
+.settings-email-state
+{
+    margin-top: 6px !important;
+
+    padding-top: 5px !important;
+
+    border-top:
+        1px solid
+        var(--border-soft) !important;
+}
+
+.settings-email-state[style*="display: block"]
+{
+    display: block !important;
+}
+
+.settings-email-state[style*="display: none"]
+{
+    display: none !important;
+}
+
+.settings-meta-row
+{
+    display: grid !important;
+
+    grid-template-columns:
+        auto
+        minmax(0, 1fr) !important;
+
+    align-items: center !important;
+
+    gap: 7px !important;
+
+    margin-bottom: 3px !important;
+}
+
+.settings-meta-label
+{
+    color: var(--ink-4) !important;
+
+    font-size: 8.75px !important;
+    font-weight: 650 !important;
+    line-height: 1.1 !important;
+    text-transform: uppercase !important;
+}
+
+.settings-meta-value
+{
+    min-width: 0 !important;
+
+    overflow: hidden !important;
+
+    color: var(--ink-1) !important;
+
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    text-align: right !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+
+/* =========================================
+   36. SETTINGS TOGGLES
+========================================= */
+
+.settings-toggle-row,
+[data-theme="dark"] .settings-toggle-row
+{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    gap: 10px !important;
+
+    min-height: 24px !important;
+
+    margin: 0 !important;
+
+    padding:
+        2px
+        0 !important;
+
+    background: transparent !important;
+
+    border:
+        0 !important;
+
+    border-radius: 0 !important;
+}
+
+.settings-toggle-row > span:first-child
+{
+    min-width: 0 !important;
+
+    color: var(--ink-1) !important;
+
+    font-size: 10.25px !important;
+    font-weight: 500 !important;
+    line-height: 1.15 !important;
+}
+
+.settings-toggle-row .toggle-wrap
+{
+    flex:
+        0
+        0
+        auto !important;
+}
+
+#panelSettings .toggle-track
+{
+    width: 34px !important;
+    height: 18px !important;
+}
+
+#panelSettings .toggle-thumb
+{
+    top: 1px !important;
+    left: 2px !important;
+
+    width: 14px !important;
+    height: 14px !important;
+}
+
+#panelSettings
+.toggle-wrap
+input:checked
++
+.toggle-track
+.toggle-thumb
+{
+    transform:
+        translateX(15px) !important;
+}
+
+
+/* =========================================
+   37. TELEGRAM CARD
+========================================= */
+
+.settings-card--telegram
+{
+    justify-content: flex-start !important;
+}
+
+.settings-telegram-toggle
+{
+    flex:
+        0
+        0
+        auto !important;
+
+    margin-bottom: 6px !important;
+
+    padding-bottom: 6px !important;
+
+    border-bottom:
+        1px solid
+        var(--border-soft) !important;
+}
+
+.settings-telegram-options[style*="display: block"]
+{
+    display: flex !important;
+    flex:
+        1
+        1
+        auto !important;
+    flex-direction: column !important;
+
+    gap: 7px !important;
+
+    min-height: 0 !important;
+}
+
+.settings-telegram-options[style*="display: none"]
+{
+    display: none !important;
+}
+
+.settings-command-group
+{
+    flex:
+        0
+        0
+        auto !important;
+
+    min-height: 0 !important;
+}
+
+.settings-command-label
+{
+    display: block !important;
+
+    margin-bottom: 4px !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 8.75px !important;
+    font-weight: 650 !important;
+    line-height: 1.1 !important;
+}
+
+.settings-command
+{
+    display: flex !important;
+    align-items: center !important;
+
+    overflow: hidden !important;
+
+    font-family: var(--mono) !important;
+    font-size: 9px !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+.settings-open-bot
+{
+    width: 100% !important;
+
+    height: 30px !important;
+    min-height: 30px !important;
+
+    margin:
+        auto
+        0
+        0 !important;
+
+    border-radius: 8px !important;
+
+    font-size: 10px !important;
+    font-weight: 650 !important;
+
+    box-shadow:
+        0 3px 8px
+        rgba(59, 91, 251, 0.14) !important;
+}
+
+
+/* =========================================
+   38. DARK MODE
+========================================= */
+
+[data-theme="dark"] .settings-control-row .input,
+[data-theme="dark"] .settings-command
+{
+    background: var(--bg-3) !important;
+}
+
+/* =========================================
+   39. INCREMENTAL UI/UX REFINEMENTS
+   Markup and styling only — no JS behavior changes
+========================================= */
+
+/* 39.1 Softer Save-tab labels */
+#panelSave .label
+{
+    letter-spacing: 0.015em !important;
+    text-transform: none !important;
+}
+
+#panelSave .label-with-meta
+{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    gap: 8px !important;
+}
+
+#panelSave .field-meta
+{
+    display: inline-flex !important;
+    align-items: center !important;
+
+    flex:
+        0
+        0
+        auto !important;
+
+    padding:
+        2px
+        6px !important;
+
+    color: var(--ink-3) !important;
+    background: var(--border-soft) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    border-radius: 999px !important;
+
+    font-size: 9px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    line-height: 1.3 !important;
+    text-transform: none !important;
+}
+
+
+/* 39.2 Header breathing room */
+.header-actions
+{
+    gap: 15px !important;
+}
+
+#ticktickStatusPill
+{
+    margin-right: 1px !important;
+}
+
+
+/* 39.3 Keep Tags helper useful but visually secondary */
+#tagsField .hint
+{
+    display: block !important;
+
+    margin-top: 5px !important;
+
+    color: var(--ink-4) !important;
+
+    font-size: 9.75px !important;
+    line-height: 1.35 !important;
+}
+
+
+/* 39.4 Settings title icons */
+.settings-card-title
+{
+    display: inline-flex !important;
+    align-items: center !important;
+
+    gap: 7px !important;
+}
+
+.settings-title-icon
+{
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    flex:
+        0
+        0
+        22px !important;
+
+    width: 22px !important;
+    height: 22px !important;
+
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+
+    border-radius: 7px !important;
+}
+
+.settings-title-icon svg
+{
+    width: 13px !important;
+    height: 13px !important;
+
+    fill: none !important;
+    stroke: currentColor !important;
+    stroke-width: 1.8 !important;
+    stroke-linecap: round !important;
+    stroke-linejoin: round !important;
+}
+
+
+/* 39.5 Read-only connected email chip */
+.settings-meta-row
+{
+    align-items: flex-start !important;
+}
+
+.settings-meta-value
+{
+    display: inline-flex !important;
+    align-items: center !important;
+
+    width: auto !important;
+    max-width: 100% !important;
+
+    margin-top: 3px !important;
+
+    padding:
+        4px
+        8px !important;
+
+    color: var(--ink-2) !important;
+    background: var(--border-soft) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    border-radius: 999px !important;
+
+    text-align: left !important;
+}
+
+
+/* 39.6 Toggle rows as clearly separated actions */
+.settings-email-state .settings-toggle-row,
+.settings-card--telegram > .settings-toggle-row
+{
+    margin-top: 9px !important;
+
+    padding-top: 9px !important;
+
+    border-top:
+        1px solid
+        var(--border-soft) !important;
+}
+
+
+/* 39.7 Telegram action order and hierarchy */
+.settings-telegram-options
+{
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.settings-open-bot
+{
+    order: 1 !important;
+
+    margin:
+        0
+        0
+        9px !important;
+}
+
+.settings-command-group
+{
+    order: 2 !important;
+}
+
+
+/* 39.8 Safe visual truncation; full values remain available via Copy */
+#userId,
+.settings-command
+{
+    min-width: 0 !important;
+
+    overflow: hidden !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#userId
+{
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+/* =========================================
+   40. UI/UX FIXES — ROUND 2
+   Isolated visual and accessibility refinements
+========================================= */
+
+/* 40.1 Compact icon-only connection state beside the TickTick title */
+.brand-wrap
+{
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+.header-connection-status
+{
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    flex:
+        0
+        0
+        16px !important;
+
+    width: 16px !important;
+    height: 16px !important;
+
+    margin-left: 1px !important;
+
+    padding: 0 !important;
+
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 50% !important;
+
+    box-shadow: none !important;
+}
+
+.header-status-dot
+{
+    display: block !important;
+
+    width: 8px !important;
+    height: 8px !important;
+
+    background: var(--ink-4) !important;
+
+    border-radius: 50% !important;
+
+    box-shadow:
+        0
+        0
+        0
+        3px
+        color-mix(
+            in srgb,
+            var(--ink-4) 14%,
+            transparent
+        ) !important;
+}
+
+.header-connection-status--connected
+.header-status-dot
+{
+    background: var(--green) !important;
+
+    box-shadow:
+        0
+        0
+        0
+        3px
+        color-mix(
+            in srgb,
+            var(--green) 16%,
+            transparent
+        ) !important;
+}
+
+.header-connection-status--disconnected
+.header-status-dot
+{
+    background: var(--red) !important;
+
+    box-shadow:
+        0
+        0
+        0
+        3px
+        color-mix(
+            in srgb,
+            var(--red) 14%,
+            transparent
+        ) !important;
+}
+
+.header-connection-status
+.pill-dot
+{
+    animation: none !important;
+}
+
+.sr-only
+{
+    position: absolute !important;
+
+    width: 1px !important;
+    height: 1px !important;
+
+    padding: 0 !important;
+    margin: -1px !important;
+
+    overflow: hidden !important;
+
+    clip:
+        rect(
+            0,
+            0,
+            0,
+            0
+        ) !important;
+
+    white-space: nowrap !important;
+
+    border: 0 !important;
+}
+
+.header-actions
+{
+    margin-left: auto !important;
+}
+
+
+/* 40.2 Telegram toggle is a separate, clearly labeled row */
+.settings-card--telegram
+.settings-telegram-toggle
+{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    width: 100% !important;
+
+    gap: 12px !important;
+
+    margin:
+        8px
+        0 !important;
+
+    padding:
+        8px
+        0 !important;
+
+    border-top:
+        1px solid
+        var(--border-soft) !important;
+
+    border-bottom:
+        1px solid
+        var(--border-soft) !important;
+}
+
+.settings-card--telegram
+.settings-telegram-toggle
+> span:first-child
+{
+    display: block !important;
+
+    min-width: 0 !important;
+
+    color: var(--ink-1) !important;
+
+    font-size: 11.5px !important;
+    font-weight: 500 !important;
+    line-height: 1.3 !important;
+}
+
+.settings-card--telegram
+.settings-open-bot
+{
+    margin-top: 0 !important;
+    margin-bottom: 9px !important;
+}
+
+
+/* 40.3 Extracted article content uses the existing monospace token */
+#rawText
+{
+    font-family: var(--mono) !important;
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+
+    tab-size: 4 !important;
+
+    resize: none !important;
+}
+
+
+/* 40.4 Switch-account action remains compact and secondary */
+#reconnectTickTickBtn
+{
+    white-space: nowrap !important;
+}
+
+/* =========================================
+   41. SETTINGS PAGE — CLEAN COMPACT REFINEMENT
+   Layout-only override; no behavior changes
+========================================= */
+
+/*
+   Remove the fixed-height card distribution that caused clipping.
+   The central .main-scroll remains the only popup scroll container.
+*/
+
+#appView.settings-active
+.main-scroll
+{
+    padding:
+        10px
+        12px
+        12px !important;
+
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+}
+
+#appView.settings-active
+#panelSettings
+{
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 10px !important;
+
+    width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
+
+    margin: 0 !important;
+    padding:
+        0
+        0
+        2px !important;
+
+    overflow: visible !important;
+}
+
+
+/* Cards */
+
+#panelSettings
+.settings-card
+{
+    display: flex !important;
+    flex:
+        0
+        0
+        auto !important;
+    flex-direction: column !important;
+
+    width: 100% !important;
+    min-height: 0 !important;
+
+    padding:
+        12px !important;
+
+    overflow: visible !important;
+
+    border-radius: 12px !important;
+
+    box-shadow:
+        0
+        2px
+        8px
+        rgba(15, 23, 42, 0.04) !important;
+}
+
+#panelSettings
+.settings-card-header
+{
+    min-height: 24px !important;
+
+    margin:
+        0
+        0
+        9px !important;
+}
+
+
+/* Titles and icons */
+
+#panelSettings
+.settings-card-title
+{
+    display: inline-flex !important;
+    align-items: center !important;
+
+    gap: 8px !important;
+
+    color: var(--ink-1) !important;
+
+    font-size: 12px !important;
+    font-weight: 650 !important;
+    line-height: 1.25 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+}
+
+#panelSettings
+.settings-title-icon
+{
+    flex:
+        0
+        0
+        21px !important;
+
+    width: 21px !important;
+    height: 21px !important;
+
+    border-radius: 7px !important;
+}
+
+#panelSettings
+.settings-title-icon
+svg
+{
+    width: 12px !important;
+    height: 12px !important;
+}
+
+
+/* Status badges */
+
+#panelSettings
+.settings-card-header
+.status-pill
+{
+    min-height: 22px !important;
+    max-width: none !important;
+
+    padding:
+        3px
+        8px !important;
+
+    overflow: visible !important;
+
+    font-size: 9.5px !important;
+    font-weight: 650 !important;
+    line-height: 1 !important;
+}
+
+#telegramStatusPill.status-pill--danger
+{
+    color: var(--amber) !important;
+    background: var(--amber-soft) !important;
+
+    border-color:
+        color-mix(
+            in srgb,
+            var(--amber) 28%,
+            var(--border)
+        ) !important;
+}
+
+
+/* Shared two-column form system */
+
+#panelSettings
+.settings-control-row,
+#panelSettings
+.settings-secondary-row
+{
+    display: grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        96px !important;
+
+    align-items: center !important;
+
+    gap: 8px !important;
+
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+#panelSettings
+.settings-control-row
+.input,
+#panelSettings
+.settings-command
+{
+    width: 100% !important;
+    min-width: 0 !important;
+
+    height: 36px !important;
+    min-height: 36px !important;
+
+    padding:
+        0
+        10px !important;
+
+    border-radius: 9px !important;
+
+    font-size: 11px !important;
+}
+
+#panelSettings
+.settings-action-button
+{
+    justify-self: end !important;
+
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+
+    height: 36px !important;
+    min-height: 36px !important;
+
+    padding:
+        0
+        8px !important;
+
+    border-radius: 9px !important;
+
+    font-size: 10px !important;
+    font-weight: 600 !important;
+}
+
+
+/* Account card */
+
+#panelSettings
+.settings-card--account
+.settings-secondary-row
+{
+    margin-top: 8px !important;
+}
+
+#panelSettings
+.settings-card--account
+.settings-helper
+{
+    color: var(--ink-3) !important;
+
+    font-size: 10.5px !important;
+    line-height: 1.25 !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#reconnectTickTickBtn
+{
+    color: var(--ink-2) !important;
+    background: var(--surface) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+}
+
+
+/* Weekly email */
+
+#panelSettings
+.settings-email-state
+{
+    margin-top: 9px !important;
+
+    padding-top: 8px !important;
+
+    border-top:
+        1px solid
+        var(--border-soft) !important;
+}
+
+#panelSettings
+.settings-meta-row
+{
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+
+    gap: 4px !important;
+
+    margin:
+        0
+        0
+        7px !important;
+}
+
+#panelSettings
+.settings-meta-label
+{
+    color: var(--ink-4) !important;
+
+    font-size: 9px !important;
+    font-weight: 650 !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.035em !important;
+    text-transform: uppercase !important;
+}
+
+#panelSettings
+.settings-meta-value
+{
+    display: flex !important;
+    align-items: center !important;
+
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 32px !important;
+
+    margin: 0 !important;
+
+    padding:
+        0
+        10px !important;
+
+    overflow: hidden !important;
+
+    color: var(--ink-2) !important;
+    background: var(--bg) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    border-radius: 8px !important;
+
+    font-size: 10.75px !important;
+    font-weight: 600 !important;
+    text-align: left !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#panelSettings
+.settings-email-state
+.settings-toggle-row
+{
+    min-height: 34px !important;
+
+    margin: 0 !important;
+
+    padding:
+        8px
+        0
+        0 !important;
+
+    border-top:
+        1px solid
+        var(--border-soft) !important;
+}
+
+
+/* Shared toggle rows */
+
+#panelSettings
+.settings-toggle-row
+{
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+
+    gap: 12px !important;
+
+    width: 100% !important;
+
+    background: transparent !important;
+}
+
+#panelSettings
+.settings-toggle-row
+> span:first-child
+{
+    min-width: 0 !important;
+
+    color: var(--ink-1) !important;
+
+    font-size: 11px !important;
+    font-weight: 500 !important;
+    line-height: 1.3 !important;
+}
+
+
+/* Telegram */
+
+#panelSettings
+.settings-card--telegram
+.settings-telegram-toggle
+{
+    min-height: 36px !important;
+
+    margin:
+        0
+        0
+        9px !important;
+
+    padding:
+        8px
+        0 !important;
+
+    border-top:
+        1px solid
+        var(--border-soft) !important;
+
+    border-bottom:
+        1px solid
+        var(--border-soft) !important;
+}
+
+#panelSettings
+.settings-telegram-options[style*="display: block"]
+{
+    display: flex !important;
+    flex:
+        0
+        0
+        auto !important;
+    flex-direction: column !important;
+
+    gap: 9px !important;
+
+    overflow: visible !important;
+}
+
+#panelSettings
+.settings-open-bot
+{
+    order: 1 !important;
+
+    width: 100% !important;
+
+    height: 36px !important;
+    min-height: 36px !important;
+
+    margin: 0 !important;
+
+    border-radius: 9px !important;
+
+    font-size: 11px !important;
+}
+
+#panelSettings
+.settings-command-group
+{
+    order: 2 !important;
+
+    width: 100% !important;
+}
+
+#panelSettings
+.settings-command-label
+{
+    margin-bottom: 5px !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 9.5px !important;
+    font-weight: 650 !important;
+}
+
+#panelSettings
+.settings-command
+{
+    display: flex !important;
+    align-items: center !important;
+
+    overflow: hidden !important;
+
+    font-family: var(--mono) !important;
+    font-size: 9.5px !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+
+/* Dark mode */
+
+[data-theme="dark"]
+#panelSettings
+.settings-meta-value
+{
+    background: var(--bg-3) !important;
+}
+
+[data-theme="dark"]
+#panelSettings
+.settings-card
+{
+    box-shadow: none !important;
+}
+
+/* =========================================
+   42. FINAL BUTTON HOVER STATES
+   Visual-only overrides — no behavior changes
+========================================= */
+
+/* Shared motion for every interactive button */
+button
+{
+    transition:
+        color 0.16s ease,
+        background-color 0.16s ease,
+        border-color 0.16s ease,
+        box-shadow 0.16s ease,
+        transform 0.16s ease,
+        opacity 0.16s ease !important;
+}
+
+button:not(:disabled):hover
+{
+    transform: translateY(-1px) !important;
+}
+
+button:not(:disabled):active
+{
+    transform: translateY(0) scale(0.985) !important;
+}
+
+
+/* Settings secondary action buttons */
+#panelSettings
+.settings-action-button:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+
+    background:
+        color-mix(
+            in srgb,
+            var(--blue-soft) 82%,
+            var(--surface)
+        ) !important;
+
+    border-color: var(--blue-ring) !important;
+
+    box-shadow:
+        0
+        4px
+        10px
+        rgba(59, 91, 251, 0.10) !important;
+}
+
+#reconnectTickTickBtn:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+    border-color: var(--blue-ring) !important;
+}
+
+
+/* Telegram primary action */
+#openTelegramBotBtn:hover:not(:disabled)
+{
+    color: #ffffff !important;
+    background: var(--blue-hover) !important;
+
+    box-shadow:
+        0
+        7px
+        16px
+        rgba(59, 91, 251, 0.24) !important;
+}
+
+
+/* Save footer actions */
+#refreshPageBtn:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+    border-color: var(--blue-ring) !important;
+}
+
+#saveArticleBtn:hover:not(:disabled)
+{
+    color: #ffffff !important;
+    background: var(--blue-hover) !important;
+
+    box-shadow:
+        0
+        9px
+        20px
+        rgba(59, 91, 251, 0.28) !important;
+}
+
+
+/* Header and navigation controls */
+.theme-toggle-btn:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+}
+
+.line-tab:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+}
+
+
+/* Save-page utility buttons */
+.project-add-button:hover:not(:disabled)
+{
+    color: #ffffff !important;
+    background: var(--blue-hover) !important;
+    border-color: var(--blue-hover) !important;
+
+    box-shadow:
+        0
+        6px
+        14px
+        rgba(59, 91, 251, 0.22) !important;
+}
+
+.tag-picker-toggle:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+}
+
+.tag-chip-remove:hover:not(:disabled)
+{
+    color: var(--blue-hover) !important;
+    background: var(--blue-soft) !important;
+}
+
+
+/* Project-creation actions */
+.project-create-cancel:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+    border-color: var(--blue-ring) !important;
+}
+
+.project-create-confirm:hover:not(:disabled)
+{
+    color: #ffffff !important;
+    background: var(--blue-hover) !important;
+    border-color: var(--blue-hover) !important;
+}
+
+
+/* Onboarding connection action */
+#connectTickTickBtn:hover:not(:disabled)
+{
+    color: #ffffff !important;
+    background: var(--blue-hover) !important;
+
+    box-shadow:
+        0
+        7px
+        16px
+        rgba(59, 91, 251, 0.22) !important;
+}
+
+
+/* Keep disabled controls visually still */
+button:disabled
+{
+    transform: none !important;
+}
+
+
+/* Dark-mode hover contrast */
+[data-theme="dark"]
+#panelSettings
+.settings-action-button:hover:not(:disabled),
+[data-theme="dark"]
+#reconnectTickTickBtn:hover:not(:disabled),
+[data-theme="dark"]
+#refreshPageBtn:hover:not(:disabled),
+[data-theme="dark"]
+.project-create-cancel:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background:
+        color-mix(
+            in srgb,
+            var(--blue-soft) 72%,
+            var(--bg-3)
+        ) !important;
+
+    border-color: var(--blue-ring) !important;
+}
+
+/* =========================================
+   43. INCREMENTAL UX REFINEMENTS — ROUND 3
+   Presentation-only overrides
+========================================= */
+
+/* 43.1 Reconnect is only relevant while disconnected */
+#reconnectTickTickBtn[hidden]
+{
+    display: none !important;
+}
+
+#panelSettings
+.settings-secondary-row--status-only
+{
+    grid-template-columns:
+        minmax(0, 1fr) !important;
+}
+
+
+/* 43.2 Visual middle truncation keeps full values in data-full-value */
+#userId,
+#telegramCommand
+{
+    overflow: hidden !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#userId
+{
+    direction: ltr !important;
+    text-align: left !important;
+}
+
+
+/* 43.3 Popup-contained theme tooltip */
+.app-header-two-tier,
+.header-top-row,
+.header-actions
+{
+    overflow: visible !important;
+}
+
+.header-actions
+{
+    position: relative !important;
+}
+
+.theme-toggle-btn
+{
+    position: relative !important;
+}
+
+.theme-toggle-btn::after
+{
+    content:
+        attr(data-tooltip);
+
+    position: absolute !important;
+
+    top:
+        calc(100% + 5px) !important;
+    right: 0 !important;
+
+    z-index: 1000 !important;
+
+    max-width: 132px !important;
+
+    padding:
+        5px
+        8px !important;
+
+    visibility: hidden !important;
+    opacity: 0 !important;
+
+    color: #ffffff !important;
+    background:
+        rgba(15, 23, 42, 0.94) !important;
+
+    border-radius: 6px !important;
+
+    box-shadow:
+        0
+        5px
+        14px
+        rgba(15, 23, 42, 0.18) !important;
+
+    font-size: 9.5px !important;
+    font-weight: 500 !important;
+    line-height: 1.25 !important;
+
+    pointer-events: none !important;
+
+    transform:
+        translateY(-2px) !important;
+
+    transition:
+        opacity 0.14s ease,
+        transform 0.14s ease,
+        visibility 0.14s ease !important;
+
+    white-space: nowrap !important;
+}
+
+.theme-toggle-btn:hover::after,
+.theme-toggle-btn:focus-visible::after
+{
+    visibility: visible !important;
+    opacity: 1 !important;
+
+    transform:
+        translateY(0) !important;
+}
+
+
+/* 43.4 The dot itself owns the explanatory hover title */
+.header-status-dot
+{
+    cursor: help !important;
+}
+
+
+/* 43.5 Force the existing mono token on Article text */
+#panelSave
+#rawText.textarea
+{
+    font-family:
+        var(--mono) !important;
+
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+
+    tab-size: 4 !important;
+}
+
+/* =========================================
+   44. HEADER BACKGROUND — NEW CUSTOM ARTWORK
+   Uses assets/images/ticktick-header-bg1.png
+========================================= */
+
+/*
+   The asset is exported at 1140 × 234, exactly three times
+   the visible 380 × 78 popup header size.
+*/
+
+.app-header-two-tier
+{
+    isolation: isolate !important;
+
+    overflow: hidden !important;
+
+    background:
+        var(--surface) !important;
+}
+
+.app-header-two-tier::before
+{
+    content: "" !important;
+
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    z-index: -2 !important;
+
+    background-image:
+        url("./assets/images/ticktick-header-bg1.png") !important;
+
+    background-position:
+        center center !important;
+
+    background-size:
+        100% 100% !important;
+
+    background-repeat:
+        no-repeat !important;
+
+    filter:
+        contrast(1.06)
+        saturate(1.08) !important;
+
+    pointer-events: none !important;
+}
+
+.app-header-two-tier::after
+{
+    content: "" !important;
+
+    position: absolute !important;
+
+    inset: 0 !important;
+
+    z-index: -1 !important;
+
+    background:
+        linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.04),
+            rgba(255, 255, 255, 0.14)
+        ) !important;
+
+    pointer-events: none !important;
+}
+
+.header-top-row,
+.header-bottom-row
+{
+    position: relative !important;
+
+    z-index: 1 !important;
+
+    width: 100% !important;
+
+    background: transparent !important;
+}
+
+
+/* Balanced compact header */
+
+.header-top-row
+{
+    height: 44px !important;
+    min-height: 44px !important;
+
+    padding:
+        8px
+        14px
+        5px !important;
+}
+
+.header-bottom-row
+{
+    height: 34px !important;
+    min-height: 34px !important;
+
+    padding:
+        0
+        14px !important;
+}
+
+.line-tab
+{
+    height: 34px !important;
+
+    padding:
+        8px
+        0
+        6px !important;
+}
+
+.brand-wrap
+{
+    gap: 7px !important;
+}
+
+.brand-logo
+{
+    width: 21px !important;
+    height: 21px !important;
+}
+
+.brand-text
+{
+    color: #0f172a !important;
+
+    font-size: 15px !important;
+    line-height: 1 !important;
+
+    text-shadow:
+        0
+        1px
+        0
+        rgba(255, 255, 255, 0.50) !important;
+}
+
+.header-actions
+{
+    margin-left: auto !important;
+
+    gap: 8px !important;
+}
+
+.theme-toggle-btn
+{
+    width: 28px !important;
+    height: 28px !important;
+
+    flex:
+        0
+        0
+        28px !important;
+
+    color: #334155 !important;
+
+    background:
+        rgba(255, 255, 255, 0.46) !important;
+}
+
+.theme-toggle-btn:hover
+{
+    color: var(--blue) !important;
+
+    background:
+        rgba(255, 255, 255, 0.82) !important;
+}
+
+
+/* Dark mode */
+
+[data-theme="dark"]
+.app-header-two-tier
+{
+    background:
+        var(--surface) !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier::before
+{
+    filter:
+        brightness(0.48)
+        contrast(1.16)
+        saturate(1.10) !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier::after
+{
+    background:
+        linear-gradient(
+            180deg,
+            rgba(8, 13, 28, 0.28),
+            rgba(8, 13, 28, 0.48)
+        ) !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.brand-text
+{
+    color: #f8fafc !important;
+
+    text-shadow:
+        0
+        1px
+        4px
+        rgba(0, 0, 0, 0.34) !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.line-tab
+{
+    color: #a8b3c7 !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.line-tab:hover
+{
+    color: #dbe7ff !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.line-tab.active
+{
+    color: #7d98ff !important;
+
+    border-bottom-color:
+        #7d98ff !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.theme-toggle-btn
+{
+    color: #e2e8f0 !important;
+
+    background:
+        rgba(15, 23, 42, 0.28) !important;
+}
+
+[data-theme="dark"]
+.app-header-two-tier
+.theme-toggle-btn:hover
+{
+    color: #ffffff !important;
+
+    background:
+        rgba(59, 91, 251, 0.24) !important;
+}
+
+/* =========================================
+   45. SEARCHABLE LIST PICKER + TELEGRAM POLISH
+========================================= */
+
+/* Save To now follows the same searchable combobox system as Tags */
+
+#projectField
+.project-search-box
+{
+    display: grid !important;
+
+    grid-template-columns:
+        18px
+        minmax(0, 1fr)
+        28px !important;
+
+    align-items: center !important;
+
+    gap: 7px !important;
+
+    height: 40px !important;
+    min-height: 40px !important;
+
+    padding:
+        5px
+        6px
+        5px
+        10px !important;
+
+    cursor: text !important;
+}
+
+#projectField
+.project-search-box.disabled
+{
+    cursor: not-allowed !important;
+
+    opacity: 0.68 !important;
+}
+
+#projectField
+.project-search-input
+{
+    width: 100% !important;
+    min-width: 0 !important;
+    height: 28px !important;
+
+    padding: 0 !important;
+
+    overflow: hidden !important;
+
+    color: var(--ink-0) !important;
+    background: transparent !important;
+
+    border: 0 !important;
+    outline: 0 !important;
+
+    font-family: var(--font) !important;
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#projectField
+.project-search-input::placeholder
+{
+    color: var(--ink-4) !important;
+
+    opacity: 1 !important;
+}
+
+#projectField
+.project-picker-toggle
+{
+    width: 28px !important;
+    height: 28px !important;
+
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    padding: 0 !important;
+
+    color: var(--ink-3) !important;
+    background: transparent !important;
+
+    border: 0 !important;
+    border-radius: 8px !important;
+
+    cursor: pointer !important;
+}
+
+#projectField
+.project-picker-toggle:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+}
+
+#projectField
+.project-picker-toggle:focus-visible
+{
+    outline:
+        2px solid
+        var(--blue) !important;
+
+    outline-offset: 1px !important;
+}
+
+#projectField
+.project-search-box.open
+.project-picker-toggle
+.picker-chevron
+{
+    transform:
+        rotate(180deg) !important;
+}
+
+#projectField
+.picker-option[hidden],
+#projectField
+.picker-empty-state[hidden]
+{
+    display: none !important;
+}
+
+#projectField
+.picker-option.active
+{
+    color: var(--blue) !important;
+    background: var(--blue-soft) !important;
+}
+
+#projectField
+.project-search-empty
+{
+    padding:
+        10px
+        9px !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 10.5px !important;
+    text-align: center !important;
+}
+
+[data-theme="dark"]
+#projectField
+.project-search-input
+{
+    color: var(--ink-0) !important;
+}
+
+
+/* Telegram Quiz card: compact, structured, and consistent with the other cards */
+
+#panelSettings
+.settings-card--telegram
+{
+    padding:
+        13px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-card-header
+{
+    margin-bottom: 9px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-telegram-toggle
+{
+    min-height: 40px !important;
+
+    margin:
+        0
+        0
+        10px !important;
+
+    padding:
+        8px
+        10px !important;
+
+    background:
+        color-mix(
+            in srgb,
+            var(--bg) 76%,
+            var(--surface)
+        ) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    border-radius: 9px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-telegram-toggle
+> span:first-child
+{
+    font-size: 10.75px !important;
+    font-weight: 550 !important;
+}
+
+#panelSettings
+.settings-telegram-options[style*="display: block"]
+{
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 10px !important;
+}
+
+#panelSettings
+.telegram-helper
+{
+    margin: 0 !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 9.75px !important;
+    line-height: 1.4 !important;
+}
+
+#panelSettings
+.telegram-action-row
+{
+    display: grid !important;
+
+    grid-template-columns:
+        minmax(0, 1fr)
+        96px !important;
+
+    align-items: center !important;
+
+    gap: 10px !important;
+
+    width: 100% !important;
+
+    padding:
+        9px
+        0 !important;
+
+    border-top:
+        1px solid
+        var(--border-soft) !important;
+
+    border-bottom:
+        1px solid
+        var(--border-soft) !important;
+}
+
+#panelSettings
+.telegram-action-copy
+{
+    display: flex !important;
+    flex-direction: column !important;
+
+    gap: 2px !important;
+
+    min-width: 0 !important;
+}
+
+#panelSettings
+.telegram-action-title
+{
+    color: var(--ink-1) !important;
+
+    font-size: 10.75px !important;
+    font-weight: 650 !important;
+    line-height: 1.25 !important;
+}
+
+#panelSettings
+.telegram-action-description
+{
+    overflow: hidden !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 9.5px !important;
+    line-height: 1.25 !important;
+
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-open-bot
+{
+    width: 96px !important;
+    min-width: 96px !important;
+    max-width: 96px !important;
+
+    height: 36px !important;
+    min-height: 36px !important;
+
+    margin: 0 !important;
+
+    justify-self: end !important;
+
+    border-radius: 9px !important;
+
+    font-size: 10px !important;
+    font-weight: 650 !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-command-group
+{
+    width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-command-label
+{
+    display: block !important;
+
+    margin:
+        0
+        0
+        5px !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 9.5px !important;
+    font-weight: 650 !important;
+    line-height: 1.25 !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-control-row
+{
+    grid-template-columns:
+        minmax(0, 1fr)
+        96px !important;
+
+    gap: 8px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-command
+{
+    height: 36px !important;
+    min-height: 36px !important;
+
+    padding:
+        0
+        10px !important;
+
+    color: var(--ink-1) !important;
+    background: var(--bg) !important;
+
+    border:
+        1px solid
+        var(--border) !important;
+
+    border-radius: 9px !important;
+
+    font-size: 9.5px !important;
+}
+
+[data-theme="dark"]
+#panelSettings
+.settings-card--telegram
+.settings-telegram-toggle,
+[data-theme="dark"]
+#panelSettings
+.settings-card--telegram
+.settings-command
+{
+    background: var(--bg-3) !important;
+}
+
+/* =========================================
+   46. FOLDER SEARCH CLARITY + COMPACT TELEGRAM
+========================================= */
+
+/* Make the whole Save To field feel interactive, not only the arrow. */
+
+#projectField
+.project-search-box
+{
+    transition:
+        border-color 0.16s ease,
+        background-color 0.16s ease,
+        box-shadow 0.16s ease !important;
+}
+
+#projectField
+.project-search-box:hover:not(.disabled)
+{
+    background: var(--surface) !important;
+
+    border-color:
+        color-mix(
+            in srgb,
+            var(--blue) 32%,
+            var(--border)
+        ) !important;
+
+    box-shadow:
+        0
+        0
+        0
+        2px
+        color-mix(
+            in srgb,
+            var(--blue-soft) 64%,
+            transparent
+        ) !important;
+}
+
+#projectField
+.project-search-box:focus-within,
+#projectField
+.project-search-box.open
+{
+    background: var(--surface) !important;
+
+    border-color: var(--blue) !important;
+
+    box-shadow:
+        0
+        0
+        0
+        3px
+        var(--blue-soft) !important;
+}
+
+#projectField
+.project-search-input
+{
+    cursor: text !important;
+}
+
+#projectField
+.project-search-input::placeholder
+{
+    color:
+        color-mix(
+            in srgb,
+            var(--ink-3) 86%,
+            var(--ink-4)
+        ) !important;
+
+    font-weight: 450 !important;
+}
+
+#projectField
+.project-picker-toggle:hover:not(:disabled)
+{
+    color: var(--blue) !important;
+    background: transparent !important;
+}
+
+#projectField
+.project-picker-toggle:active:not(:disabled)
+{
+    background: transparent !important;
+}
+
+#projectField
+.project-search-hint
+{
+    margin:
+        5px
+        2px
+        0 !important;
+
+    color: var(--ink-3) !important;
+
+    font-size: 10px !important;
+    line-height: 1.35 !important;
+}
+
+
+/* Telegram: keep only the toggle, Open Bot action, and copyable command. */
+
+#panelSettings
+.settings-card--telegram
+.settings-telegram-options[style*="display: block"]
+{
+    gap: 8px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-telegram-toggle
+{
+    margin-bottom: 8px !important;
+}
+
+#panelSettings
+.telegram-open-row
+{
+    display: block !important;
+
+    width: 100% !important;
+
+    padding: 0 !important;
+
+    border: 0 !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-open-bot
+{
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+
+    height: 36px !important;
+    min-height: 36px !important;
+
+    justify-self: stretch !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-command-group
+{
+    margin-top: 1px !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-control-row
+{
+    align-items: center !important;
+}
+
+#panelSettings
+.settings-card--telegram
+.settings-command
+{
+    font-size: 9.75px !important;
+}
+
+[data-theme="dark"]
+#projectField
+.project-search-box:hover:not(.disabled),
+[data-theme="dark"]
+#projectField
+.project-search-box:focus-within,
+[data-theme="dark"]
+#projectField
+.project-search-box.open
+{
+    background: var(--bg-3) !important;
+}
+
+/* =========================================
+   47. FINAL LIST PLACEHOLDER CLARITY
+========================================= */
+
+#projectField
+.project-search-input::placeholder
+{
+    color: var(--ink-3) !important;
+
+    opacity: 0.88 !important;
+}
+
+#projectField
+.project-search-hint
+{
+    color:
+        color-mix(
+            in srgb,
+            var(--ink-3) 90%,
+            var(--ink-2)
+        ) !important;
+}
+
+/* =========================================
+   48. PRECISE DROPDOWN CLICK BOUNDARIES
+========================================= */
+
+/* Keep the Telegram command/copy controls in the DOM for JS safety,
+   but remove them from the visible Settings UI. */
+
+#panelSettings
+.settings-card--telegram
+.settings-command-group[hidden]
+{
+    display: none !important;
+}
+
+
+/* The actual visible controls define the open interaction area.
+   Labels, helper text, and surrounding form whitespace are not part
+   of the dropdown hit area anymore. */
+
+#projectField
+.project-search-box,
+#tagsField
+.tags-input-box
+{
+    position: relative !important;
+}
+
+#projectField
+.project-search-box::after,
+#tagsField
+.tags-input-box::after
+{
+    content: none !important;
+}
+
+/* =========================================
+   49. REMOVE HEADER DOT + EXACT HIT AREAS
+========================================= */
+
+/* Preserve the existing element for JS compatibility but remove it visually. */
+
+#ticktickStatusPill,
+#ticktickStatusPill[hidden]
+{
+    display: none !important;
+}
+
+
+/*
+   The visual input rectangles are the only trigger hit areas.
+   Parent form groups, labels, hints, and surrounding whitespace do not
+   participate in dropdown open/close detection.
+*/
+
+#projectField
+.project-search-box,
+#tagsField
+.tags-input-box
+{
+    pointer-events: auto !important;
+}
+
+/* =========================================
+   50. STABLE OUTSIDE-CLICK CLOSING
+========================================= */
+
+/*
+   These labels remain accessible through aria-labelledby, but they are no
+   longer native activation targets for the searchable controls. Clicking
+   the label or nearby whitespace now closes the open dropdown and cannot
+   immediately focus/reopen it.
+*/
+
+#projectFieldLabel,
+#tagsFieldLabel
+{
+    cursor: default !important;
+
+    user-select: none;
+}
+
+/* =========================================
+   51. PROJECT DROPDOWN ARROW HOVER
+========================================= */
+
+/* Match the compact rounded hover used by the Tags dropdown arrow. */
+
+#projectField
+.project-picker-toggle:hover:not(:disabled),
+#projectField
+.project-search-box.open
+.project-picker-toggle
+{
+    color: var(--blue) !important;
+
+    background: var(--blue-soft) !important;
+
+    border-radius: 8px !important;
+}
+
+#projectField
+.project-picker-toggle:active:not(:disabled)
+{
+    color: var(--blue-hover) !important;
+
+    background:
+        color-mix(
+            in srgb,
+            var(--blue) 18%,
+            transparent
+        ) !important;
+}
+
+[data-theme="dark"]
+#projectField
+.project-picker-toggle:hover:not(:disabled),
+[data-theme="dark"]
+#projectField
+.project-search-box.open
+.project-picker-toggle
+{
+    color: #dbe7ff !important;
+
+    background:
+        rgba(74, 114, 245, 0.18) !important;
+}
+
+/* =========================================
+   52. CENTER PROJECT DROPDOWN ARROW
+========================================= */
+
+/*
+   The shared .picker-chevron rule uses margin-left: auto for normal
+   dropdown layouts. Inside the square Project arrow button that margin
+   pushes the chevron off-center, so reset it only for this button.
+*/
+
+#projectField
+.project-picker-toggle
+{
+    line-height: 0 !important;
+}
+
+#projectField
+.project-picker-toggle
+.picker-chevron
+{
+    width: 100% !important;
+    height: 100% !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    margin: 0 !important;
+
+    line-height: 0 !important;
+}
+
+#projectField
+.project-picker-toggle
+.picker-chevron
+svg
+{
+    width: 16px !important;
+    height: 16px !important;
+
+    display: block !important;
+
+    margin: 0 !important;
+
+    transform: none !important;
+}
+
+#projectField
+.project-search-box.open
+.project-picker-toggle
+.picker-chevron
+{
+    transform:
+        rotate(180deg) !important;
+}
+
