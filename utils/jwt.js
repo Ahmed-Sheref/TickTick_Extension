@@ -31,7 +31,7 @@ const createAppToken = (user) =>
         secret,
         {
             expiresIn:
-                process.env.JWT_EXPIRES_IN || "7d"
+                process.env.JWT_EXPIRES_IN || "365d"
         }
     );
 };
