@@ -15,7 +15,7 @@
   ],
 
   "host_permissions": [
-    "https://lionfish-app-jxpvk.ondigitalocean.app/*",
+    "https://ticktick-api506.spaincentral.cloudapp.azure.com/*",
     "https://ticktick.com/*",
     "https://api.ticktick.com/*",
     "https://t.me/*",

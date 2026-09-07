@@ -2,7 +2,7 @@
    popup.js — TickTick Extension
    ========================================================================= */
 
-const API_BASE = "https://lionfish-app-jxpvk.ondigitalocean.app/api/v1";
+const API_BASE = "https://ticktick-api506.spaincentral.cloudapp.azure.com/api/v1";
 const TELEGRAM_BOT_USERNAME = "Tick_review_bot";
 
 const STORAGE_KEYS =

@@ -3,7 +3,7 @@
    ========================================================================= */
 
 // const API_BASE = "https://carefree-alignment-production-7eff.up.railway.app/api/v1";
-const API_BASE = "https://lionfish-app-jxpvk.ondigitalocean.app/api/v1";
+const API_BASE = "https://ticktick-api506.spaincentral.cloudapp.azure.com/api/v1";
 
 // ─── TickTick OAuth ───────────────────────────────────────────────────────────
 
