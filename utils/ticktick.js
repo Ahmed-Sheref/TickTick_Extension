@@ -190,10 +190,9 @@ export const createTickTickProject = async (accessToken,projectName) =>
 
     if (!response.ok)
     {
-        throw new Error(
-            data?.message ||
-            "Failed to create TickTick project"
-        );
+        const error = new Error(data?.message ||"Failed to create TickTick project. You may have reached the free tier limit.");
+        error.status = response.status;
+        throw error;
     }
 
     return data;

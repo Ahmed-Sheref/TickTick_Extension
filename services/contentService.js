@@ -162,14 +162,14 @@ const createContent = async (payload) =>
                 "User not found"
             );
 
-            error.statusCode = 404;
+            error.status = 404;
             throw error;
         }
 
         if (!user.tickTickConnected ||!user.tickTickAccessToken)
         {
             const error = new Error("TickTick account is not connected");
-            error.statusCode = 401;
+            error.status = 401;
             throw error;
         }
 
@@ -186,7 +186,7 @@ const createContent = async (payload) =>
             {
                 const error = new Error("Selected TickTick project no longer exists");
 
-                error.statusCode = 400;
+                error.status = 400;
                 throw error;
             }
         }
@@ -202,7 +202,7 @@ const createContent = async (payload) =>
         if (validationError)
         {
             const error = new Error(validationError);
-            error.statusCode = 400;
+            error.status = 400;
             throw error;
         }
 
@@ -231,7 +231,7 @@ const createContent = async (payload) =>
             if (quizValidationError)
             {
                 const error = new Error(quizValidationError);
-                error.statusCode = 400;
+                error.status = 400;
                 throw error;
             }
         }

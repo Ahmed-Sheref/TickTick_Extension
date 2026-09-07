@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TickTick Extension",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Save articles and generate AI summaries",
 
   "permissions": [
