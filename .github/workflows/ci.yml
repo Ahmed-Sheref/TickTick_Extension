@@ -5,6 +5,10 @@ on:
     branches:
       - develop
 
+  pull_request:
+    branches:
+      - master
+
 jobs:
   verify-actions:
     runs-on: ubuntu-latest
