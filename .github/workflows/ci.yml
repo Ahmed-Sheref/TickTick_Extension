@@ -13,5 +13,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Check Node.js version
+        run: node --version
+
+      - name: Check npm version
+        run: npm --version
+
       - name: Verify GitHub Actions
         run: echo "GitHub Actions is working successfully"
