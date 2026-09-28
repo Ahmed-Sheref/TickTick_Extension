@@ -1,0 +1,14 @@
+name: CI Smoke
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  verify-actions:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify GitHub Actions
+        run: echo "GitHub Actions is working successfully"
