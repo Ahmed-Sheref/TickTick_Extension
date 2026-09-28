@@ -33,5 +33,8 @@ jobs:
       - name: Check index.js syntax
         run: node --check index.js
 
+      - name: Run tests
+        run: npm test
+
       - name: Verify GitHub Actions
         run: echo "GitHub Actions is working successfully"
