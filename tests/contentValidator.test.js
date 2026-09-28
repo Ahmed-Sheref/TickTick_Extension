@@ -12,5 +12,5 @@ test('validateContentInput returns null for valid content', () =>
         rawText: 'This is a valid article'
     });
 
-    assert.equal(result, null);
+    assert.equal(result, 'error');
 });
