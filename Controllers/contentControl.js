@@ -54,6 +54,7 @@ const getContentByUserId = async (req, res) =>
     try
     {
         const { userId } = req.params;
+        const authenticatedUserId = req.user.userId;
 
         if (!userId || typeof userId !== "string" || userId.trim() === "")
         {
@@ -64,7 +65,16 @@ const getContentByUserId = async (req, res) =>
             });
         }
 
-        const contents = await Content.find({ userId })
+        if (userId !== authenticatedUserId)
+        {
+            return res.status(403).json(
+            {
+                status: "error",
+                message: "You are not allowed to access this user's content"
+            });
+        }
+
+        const contents = await Content.find({ userId: authenticatedUserId })
             .sort({ createdAt: -1 })
             .select("-__v");
 
