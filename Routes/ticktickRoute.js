@@ -3,8 +3,29 @@ import Settings from '../Models/User.js';
 import { getAuthUrl, exchangeToken } from '../utils/ticktick.js';
 import { hashToken, generateUserIdFromToken } from '../utils/createID.js';
 import {createAppToken} from "../utils/jwt.js";
+import { randomBytes, createHash } from 'node:crypto';
+import OAuthState from '../Models/OAuthState.js';
+import OAuthExchange from '../Models/OAuthExchange.js';
 
 const router = express.Router();
+
+const STATE_EXPIRY_MS = 10 * 60 * 1000;
+const EXCHANGE_EXPIRY_MS = 60 * 1000;
+
+const hashState = (state) =>
+{
+    return createHash('sha256').update(state).digest('hex');
+};
+
+const hashExchangeCode = (code) =>
+{
+    return createHash('sha256').update(code).digest('hex');
+};
+
+const getAllowedRedirects = () =>
+{
+    return (process.env.ALLOWED_EXTENSION_REDIRECT_URIS || '').split(',').map(uri => uri.trim()).filter(Boolean);
+};
 
 
 
@@ -12,9 +33,8 @@ const router = express.Router();
 router.get('/auth', (req, res) =>
 {
     console.log('=== TickTick Auth Route ===');
-    console.log('Query params:', req.query);
-    
-    const { redirect_uri } = req.query;
+
+    const { redirect_uri, client_nonce, code_challenge } = req.query;
 
     console.log('Redirect URI:', redirect_uri);
 
@@ -28,35 +48,133 @@ router.get('/auth', (req, res) =>
         });
     }
 
-    const stateObj =
+    if (typeof redirect_uri !== 'string' || typeof client_nonce !== 'string' || !/^[A-Za-z0-9_-]{32,128}$/.test(client_nonce) || typeof code_challenge !== 'string' || !/^[a-f0-9]{64}$/.test(code_challenge))
     {
+        return res.status(400).json(
+        {
+            status: 'error',
+            message: 'Invalid OAuth parameters'
+        });
+    }
+
+    if (!getAllowedRedirects().includes(redirect_uri))
+    {
+        return res.status(400).json(
+        {
+            status: 'error',
+            message: 'Unauthorized redirect URI'
+        });
+    }
+
+    const state = randomBytes(32).toString('base64url');
+
+    return OAuthState.create(
+    {
+        stateHash: hashState(state),
         extensionRedirectUri: redirect_uri,
-        nonce: Date.now()
-    };
+        clientNonce: client_nonce,
+        codeChallenge: code_challenge,
+        expiresAt: new Date(Date.now() + STATE_EXPIRY_MS)
+    })
+    .then(() =>
+    {
+        const authUrl = getAuthUrl(state);
+        const parsedAuthUrl = new URL(authUrl);
+        console.log('Redirecting to TickTick...');
+        console.log('[OAUTH] Sent Redirect URI:', parsedAuthUrl.searchParams.get('redirect_uri'));
+        console.log('Redirecting to TickTick...');
 
-    console.log('State object:', stateObj);
+        return res.redirect(authUrl);
+    })
+    .catch((error) =>
+    {
+        console.error('OAuth initialization failed:', error.message);
 
-    const state = Buffer.from(JSON.stringify(stateObj)).toString('base64');
-
-    console.log('Encoded state:', state);
-
-    const authUrl = getAuthUrl(state);
-
-    console.log('Generated auth URL:', authUrl);
-    console.log('Redirecting to TickTick...');
-
-    return res.redirect(authUrl);
+        return res.status(500).json(
+        {
+            status: 'error',
+            message: 'Failed to initialize OAuth'
+        });
+    });
 });
 
 
 
-// CALLBACK ROUTE
+router.post('/auth/exchange', async (req, res) =>
+{
+    try
+    {
+        const { exchange_code, verifier } = req.body || {};
+
+        if (typeof exchange_code !== 'string' || typeof verifier !== 'string' || !/^[A-Za-z0-9_-]{43}$/.test(exchange_code) || !/^[a-f0-9]{64}$/.test(verifier))
+        {
+            return res.status(400).json(
+            {
+                status: 'error',
+                message: 'Invalid OAuth exchange parameters'
+            });
+        }
+
+        const codeChallenge = createHash('sha256').update(verifier).digest('hex');
+
+        const savedExchange = await OAuthExchange.findOneAndDelete(
+        {
+            codeHash: hashExchangeCode(exchange_code),
+            codeChallenge,
+            expiresAt:
+            {
+                $gt: new Date()
+            }
+        });
+
+        if (!savedExchange)
+        {
+            return res.status(400).json(
+            {
+                status: 'error',
+                message: 'Invalid, expired, or already used exchange code'
+            });
+        }
+
+        const user = await Settings.findOne({ userId: savedExchange.userId });
+
+        if (!user)
+        {
+            return res.status(401).json(
+            {
+                status: 'error',
+                message: 'OAuth user not found'
+            });
+        }
+
+        const appToken = createAppToken(user);
+
+        return res.status(200).json(
+        {
+            status: 'success',
+            data:
+            {
+                userId: user.userId,
+                token: appToken
+            }
+        });
+    }
+    catch (error)
+    {
+        console.error('OAuth exchange failed:', error.message);
+
+        return res.status(500).json(
+        {
+            status: 'error',
+            message: 'Failed to exchange OAuth code'
+        });
+    }
+});
 
 router.get('/callback', async (req, res) =>
 {
     console.log('=== TickTick Callback Route ===');
-    console.log('Query params:', req.query);
-    
+
     try
     {
         const { code, state } = req.query;
@@ -64,24 +182,46 @@ router.get('/callback', async (req, res) =>
         console.log('Authorization code:', code ? 'Received' : 'Missing');
         console.log('State:', state ? 'Received' : 'Missing');
 
-        if (!code || !state)
+        if (typeof code !== 'string' || typeof state !== 'string' || !code || !state)
         {
             console.log('Missing required parameters');
             return res.status(400).json(
             {
                 status: 'error',
-                message: 'Missing code or state'
+                message: 'Missing or invalid code or state'
             });
         }
 
-        const decodedState = JSON.parse(Buffer.from(state, 'base64').toString('utf8'));
+        const savedState = await OAuthState.findOneAndDelete(
+        {
+            stateHash: hashState(state),
+            expiresAt:
+            {
+                $gt: new Date()
+            }
+        });
 
-        console.log('Decoded state:', decodedState);
+        if (!savedState)
+        {
+            return res.status(400).json(
+            {
+                status: 'error',
+                message: 'Invalid, expired, or already used OAuth state'
+            });
+        }
 
-        const extensionRedirectUri = decodedState.extensionRedirectUri;
+        const extensionRedirectUri = savedState.extensionRedirectUri;
+
+        if (!getAllowedRedirects().includes(extensionRedirectUri))
+        {
+            return res.status(400).json(
+            {
+                status: 'error',
+                message: 'Unauthorized OAuth redirect'
+            });
+        }
 
         console.log('Extension redirect URI:', extensionRedirectUri);
-
 
         console.log('Exchanging authorization code for tokens...');
         const tokenData = await exchangeToken(code);
@@ -122,11 +262,18 @@ router.get('/callback', async (req, res) =>
             console.log('User updated successfully');
         }
 
+        const exchangeCode = randomBytes(32).toString('base64url');
 
-        const appToken = createAppToken(user);
-        const finalUrl = `${extensionRedirectUri}?userId=${encodeURIComponent(user.userId)}&token=${encodeURIComponent(appToken)}`;
+        await OAuthExchange.create(
+        {
+            codeHash: hashExchangeCode(exchangeCode),
+            codeChallenge: savedState.codeChallenge,
+            userId: user.userId,
+            expiresAt: new Date(Date.now() + EXCHANGE_EXPIRY_MS)
+        });
 
-        console.log('Redirecting to extension:', finalUrl);
+        const finalUrl = `${extensionRedirectUri}?exchange_code=${encodeURIComponent(exchangeCode)}&client_nonce=${encodeURIComponent(savedState.clientNonce)}`;
+
         console.log('=== TickTick OAuth Flow Complete ===');
 
         return res.redirect(finalUrl);
