@@ -10,8 +10,19 @@ export const startTelegramBot = async () =>
         console.log('[TELEGRAM] Starting Telegram bot...');
         
         // Set Webhook
+        const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+
+        if (!webhookSecret || !/^[A-Za-z0-9_-]{1,256}$/.test(webhookSecret))
+        {
+            throw new Error("TELEGRAM_WEBHOOK_SECRET is missing or invalid");
+        }
+
         const webhookUrl = `${process.env.WEBHOOK_URL}/api/v1/telegram/webhook`;
-        await bot.setWebHook(webhookUrl);
+
+        await bot.setWebHook(webhookUrl,
+        {
+            secret_token: webhookSecret
+        });
         console.log('[TELEGRAM] Webhook set:', webhookUrl);
 
         // /start command - handle deep link and manual commands
