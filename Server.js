@@ -12,8 +12,8 @@ import { startWeeklyQuizCron } from './utils/weeklyQuiz.js';
 
 const DB = process.env.DATABASE;
 
-console.log('[DB] DATABASE env variable:', DB ? 'Found' : 'NOT FOUND');
-console.log('[DB] DB value:', DB || 'undefined');
+// console.log('[DB] DATABASE env variable:', DB ? 'Found' : 'NOT FOUND');
+// console.log('[DB] DB value:', DB || 'undefined');
 
 const PORT = process.env.PORT || 3000;
 
@@ -39,6 +39,7 @@ mongoose.connect(DB).then(async (con) =>
         () =>
         {
             console.log(`[SERVER] Server is running on port ${PORT}`);
+            console.log('[OAUTH] Redirect URI:', process.env.TICKTICK_REDIRECT_URI);
         }
     );
 })
