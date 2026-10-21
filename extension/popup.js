@@ -2,7 +2,9 @@
    popup.js — TickTick Extension
    ========================================================================= */
 
-const API_BASE = "https://lionfish-app-jxpvk.ondigitalocean.app/api/v1";
+// const API_BASE = "https://lionfish-app-jxpvk.ondigitalocean.app/api/v1";
+// const API_BASE = "https://lionfish-app-jxpvk.ondigitalocean.app/api/v1";
+const API_BASE = "http://localhost:3000/api/v1";
 const TELEGRAM_BOT_USERNAME = "Tick_review_bot";
 
 const STORAGE_KEYS =
@@ -3224,6 +3226,7 @@ function syncPopupViewportHeight()
 async function bootstrap()
 {
     window.scrollTo(0, 0);
+    chrome.action.setBadgeText({ text: "" }).catch(() => {});
 
     const stored = await storageGet(
     [
@@ -3297,6 +3300,45 @@ async function bootstrap()
         );
     }
 }
+
+chrome.storage.onChanged.addListener((changes, areaName) =>
+{
+    if (areaName !== "local") return;
+
+    if (!changes[STORAGE_KEYS.connected] && !changes[STORAGE_KEYS.userId] && !changes[STORAGE_KEYS.token]) return;
+
+    storageGet(
+    [
+        STORAGE_KEYS.connected,
+        STORAGE_KEYS.userId,
+        STORAGE_KEYS.token
+    ]).then(async (stored) =>
+    {
+        const userId = stored[STORAGE_KEYS.userId];
+        const isConnected = Boolean(stored[STORAGE_KEYS.connected] && userId && stored[STORAGE_KEYS.token]);
+
+        setConnectedUI(isConnected);
+
+        if (!isConnected) return;
+
+        switchTab("save");
+        fillTelegramCommand(userId);
+        setUserIdDisplay(userId);
+
+        await Promise.allSettled(
+        [
+            refreshPageData(),
+            loadUserPreferences(),
+            loadTickTickProjects(),
+            loadTags()
+        ]);
+
+        setStatus("Ready", "success");
+    }).catch((error) =>
+    {
+        console.error("[OAUTH] Popup refresh failed:", error);
+    });
+});
 
 document.addEventListener(
     "DOMContentLoaded",
