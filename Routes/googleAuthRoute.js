@@ -9,9 +9,41 @@ import {
     exchangeGoogleCode,
     verifyGoogleIdentity
 } from "../utils/googleOAuth.js";
+import { createAppToken } from "../utils/jwt.js";
 
 const STATE_EXPIRY_MS = 10 * 60 * 1000;
 const EXCHANGE_EXPIRY_MS = 60 * 1000;
+
+// Log classifications only: OAuth errors may contain tokens, request bodies,
+// account details, and credentials in their message/response/config fields.
+const callbackErrorDetails = (stage, error) =>
+{
+    const names = new Set([
+        "Error", "TypeError", "GaxiosError", "MongoServerError", "MongooseError",
+        "ValidationError", "CastError", "MongoNetworkError", "MongoServerSelectionError"
+    ]);
+    const networkCodes = new Set([
+        "ENOTFOUND", "ECONNREFUSED", "ECONNRESET", "ETIMEDOUT", "EAI_AGAIN",
+        "CERT_HAS_EXPIRED", "UNABLE_TO_VERIFY_LEAF_SIGNATURE", "ERR_TLS_CERT_ALTNAME_INVALID"
+    ]);
+    const providerCodes = new Set([
+        "invalid_grant", "invalid_client", "unauthorized_client", "redirect_uri_mismatch",
+        "access_denied", "invalid_request", "invalid_scope", "server_error",
+        "temporarily_unavailable", "unsupported_grant_type"
+    ]);
+    const code = error?.code;
+    const httpStatus = error?.response?.status ?? error?.statusCode;
+    const providerError = error?.response?.data?.error;
+
+    return {
+        stage,
+        errorType: names.has(error?.name) ? error.name : "UnclassifiedError",
+        code: Number.isSafeInteger(code) || networkCodes.has(code) ? code : null,
+        httpStatus: Number.isInteger(httpStatus) && httpStatus >= 100 && httpStatus <= 599
+            ? httpStatus : null,
+        providerError: providerCodes.has(providerError) ? providerError : null
+    };
+};
 
 const hashValue = (value) =>
 {
@@ -130,7 +162,8 @@ export const createGoogleAuthRouter = (dependencies = {}) =>
         getGoogleAuthUrlFn = getGoogleAuthUrl,
         exchangeGoogleCodeFn = exchangeGoogleCode,
         verifyGoogleIdentityFn = verifyGoogleIdentity,
-        getAllowedRedirectsFn = getAllowedRedirects
+        getAllowedRedirectsFn = getAllowedRedirects,
+        createAppTokenFn = createAppToken
     } = dependencies;
 
     const router = express.Router();
@@ -216,6 +249,7 @@ export const createGoogleAuthRouter = (dependencies = {}) =>
 
     router.get("/callback", async (req, res) =>
     {
+        let stage = "validate_callback";
         try
         {
             const { code, state, error: oauthError } = req.query;
@@ -235,6 +269,7 @@ export const createGoogleAuthRouter = (dependencies = {}) =>
                 });
             }
 
+            stage = "load_oauth_state";
             const savedState = await GoogleOAuthStateModel.findOneAndDelete(
             {
                 stateHash: hashValue(state),
@@ -262,12 +297,14 @@ export const createGoogleAuthRouter = (dependencies = {}) =>
                 });
             }
 
+            stage = "exchange_google_code";
             const idToken = await exchangeGoogleCodeFn(
             {
                 code,
                 codeVerifier: savedState.googleCodeVerifier
             });
 
+            stage = "verify_google_identity";
             const identity = await verifyGoogleIdentityFn(
             {
                 idToken,
@@ -283,6 +320,7 @@ export const createGoogleAuthRouter = (dependencies = {}) =>
                 });
             }
 
+            stage = "resolve_user";
             const user = await resolveOrCreateGoogleUser(
             {
                 providerSubject: identity.providerSubject,
@@ -293,6 +331,7 @@ export const createGoogleAuthRouter = (dependencies = {}) =>
 
             const exchangeCode = randomBytes(32).toString("base64url");
 
+            stage = "create_extension_exchange";
             await OAuthExchangeModel.create(
             {
                 codeHash: hashValue(exchangeCode),
@@ -301,6 +340,7 @@ export const createGoogleAuthRouter = (dependencies = {}) =>
                 expiresAt: new Date(Date.now() + EXCHANGE_EXPIRY_MS)
             });
 
+            stage = "redirect_to_extension";
             const finalRedirectUrl = new URL(savedState.extensionRedirectUri);
             finalRedirectUrl.searchParams.set("exchange_code", exchangeCode);
             finalRedirectUrl.searchParams.set("client_nonce", savedState.clientNonce);
@@ -309,7 +349,10 @@ export const createGoogleAuthRouter = (dependencies = {}) =>
         }
         catch (error)
         {
-            console.error("[GOOGLE OAUTH] Callback authentication failed");
+            console.error(
+                "[GOOGLE OAUTH] Callback authentication failed",
+                callbackErrorDetails(stage, error)
+            );
 
             const statusCode = error?.statusCode === 401 ? 401 : 500;
 
@@ -317,6 +360,87 @@ export const createGoogleAuthRouter = (dependencies = {}) =>
             {
                 status: "error",
                 message: "Google authentication failed"
+            });
+        }
+    });
+
+    router.post("/exchange", async (req, res) =>
+    {
+        try
+        {
+            const requestBody = req.body || {};
+            const exchangeCode = requestBody.exchange_code || requestBody.code;
+            const pkceVerifier = requestBody.verifier || requestBody.codeVerifier;
+
+            if (
+                typeof exchangeCode !== "string" ||
+                typeof pkceVerifier !== "string" ||
+                !/^[A-Za-z0-9_-]{43}$/.test(exchangeCode) ||
+                !/^[a-f0-9]{64}$/.test(pkceVerifier)
+            )
+            {
+                return res.status(400).json(
+                {
+                    status: "error",
+                    message: "Invalid OAuth exchange parameters"
+                });
+            }
+
+            const codeChallenge = createHash("sha256").update(pkceVerifier).digest("hex");
+
+            const savedExchange = await OAuthExchangeModel.findOneAndDelete(
+            {
+                codeHash: hashValue(exchangeCode),
+                codeChallenge,
+                expiresAt:
+                {
+                    $gt: new Date()
+                }
+            });
+
+            if (!savedExchange)
+            {
+                return res.status(400).json(
+                {
+                    status: "error",
+                    message: "Invalid, expired, or already used exchange code"
+                });
+            }
+
+            const user = await UserModel.findOne(
+            {
+                userId: savedExchange.userId
+            });
+
+            if (!user)
+            {
+                return res.status(401).json(
+                {
+                    status: "error",
+                    message: "OAuth user not found"
+                });
+            }
+
+            const appToken = createAppTokenFn(user);
+
+            return res.status(200).json(
+            {
+                status: "success",
+                data:
+                {
+                    userId: user.userId,
+                    token: appToken
+                }
+            });
+        }
+        catch (error)
+        {
+            console.error("[GOOGLE OAUTH] Exchange failed");
+
+            return res.status(500).json(
+            {
+                status: "error",
+                message: "Failed to exchange OAuth code"
             });
         }
     });

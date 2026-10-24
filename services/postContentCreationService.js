@@ -1,6 +1,7 @@
 import User from "../Models/User.js";
 import Content from "../Models/Content.js";
 import * as TickTickFunctions from "../utils/ticktick.js";
+import { getTickTickAccessToken } from "./ticktickCredentials.js";
 
 const syncContentToTickTick = async (
 {
@@ -16,13 +17,14 @@ const syncContentToTickTick = async (
     {
         const user = await User.findOne({ userId });
 
-        if (!user?.tickTickConnected || !user?.tickTickAccessToken)
+        const accessToken = await getTickTickAccessToken(userId, user);
+        if (!accessToken)
         {
             return;
         }
 
         const task = await TickTickFunctions.createTickTickTask(
-            user.tickTickAccessToken,
+            accessToken,
             {
                 title,
                 rawText,
@@ -45,7 +47,7 @@ const syncContentToTickTick = async (
     }
     catch (error)
     {
-        console.error("[CONTENT] TickTick sync failed:", error.message);
+        console.error("[CONTENT] TickTick sync failed");
     }
 };
 

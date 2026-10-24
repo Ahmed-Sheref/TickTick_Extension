@@ -4,6 +4,7 @@ import { asyncHandler } from '../middleware/errorMiddleware.js';
 import requireAuth from '../middleware/requireAuth.js';
 import { getTickTickProjects } from '../utils/ticktick.js';
 import User from "../Models/User.js";
+import { getTickTickAccessToken } from "../services/ticktickCredentials.js";
 
 import{createTickTickProject} from "../utils/ticktick.js";
 
@@ -16,7 +17,12 @@ router.route("/")
 router.get("/projects", requireAuth, async (req, res) =>
 {
     const user = await User.findOne({ userId: req.user.userId });
-    const projects = await getTickTickProjects(user.tickTickAccessToken);
+    const accessToken = await getTickTickAccessToken(req.user.userId, user);
+    if (!accessToken)
+    {
+        return res.status(401).json({ status: "error", message: "TickTick account is not connected" });
+    }
+    const projects = await getTickTickProjects(accessToken);
 
     res.json({ status: "success", data: projects });
 });
@@ -42,7 +48,8 @@ router.post(
 
             const user = await User.findOne({userId: req.user.userId});
 
-            if (!user?.tickTickConnected ||!user?.tickTickAccessToken)
+            const accessToken = await getTickTickAccessToken(req.user.userId, user);
+            if (!accessToken)
             {
                 return res.status(401).json(
                 {
@@ -51,7 +58,7 @@ router.post(
                 });
             }
 
-            const project = await createTickTickProject(user.tickTickAccessToken,projectName);
+            const project = await createTickTickProject(accessToken,projectName);
 
             return res.status(201).json(
             {

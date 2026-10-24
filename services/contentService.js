@@ -8,6 +8,7 @@ import postContentCreationService from "./postContentCreationService.js";
 import {validateContentInput,validateQuizObject} from "../validators/contentValidator.js";
 import { getTickTickProjects } from "../utils/ticktick.js";
 import User from "../Models/User.js";
+import { getTickTickAccessToken } from "./ticktickCredentials.js";
 
 
 const prepareContentInput = (userInput) =>
@@ -166,17 +167,18 @@ const createContent = async (payload) =>
             throw error;
         }
 
-        if (!user.tickTickConnected ||!user.tickTickAccessToken)
-        {
-            const error = new Error("TickTick account is not connected");
-            error.statusCode = 401;
-            throw error;
-        }
-
-
         if (projectId)
         {
-            const projects = await getTickTickProjects(user.tickTickAccessToken);
+            // Core library saves are independent of external destinations.
+            const accessToken = await getTickTickAccessToken(userId, user);
+            if (!accessToken)
+            {
+                const error = new Error("TickTick account is not connected");
+                error.statusCode = 401;
+                throw error;
+            }
+
+            const projects = await getTickTickProjects(accessToken);
 
             const projectExists = projects.some((project) =>
             {

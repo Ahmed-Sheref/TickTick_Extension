@@ -4,10 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>TickTick Extension</title>
-<link href="https://fonts.googleapis.com" rel="preconnect"/>
-<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&amp;family=DM+Mono&amp;display=swap" rel="stylesheet"/>
+<title>Save Knowledge</title>
 <link href="popup.css" rel="stylesheet"/>
 </head>
 <body>
@@ -15,14 +12,30 @@
 <!-- Onboarding -->
 <div class="full-screen-center" id="onboardingView">
 <div class="onboard-container">
-<div class="tt-icon-large"></div>
-<h1>Welcome to TickTick</h1>
-<p>
-                    Sign in to sync your articles and tasks.
-                </p>
-<button id="connectTickTickBtn" type="button">
-                    Connect Now
-                </button>
+<div class="welcome-brand"><div class="brand-logo" aria-hidden="true"></div><span>Save Knowledge</span><span class="welcome-version">WORKSPACE</span></div>
+<div class="welcome-heading"><span class="onboard-eyebrow">A HOME FOR YOUR NEXT GOOD IDEA</span><h1>Read something great.<br/><span>Keep what matters.</span></h1><p class="onboard-lead">Your articles, key ideas, and next steps.<br/>Together in one thoughtful workspace.</p></div>
+<div class="welcome-preview" aria-hidden="true">
+<div class="preview-top"><span class="preview-bookmark">✓</span><span>FROM READING TO REMEMBERING</span><span class="preview-spark">✦</span></div>
+<div class="preview-title">More than a bookmark.</div>
+<div class="preview-lines"><i></i><i></i></div>
+<div class="preview-bottom"><span>✦ AI summary</span><span># Smart tags</span><span class="preview-saved">✓ Saved</span></div>
+</div>
+<div class="welcome-action-copy"><strong>Your knowledge starts here</strong><span>Sign in to save your first article.</span></div>
+<button class="google-auth-btn" id="connectGoogleBtn" type="button">
+<span aria-hidden="true" class="google-auth-icon">
+<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.9-1.75 2.98-4.33 2.98-7.36Z"/><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.62-2.41l-3.24-2.51c-.9.6-2.05.97-3.38.97-2.6 0-4.8-1.76-5.59-4.12H3.07v2.59A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.41 13.93a6 6 0 0 1 0-3.86V7.48H3.07a10 10 0 0 0 0 9.04l3.34-2.59Z"/><path fill="#EA4335" d="M12 5.95c1.47 0 2.79.51 3.82 1.51l2.87-2.87A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.93 5.48l3.34 2.59C7.2 7.71 9.4 5.95 12 5.95Z"/></svg>
+</span>
+<span class="google-auth-label">Continue with Google</span>
+<span aria-hidden="true" class="google-auth-arrow">→</span>
+</button>
+<div class="onboard-footer-note">
+<svg aria-hidden="true" viewBox="0 0 24 24" width="12" height="12">
+<rect x="4" y="11" width="16" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+<path d="M8 11V7a4 4 0 0 1 8 0v4" fill="none" stroke="currentColor" stroke-width="2"/>
+</svg>
+<span>Secure sign-in with Google</span>
+</div>
+<p class="auth-status" id="onboardingAuthStatus" role="status" aria-live="polite" hidden></p>
 </div>
 </div>
 <!-- Main App -->
@@ -31,44 +44,45 @@
 <div class="header-top-row">
 <div class="brand-wrap">
 <div class="brand-logo"></div>
-<span class="brand-text">TickTick</span>
-<div aria-hidden="true" aria-label="Connected to TickTick" class="header-connection-status header-connection-status--connected" hidden="" id="ticktickStatusPill" role="status"><span aria-hidden="true" class="header-status-dot"></span><span class="sr-only">Connected</span></div></div>
+<div><span class="brand-text">Save Knowledge</span><span class="brand-caption">Your personal knowledge space</span></div>
+</div>
 <div class="header-actions">
 <button aria-label="Toggle theme" class="theme-toggle-btn" data-tooltip="Toggle theme" id="themeToggleBtn" type="button"></button>
 </div>
 </div>
-<div class="header-bottom-row">
-<button class="line-tab active" id="tabSave" type="button">
-                        Save
+<div class="header-bottom-row" role="tablist" aria-label="Workspace">
+<button class="line-tab active" id="tabSave" role="tab" aria-controls="panelSave" aria-selected="true" type="button">
+                        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4V4Z"/></svg> Capture
                     </button>
-<button class="line-tab" id="tabSettings" type="button">
-                        Settings
+<button class="line-tab" id="tabSettings" role="tab" aria-controls="panelSettings" aria-selected="false" tabindex="-1" type="button">
+                        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg> Settings
                     </button>
 </div>
 </header>
 <main class="main-scroll">
 <!-- Save Panel -->
-<section class="panel" id="panelSave">
-<div class="form-group">
-<label class="label" for="title">
-                            Title
-                        </label>
-<input class="input" dir="auto" id="title" placeholder="Article title" type="text"/>
+<section class="panel" id="panelSave" role="tabpanel" aria-labelledby="tabSave">
+<div class="capture-card">
+<div class="capture-heading"><span>ARTICLE DETAILS</span><span class="capture-editable"><i></i> Ready to edit</span></div>
+<label class="sr-only" for="title">Article title</label>
+<input class="input capture-title" dir="auto" id="title" required maxlength="500" placeholder="Give your article a title" type="text"/>
+<div class="capture-url-row"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m10 13 4-4M8 16l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 10a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1"/></svg><label class="sr-only" for="url">Article URL</label><input class="input capture-url" id="url" placeholder="https://example.com/article" type="text"/></div>
+<label class="sr-only" for="rawText">Article text</label>
+<textarea class="textarea capture-content" dir="auto" id="rawText" required maxlength="100000" placeholder="Your selected text or article content…" rows="3"></textarea>
 </div>
-<div class="form-group">
-<label class="label" for="url">
-                            URL
-                        </label>
-<input class="input" id="url" placeholder="https://example.com/article" type="text"/>
+<div class="destination-note" id="ticktickConnectHint" hidden="">
+<div class="destination-note-icon" aria-hidden="true">
+<svg viewBox="0 0 24 24">
+<path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"/>
+</svg>
 </div>
-<div class="form-group">
-<label class="label label-with-meta" for="rawText">
-<span>Article text</span>
-<span class="field-meta">
-                                Auto-detected — editable
-                            </span>
-</label>
-<textarea class="textarea" dir="auto" id="rawText" placeholder="Paste article content here..." rows="4"></textarea>
+<div class="destination-note-copy">
+<strong>Connect TickTick</strong>
+<p>Send articles straight to your lists.</p>
+</div>
+<button class="btn btn-secondary btn-sm destination-connect-btn" id="connectTickTickFromSaveBtn" type="button">
+                            Connect →
+                        </button>
 </div>
 <!-- TickTick destination folder -->
 <div class="form-group compact-form-group" id="projectField">
@@ -77,25 +91,25 @@
                         </label>
 <div class="project-picker-row">
 <div class="picker project-picker-main">
-<div aria-controls="projectMenu" aria-disabled="false" aria-expanded="false" aria-haspopup="listbox" class="picker-control project-search-box" id="projectPickerBtn" role="combobox">
+<div aria-disabled="false" class="picker-control project-search-box" id="projectPickerBtn">
 <span aria-hidden="true" class="picker-leading-icon">
-<svg viewbox="0 0 24 24">
+<svg viewBox="0 0 24 24">
 <path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"></path>
 </svg>
 </span>
 <span class="sr-only" id="projectPickerLabel">
             Loading lists...
         </span>
-<input aria-autocomplete="list" aria-controls="projectMenu" aria-describedby="projectSearchHint" aria-expanded="false" aria-labelledby="projectFieldLabel" autocomplete="off" class="project-search-input" id="projectSearchInput" placeholder="Search or choose a list…" spellcheck="false" type="text"/>
+<input aria-autocomplete="list" aria-controls="projectMenu" aria-describedby="projectSearchHint" aria-expanded="false" aria-labelledby="projectFieldLabel" autocomplete="off" class="project-search-input" id="projectSearchInput" role="combobox" aria-haspopup="listbox" placeholder="Search or choose a list…" spellcheck="false" type="text"/>
 <button aria-controls="projectMenu" aria-expanded="false" aria-label="Toggle TickTick lists" class="project-picker-toggle" id="projectPickerToggleBtn" type="button">
 <span class="picker-chevron">
-<svg aria-hidden="true" viewbox="0 0 20 20">
+<svg aria-hidden="true" viewBox="0 0 20 20">
 <path d="m5.75 7.75 4.25 4.25 4.25-4.25"></path>
 </svg>
 </span>
 </button>
 </div>
-<div class="picker-menu" id="projectMenu" role="listbox" style="display: none;"></div>
+<div class="picker-menu" id="projectMenu" role="listbox" aria-labelledby="projectFieldLabel" style="display: none;"></div>
 <select aria-hidden="true" hidden="" id="projectSelect" tabindex="-1">
 <option value="">
                                         Loading lists...
@@ -103,11 +117,11 @@
 </select>
 </div>
 <button aria-label="Add new list" class="project-add-button" id="openCreateProjectBtn" title="Add new list" type="button">
-<svg aria-hidden="true" viewbox="0 0 24 24">
+<svg aria-hidden="true" viewBox="0 0 24 24">
 <path d="M12 5v14M5 12h14"></path>
 </svg>
 </button>
-</div><p class="hint project-search-hint" id="projectSearchHint">If no list is selected, the article will be saved to Inbox.</p>
+</div><p class="sr-only project-search-hint" id="projectSearchHint">Default destination: Inbox</p>
 <div class="project-create-panel" hidden="" id="projectCreatePanel">
 <div class="project-create-copy">
 <strong>Create a TickTick list</strong>
@@ -115,7 +129,7 @@
                                     The new list will be created in your connected TickTick account.
                                 </span>
 </div>
-<input autocomplete="off" class="project-create-input" id="projectNameInput" maxlength="100" placeholder="List name" spellcheck="false" type="text"/>
+<input autocomplete="off" class="project-create-input" id="projectNameInput" aria-label="List name" maxlength="100" placeholder="List name" spellcheck="false" type="text"/>
 <div class="project-create-actions">
 <button class="project-create-cancel" id="cancelCreateProjectBtn" type="button">
                                     Cancel
@@ -132,38 +146,36 @@
                             Tags
                         </label>
 <div class="picker tags-picker">
-<div aria-controls="tagSuggestions" aria-expanded="false" aria-haspopup="listbox" class="picker-control tags-input-box" id="tagsInputBox" role="combobox">
+<div class="picker-control tags-input-box" id="tagsInputBox">
 <span class="picker-leading-icon">
-<svg aria-hidden="true" viewbox="0 0 24 24">
+<svg aria-hidden="true" viewBox="0 0 24 24">
 <path d="M20 13 13 20 4 11V4h7l9 9Z"></path>
 <circle cx="8.5" cy="8.5" r="1.25"></circle>
 </svg>
 </span>
 <div class="tags-picker-value">
 <div class="selected-tags-container" id="selectedTagsContainer"></div>
-<input aria-autocomplete="list" aria-controls="tagSuggestions" aria-expanded="false" aria-labelledby="tagsFieldLabel" autocomplete="off" class="tag-text-input" id="tagInput" placeholder="Add tags…" spellcheck="false" type="text"/>
+<input aria-autocomplete="list" aria-controls="tagSuggestions" aria-expanded="false" aria-labelledby="tagsFieldLabel" autocomplete="off" class="tag-text-input" id="tagInput" aria-describedby="tagInputHint" role="combobox" aria-haspopup="listbox" placeholder="Add tags…" spellcheck="false" type="text"/>
 </div>
 <button aria-controls="tagSuggestions" aria-expanded="false" aria-label="Toggle tag suggestions" class="tag-picker-toggle" id="tagPickerToggleBtn" type="button">
 <span class="picker-chevron">
-<svg aria-hidden="true" viewbox="0 0 20 20">
+<svg aria-hidden="true" viewBox="0 0 20 20">
 <path d="m5.75 7.75 4.25 4.25 4.25-4.25"></path>
 </svg>
 </span>
 </button>
 </div>
-<div class="picker-menu tag-suggestions" id="tagSuggestions" role="listbox" style="display: none;"></div>
+<div class="picker-menu tag-suggestions" id="tagSuggestions" role="listbox" aria-labelledby="tagsFieldLabel" style="display: none;"></div>
 </div>
-<p class="hint">
-                            Press Enter, comma, or space to add.
-                        </p>
+<p class="sr-only" id="tagInputHint">Press Enter, comma, or space to add a tag.</p>
 </div>
 <div class="ai-block">
 <span class="ai-block-label">
-                            AI Processing
+                            <span class="ai-heading-icon" aria-hidden="true">✦</span> Enrich your article <span class="section-optional">OPTIONAL</span>
                         </span>
 <div class="ai-options-grid">
 <label class="toggle-row" for="useSummaryAi">
-<span>Weekly Email</span>
+<span title="Generate a summary and include this article in your weekly email">Summary &amp; digest</span>
 <div class="toggle-wrap">
 <input id="useSummaryAi" type="checkbox"/>
 <span class="toggle-track">
@@ -181,7 +193,7 @@
 </div>
 </label>
 <label class="toggle-row" for="useQuiz">
-<span>Telegram Quiz</span>
+<span>Telegram quiz</span>
 <div class="toggle-wrap">
 <input id="useQuiz" type="checkbox"/>
 <span class="toggle-track">
@@ -190,7 +202,7 @@
 </div>
 </label>
 <label class="toggle-row" for="mergeSummaryWithContent">
-<span>Append Summary</span>
+<span title="Add the generated summary to the saved article text">Append summary</span>
 <div class="toggle-wrap">
 <input id="mergeSummaryWithContent" type="checkbox"/>
 <span class="toggle-track">
@@ -202,21 +214,22 @@
 </div>
 </section>
 <!-- Settings Panel -->
-<section class="panel settings-panel" id="panelSettings">
+<section class="panel settings-panel" id="panelSettings" role="tabpanel" aria-labelledby="tabSettings">
+<div class="settings-intro"><h2>Make it your workspace.</h2><p>Accounts, connections, and ways to revisit.</p></div>
 <article class="settings-card settings-card--account">
 <div class="settings-card-header">
 <h3 class="settings-card-title">
 <span aria-hidden="true" class="settings-title-icon">
-<svg viewbox="0 0 24 24">
+<svg viewBox="0 0 24 24">
 <circle cx="12" cy="8" r="3.5"></circle>
 <path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6"></path>
 </svg>
 </span>
-<span>Account &amp; Connection</span>
+<span>Google account</span>
 </h3>
-<div class="status-pill status-pill--success" id="ticktickStatusSecondary">
+<div class="status-pill status-pill--success" id="googleStatusSecondary">
 <span class="pill-dot"></span>
-                                Connected
+                                Signed in
                             </div>
 </div>
 <div class="settings-control-row">
@@ -226,22 +239,44 @@
                             </button>
 </div>
 <div class="settings-secondary-row">
+
+<button aria-label="Sign out" class="btn btn-ghost btn-sm settings-action-button" id="signOutBtn" hidden disabled title="Sign out is not available yet" type="button">Sign out</button>
+</div>
+</article>
+<article class="settings-card settings-card--destination">
+<div class="settings-card-header">
+<h3 class="settings-card-title">
+<span aria-hidden="true" class="settings-title-icon">
+<svg viewBox="0 0 24 24">
+<path d="M4 5.75A1.75 1.75 0 0 1 5.75 4h12.5A1.75 1.75 0 0 1 20 5.75v12.5A1.75 1.75 0 0 1 18.25 20H5.75A1.75 1.75 0 0 1 4 18.25V5.75Z"></path>
+<path d="M4 14h4l1.5 2h5l1.5-2h4"></path>
+</svg>
+</span>
+<span>TickTick destination</span>
+</h3>
+<div class="status-pill status-pill--danger" id="ticktickStatusSecondary">
+<span class="pill-dot"></span>
+                                Not connected
+                            </div>
+</div>
+<div class="settings-secondary-row">
 <span class="settings-helper">
-                                Connected TickTick account
+                                Choose where your saved articles go.
                             </span>
-<button aria-label="Reconnect TickTick account" class="btn btn-ghost btn-sm settings-action-button" id="reconnectTickTickBtn" title="Reconnect TickTick account" type="button">Reconnect</button>
+<button aria-label="Connect TickTick account" class="btn btn-ghost btn-sm settings-action-button" id="connectTickTickBtn" title="Connect TickTick account" type="button">Connect</button>
+<button aria-label="Reconnect TickTick account" class="btn btn-ghost btn-sm settings-action-button" hidden="" id="reconnectTickTickBtn" title="Reconnect TickTick account" type="button">Reconnect</button>
 </div>
 </article>
 <article class="settings-card settings-card--email">
 <div class="settings-card-header">
 <h3 class="settings-card-title">
 <span aria-hidden="true" class="settings-title-icon">
-<svg viewbox="0 0 24 24">
+<svg viewBox="0 0 24 24">
 <rect height="13" rx="2" width="17" x="3.5" y="5.5"></rect>
 <path d="m5 8 7 5 7-5"></path>
 </svg>
 </span>
-<span>Weekly Email Digest</span>
+<span>Weekly digest</span>
 </h3>
 </div>
 <div class="settings-control-row">
@@ -272,11 +307,11 @@
 <div class="settings-card-header">
 <h3 class="settings-card-title">
 <span aria-hidden="true" class="settings-title-icon">
-<svg viewbox="0 0 24 24">
+<svg viewBox="0 0 24 24">
 <path d="m21 4-3 16-6-4-3 3 .7-5.2L18 7.5 7.5 12 3 10.5 21 4Z"></path>
 </svg>
 </span>
-<span>Telegram Quiz</span>
+<span>Telegram quiz</span>
 </h3>
 <div class="status-pill status-pill--danger" id="telegramStatusPill">
 <span class="pill-dot"></span>
@@ -312,7 +347,7 @@
 <footer class="app-footer" id="appFooter">
 <div class="save-actions" id="saveActions">
 <button class="btn btn-ghost" id="refreshPageBtn" type="button">
-                        Refresh
+                        Refresh page
                     </button>
 <button class="btn btn-primary" id="saveArticleBtn" type="button">
                         Save Article

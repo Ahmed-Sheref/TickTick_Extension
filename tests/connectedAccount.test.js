@@ -156,3 +156,48 @@ test("creating a connected account does not invent an application userId", () =>
     assert.equal(account.userId, undefined);
     assert.equal("User" in mongoose.models, false);
 });
+
+
+test("TickTick credentials have a unique partial fingerprint index without replacing existing ownership indexes", () =>
+{
+    const index = getIndex({ provider: 1, credentialFingerprint: 1 });
+    assert.ok(index);
+    assert.equal(index[1].unique, true);
+    assert.equal(index[1].name, "ticktick_credential_fingerprint_unique");
+    assert.deepEqual(index[1].partialFilterExpression,
+    {
+        provider: "ticktick",
+        credentialFingerprint: { $type: "string" }
+    });
+    assert.equal(getIndex({ userId: 1, provider: 1 })[1].unique, true);
+    assert.equal(getIndex({ provider: 1, providerAccountId: 1 })[1].unique, true);
+});
+
+test("fingerprints are optional and excluded from ordinary account queries", async () =>
+{
+    const account = new ConnectedAccount({ userId: "USER_existing", provider: "ticktick" });
+    await account.validate();
+    assert.equal(account.credentialFingerprint, null);
+    assert.equal(account.providerAccountId, null);
+    assert.equal(ConnectedAccount.schema.path("credentialFingerprint").options.select, false);
+});
+
+test("a credential fingerprint does not manufacture a provider identity or alter Notion identity", async () =>
+{
+    const account = new ConnectedAccount({ userId: "USER_existing", provider: "ticktick", credentialFingerprint: "ab".repeat(32) });
+    await account.validate();
+    assert.equal(account.providerAccountId, null);
+    const notion = new ConnectedAccount({ userId: "USER_existing", provider: "notion", providerAccountId: "notion-workspace" });
+    await notion.validate();
+    assert.equal(notion.providerAccountId, "notion-workspace");
+    assert.equal(notion.credentialFingerprint, null);
+});
+
+test("populated fingerprints must be canonical 64-character hex digests", async () =>
+{
+    for (const credentialFingerprint of ["", "token", "g".repeat(64)])
+    {
+        const account = new ConnectedAccount({ userId: "USER_existing", provider: "ticktick", credentialFingerprint });
+        await assert.rejects(account.validate(), /credentialFingerprint/);
+    }
+});

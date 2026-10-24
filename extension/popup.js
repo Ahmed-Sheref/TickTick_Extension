@@ -1,22 +1,26 @@
 /* =========================================================================
-   popup.js — TickTick Extension
+   popup.js — Save Knowledge Extension
    ========================================================================= */
 
-// const API_BASE = "https://lionfish-app-jxpvk.ondigitalocean.app/api/v1";
 // const API_BASE = "https://lionfish-app-jxpvk.ondigitalocean.app/api/v1";
 const API_BASE = "http://localhost:3000/api/v1";
 const TELEGRAM_BOT_USERNAME = "Tick_review_bot";
 
 const STORAGE_KEYS =
 {
-    userId: "ticktick_userId",
-    token: "ticktick_token",
-    connected: "ticktick_connected",
+    userId: "sk_userId",
+    token: "sk_token",
+    signedIn: "sk_signed_in",
+
+    legacyUserId: "ticktick_userId",
+    legacyToken: "ticktick_token",
+    ticktickConnected: "ticktick_connected",
 
     email: "ticktick_email",
     weeklyEmailToggle: "ticktick_weeklyEmailToggle",
     telegramQuizToggle: "ticktick_telegramQuizToggle",
 
+    authUI: "sk_auth_ui",
     theme: "ticktick_theme",
     contextData: "ticktick_context_data",
 
@@ -31,6 +35,7 @@ const STORAGE_KEYS =
 
 const el =
 {
+    onboardingAuthStatus: document.getElementById("onboardingAuthStatus"),
     onboardingView: document.getElementById("onboardingView"),
     appView: document.getElementById("appView"),
     mainScroll: document.querySelector(".main-scroll"),
@@ -39,8 +44,11 @@ const el =
 
     ticktickStatusPill: document.getElementById("ticktickStatusPill"),
     ticktickStatusSecondary: document.getElementById("ticktickStatusSecondary"),
+    connectGoogleBtn: document.getElementById("connectGoogleBtn"),
     connectTickTickBtn: document.getElementById("connectTickTickBtn"),
+    connectTickTickFromSaveBtn: document.getElementById("connectTickTickFromSaveBtn"),
     reconnectTickTickBtn: document.getElementById("reconnectTickTickBtn"),
+    ticktickConnectHint: document.getElementById("ticktickConnectHint"),
 
     tabSave: document.getElementById("tabSave"),
     tabSettings: document.getElementById("tabSettings"),
@@ -303,6 +311,9 @@ function switchTab(tab)
         String(!isSave)
     );
 
+    el.tabSave.tabIndex = isSave ? 0 : -1;
+    el.tabSettings.tabIndex = isSave ? -1 : 0;
+
     hideTagSuggestions();
     hideProjectMenu(false);
     hideProjectCreatePanel();
@@ -311,12 +322,42 @@ function switchTab(tab)
 
 // ─── Connection UI ───────────────────────────────────────────────────────────
 
-function setConnectedUI(isConnected)
+function resolveAuthState(stored = {})
+{
+    const userId =
+        stored[STORAGE_KEYS.userId] ||
+        stored[STORAGE_KEYS.legacyUserId] ||
+        "";
+
+    const token =
+        stored[STORAGE_KEYS.token] ||
+        stored[STORAGE_KEYS.legacyToken] ||
+        "";
+
+    const isTickTickConnected =
+        Boolean(stored[STORAGE_KEYS.ticktickConnected]);
+
+    const isSignedIn =
+        Boolean(
+            (stored[STORAGE_KEYS.signedIn] || isTickTickConnected) &&
+            userId &&
+            token
+        );
+
+    return {
+        userId,
+        token,
+        isSignedIn,
+        isTickTickConnected
+    };
+}
+
+function setConnectedUI(isSignedIn, isTickTickConnected = false)
 {
     if (el.onboardingView)
     {
         el.onboardingView.style.display =
-            isConnected
+            isSignedIn
                 ? "none"
                 : "flex";
     }
@@ -324,23 +365,30 @@ function setConnectedUI(isConnected)
     if (el.appView)
     {
         el.appView.style.display =
-            isConnected
+            isSignedIn
                 ? "flex"
                 : "none";
     }
 
+    if (el.projectField)
+    {
+        el.projectField.hidden =
+            !isTickTickConnected;
+    }
+
+    if (el.ticktickConnectHint)
+    {
+        el.ticktickConnectHint.hidden =
+            !isSignedIn || isTickTickConnected;
+    }
+
     const text =
-        isConnected
+        isTickTickConnected
             ? "Connected"
             : "Not Connected";
 
-    const tooltip =
-        isConnected
-            ? "Connected to TickTick"
-            : "Not connected to TickTick";
-
     const className =
-        isConnected
+        isTickTickConnected
             ? "status-pill status-pill--success"
             : "status-pill status-pill--danger";
 
@@ -368,26 +416,15 @@ function setConnectedUI(isConnected)
         el.ticktickStatusSecondary.innerHTML = inner;
     }
 
-    if (el.reconnectTickTickBtn)
+    if (el.connectTickTickBtn)
     {
-        el.reconnectTickTickBtn.hidden =
-            isConnected;
-
-        el.reconnectTickTickBtn.disabled =
-            isConnected;
-
-        el.reconnectTickTickBtn.setAttribute(
-            "aria-hidden",
-            String(isConnected)
-        );
-
-        el.reconnectTickTickBtn
-            .closest(".settings-secondary-row")
-            ?.classList.toggle(
-                "settings-secondary-row--status-only",
-                isConnected
-            );
+        el.connectTickTickBtn.textContent = isTickTickConnected ? "Reconnect" : "Connect";
+        const label = isTickTickConnected ? "Reconnect TickTick account" : "Connect TickTick account";
+        el.connectTickTickBtn.setAttribute("aria-label", label);
+        el.connectTickTickBtn.title = label;
     }
+    // Both existing buttons trigger the same flow; expose one clear action.
+    if (el.reconnectTickTickBtn) el.reconnectTickTickBtn.hidden = true;
 }
 
 
@@ -397,10 +434,13 @@ async function apiFetch(path, options = {})
 {
     const stored = await storageGet(
     [
-        STORAGE_KEYS.token
+        STORAGE_KEYS.token,
+        STORAGE_KEYS.legacyToken
     ]);
 
-    const token = stored[STORAGE_KEYS.token];
+    const token =
+        stored[STORAGE_KEYS.token] ||
+        stored[STORAGE_KEYS.legacyToken];
 
     const response = await fetch(
         `${API_BASE}${path}`,
@@ -517,10 +557,6 @@ function hideProjectMenu(restoreValue = true)
 
     el.projectMenu.style.display = "none";
 
-    el.projectPickerBtn.setAttribute(
-        "aria-expanded",
-        "false"
-    );
 
     el.projectSearchInput?.setAttribute(
         "aria-expanded",
@@ -535,6 +571,7 @@ function hideProjectMenu(restoreValue = true)
     el.projectPickerBtn.classList.remove("open");
 
     activeProjectSuggestionIndex = -1;
+    el.projectSearchInput?.removeAttribute("aria-activedescendant");
 
     if (restoreValue)
     {
@@ -566,8 +603,10 @@ function updateActiveProjectOption(items)
         );
     });
 
-    const activeItem =
-        items[activeProjectSuggestionIndex];
+    items.forEach((item, index) => { item.id = `project-option-${index}`; });
+    const activeItem = items[activeProjectSuggestionIndex];
+    if (activeItem) el.projectSearchInput?.setAttribute("aria-activedescendant", activeItem.id);
+    else el.projectSearchInput?.removeAttribute("aria-activedescendant");
 
     activeItem?.scrollIntoView(
     {
@@ -654,6 +693,7 @@ function filterProjectOptions(query = "")
     }
 
     activeProjectSuggestionIndex = -1;
+    el.projectSearchInput?.removeAttribute("aria-activedescendant");
 }
 
 function showProjectMenu(query = "")
@@ -673,10 +713,6 @@ function showProjectMenu(query = "")
 
     el.projectMenu.style.display = "block";
 
-    el.projectPickerBtn.setAttribute(
-        "aria-expanded",
-        "true"
-    );
 
     el.projectSearchInput?.setAttribute(
         "aria-expanded",
@@ -689,6 +725,7 @@ function showProjectMenu(query = "")
     );
 
     el.projectPickerBtn.classList.add("open");
+    el.projectMenu.scrollIntoView({ block: "nearest" });
 }
 
 function toggleProjectMenu()
@@ -930,6 +967,7 @@ function createInboxOption()
     button.className = "picker-option";
     button.dataset.projectId = "";
     button.setAttribute("role", "option");
+    button.tabIndex = -1;
 
     const icon =
         document.createElement("span");
@@ -993,6 +1031,7 @@ function createProjectOption(project)
     button.className = "picker-option";
     button.dataset.projectId = projectId;
     button.setAttribute("role", "option");
+    button.tabIndex = -1;
 
     const icon =
         document.createElement("span");
@@ -1373,6 +1412,7 @@ function setActiveTagSuggestion(index)
     if (buttons.length === 0)
     {
         activeTagSuggestionIndex = -1;
+        el.tagInput?.removeAttribute("aria-activedescendant");
         return;
     }
 
@@ -1387,6 +1427,11 @@ function setActiveTagSuggestion(index)
     }
 
     activeTagSuggestionIndex = index;
+    buttons.forEach((button, optionIndex) => {
+        button.id = `tag-option-${optionIndex}`;
+        button.setAttribute("aria-selected", String(optionIndex === index));
+    });
+    el.tagInput?.setAttribute("aria-activedescendant", buttons[index].id);
 
     buttons.forEach((button, buttonIndex) =>
     {
@@ -1416,10 +1461,6 @@ function hideTagSuggestions()
         "false"
     );
 
-    el.tagsInputBox?.setAttribute(
-        "aria-expanded",
-        "false"
-    );
 
     el.tagPickerToggleBtn?.setAttribute(
         "aria-expanded",
@@ -1431,6 +1472,7 @@ function hideTagSuggestions()
     );
 
     activeTagSuggestionIndex = -1;
+    el.tagInput?.removeAttribute("aria-activedescendant");
 }
 
 function renderSelectedTags()
@@ -1532,6 +1574,7 @@ function renderTagSuggestions()
         normalizeTag(el.tagInput.value);
 
     activeTagSuggestionIndex = -1;
+    el.tagInput?.removeAttribute("aria-activedescendant");
     el.tagSuggestions.innerHTML = "";
 
     const filteredTags =
@@ -1571,6 +1614,7 @@ function renderTagSuggestions()
 
         createButton.dataset.tag = query;
         createButton.setAttribute("role", "option");
+        createButton.tabIndex = -1;
 
         const left =
             document.createElement("span");
@@ -1627,6 +1671,7 @@ function renderTagSuggestions()
         button.className = "tag-suggestion-item";
         button.dataset.tag = normalizedTag;
         button.setAttribute("role", "option");
+        button.tabIndex = -1;
 
         const left =
             document.createElement("span");
@@ -1699,16 +1744,13 @@ function renderTagSuggestions()
     }
 
     el.tagSuggestions.style.display = "block";
+    el.tagSuggestions.scrollIntoView({ block: "nearest" });
 
     el.tagInput.setAttribute(
         "aria-expanded",
         "true"
     );
 
-    el.tagsInputBox?.setAttribute(
-        "aria-expanded",
-        "true"
-    );
 
     el.tagPickerToggleBtn?.setAttribute(
         "aria-expanded",
@@ -2095,68 +2137,59 @@ function showCurrentEmail(email, isEnabled)
 
 // ─── Authentication ──────────────────────────────────────────────────────────
 
-async function connectTickTick()
+// Only presentation state is stored here; OAuth exchanges remain unchanged.
+function renderAuthUI(state)
 {
+    const pending = state?.status === "pending";
+    const failed = state?.status === "error";
+    const provider = state?.provider || "Google";
+    const message = pending
+        ? `Continue in the ${provider} window. This popup will reopen when you're done.`
+        : failed ? state.message : state?.status === "success" ? `${provider} connected successfully.` : "";
+
+    for (const button of [el.connectGoogleBtn, el.connectTickTickBtn, el.connectTickTickFromSaveBtn, el.reconnectTickTickBtn])
+    {
+        if (!button) continue;
+        button.disabled = pending;
+        button.setAttribute("aria-busy", String(pending));
+    }
+    // Keep the existing connected-state rule for the reconnect button.
+    if (!pending && el.reconnectTickTickBtn?.hidden) el.reconnectTickTickBtn.disabled = true;
+    const googleLabel = el.connectGoogleBtn?.querySelector(".google-auth-label");
+    if (googleLabel) googleLabel.textContent = pending ? `Opening ${provider}…` : "Continue with Google";
+    if (el.onboardingAuthStatus)
+    {
+        el.onboardingAuthStatus.hidden = !message;
+        el.onboardingAuthStatus.textContent = message;
+        el.onboardingAuthStatus.dataset.state = failed ? "error" : "info";
+    }
+    if (message) setStatus(message, failed ? "danger" : pending ? "info" : "success");
+}
+
+function startConnection(provider, action)
+{
+    renderAuthUI({ provider, status: "pending" });
     try
     {
-        setStatus(
-            "Opening TickTick login...",
-            "info"
-        );
-
-        chrome.runtime.sendMessage(
+        chrome.runtime.sendMessage({ action }, response =>
+        {
+            const error = chrome.runtime.lastError?.message || response?.error;
+            if (error || !response?.started)
             {
-                action: "startTickTickAuth"
-            },
-            (response) =>
-            {
-                if (chrome.runtime.lastError)
-                {
-                    setStatus(
-                        chrome.runtime.lastError.message,
-                        "danger"
-                    );
-
-                    return;
-                }
-
-                if (!response)
-                {
-                    setStatus(
-                        "No response from background.",
-                        "danger"
-                    );
-
-                    return;
-                }
-
-                if (response.error)
-                {
-                    setStatus(
-                        response.error,
-                        "danger"
-                    );
-
-                    return;
-                }
-
-                if (response.started)
-                {
-                    setStatus(
-                        "TickTick login opened.",
-                        "success"
-                    );
-                }
+                renderAuthUI({ provider, status: "error", message: error || "Could not open the connection window. Please try again." });
             }
-        );
+        });
     }
     catch (error)
     {
-        setStatus(
-            error.message || "Connect failed.",
-            "danger"
-        );
+        renderAuthUI({ provider, status: "error", message: error.message || "Could not open the connection window." });
     }
+}
+
+function connectGoogle() { startConnection("Google", "startGoogleAuth"); }
+function connectTickTick()
+{
+    startConnection("TickTick", "startTickTickAuth");
 }
 
 
@@ -2174,16 +2207,18 @@ async function saveArticle()
     {
         const stored = await storageGet(
         [
-            STORAGE_KEYS.token
+            STORAGE_KEYS.token,
+            STORAGE_KEYS.legacyToken
         ]);
 
         const token =
-            stored[STORAGE_KEYS.token];
+            stored[STORAGE_KEYS.token] ||
+            stored[STORAGE_KEYS.legacyToken];
 
         if (!token)
         {
             throw new Error(
-                "Authentication token is missing. Please reconnect TickTick."
+                "Authentication token is missing. Please sign in again."
             );
         }
 
@@ -2233,6 +2268,8 @@ async function saveArticle()
 
         if (!payload.title)
         {
+            el.title?.setAttribute("aria-invalid", "true");
+            el.title?.focus();
             throw new Error(
                 "Title is required."
             );
@@ -2240,6 +2277,8 @@ async function saveArticle()
 
         if (!payload.rawText)
         {
+            el.rawText?.setAttribute("aria-invalid", "true");
+            el.rawText?.focus();
             throw new Error(
                 "Article text is required."
             );
@@ -2836,7 +2875,29 @@ async function saveQuizPreference()
 
 function bindEvents()
 {
+    for (const input of [el.title, el.rawText])
+    {
+        input?.setAttribute("aria-describedby", "statusText");
+        input?.addEventListener("input", () => input.removeAttribute("aria-invalid"));
+    }
+    document.querySelector('[role="tablist"]')?.addEventListener("keydown", event => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const settings = event.key === "End" || (event.key !== "Home" && document.activeElement === el.tabSave);
+        switchTab(settings ? "settings" : "save");
+        (settings ? el.tabSettings : el.tabSave)?.focus();
+    });
+    el.connectGoogleBtn?.addEventListener(
+        "click",
+        connectGoogle
+    );
+
     el.connectTickTickBtn?.addEventListener(
+        "click",
+        connectTickTick
+    );
+
+    el.connectTickTickFromSaveBtn?.addEventListener(
         "click",
         connectTickTick
     );
@@ -3204,23 +3265,6 @@ function bindEvents()
 }
 
 
-// ─── Popup Viewport ──────────────────────────────────────────────────────────
-
-function syncPopupViewportHeight()
-{
-    const viewportHeight =
-        Math.min(
-            window.innerHeight || 600,
-            600
-        );
-
-    document.documentElement.style.setProperty(
-        "--popup-viewport-height",
-        `${viewportHeight}px`
-    );
-}
-
-
 // ─── Bootstrap ───────────────────────────────────────────────────────────────
 
 async function bootstrap()
@@ -3232,22 +3276,20 @@ async function bootstrap()
     [
         STORAGE_KEYS.userId,
         STORAGE_KEYS.token,
-        STORAGE_KEYS.connected,
-        STORAGE_KEYS.theme
+        STORAGE_KEYS.signedIn,
+        STORAGE_KEYS.legacyUserId,
+        STORAGE_KEYS.legacyToken,
+        STORAGE_KEYS.ticktickConnected,
+        STORAGE_KEYS.theme,
+        STORAGE_KEYS.authUI
     ]);
 
-    const userId =
-        stored[STORAGE_KEYS.userId];
-
-    const token =
-        stored[STORAGE_KEYS.token];
-
-    const isConnected =
-        Boolean(
-            stored[STORAGE_KEYS.connected] &&
-            userId &&
-            token
-        );
+    const
+    {
+        userId,
+        isSignedIn,
+        isTickTickConnected
+    } = resolveAuthState(stored);
 
     const savedTheme =
         stored[STORAGE_KEYS.theme];
@@ -3270,75 +3312,157 @@ async function bootstrap()
 
     bindEvents();
     switchTab("save");
-    setConnectedUI(isConnected);
+    setConnectedUI(
+        isSignedIn,
+        isTickTickConnected
+    );
     fillTelegramCommand(userId || "");
-
     setStatus(
-        isConnected
+        isSignedIn
             ? "Loading..."
             : "Ready",
-        isConnected
+        isSignedIn
             ? "info"
             : "success"
     );
 
-    if (isConnected && el.userId)
+
+    if (stored[STORAGE_KEYS.authUI]?.status === "pending")
+    {
+        chrome.runtime.sendMessage({ action: "getConnectionState" }, response => {
+            if (chrome.runtime.lastError || !response?.pending)
+                renderAuthUI({ provider: stored[STORAGE_KEYS.authUI].provider, status: "error", message: "The connection window closed. You can try again." });
+            else renderAuthUI(stored[STORAGE_KEYS.authUI]);
+        });
+    }
+    else if (Date.now() - (stored[STORAGE_KEYS.authUI]?.updatedAt || 0) < 300000)
+        renderAuthUI(stored[STORAGE_KEYS.authUI]);
+
+    if (isSignedIn && el.userId)
     {
         setUserIdDisplay(userId);
 
-        await Promise.allSettled(
+        const initialTasks =
         [
             refreshPageData(),
             loadUserPreferences(),
-            loadTickTickProjects(),
             loadTags()
-        ]);
+        ];
 
-        setStatus(
-            "Ready",
-            "success"
-        );
+        if (isTickTickConnected)
+        {
+            initialTasks.push(loadTickTickProjects());
+        }
+        else
+        {
+            renderProjects([], "");
+        }
+
+        await Promise.allSettled(initialTasks);
+
+        if (el.statusText?.textContent === "Loading...") setStatus("Ready", "success");
+        const connectionUI = stored[STORAGE_KEYS.authUI];
+        if (connectionUI && connectionUI.status !== "pending" && Date.now() - connectionUI.updatedAt < 300000)
+            renderAuthUI(connectionUI);
     }
 }
 
 chrome.storage.onChanged.addListener((changes, areaName) =>
 {
-    if (areaName !== "local") return;
+    if (areaName !== "local")
+    {
+        return;
+    }
 
-    if (!changes[STORAGE_KEYS.connected] && !changes[STORAGE_KEYS.userId] && !changes[STORAGE_KEYS.token]) return;
+    if (changes[STORAGE_KEYS.authUI]) renderAuthUI(changes[STORAGE_KEYS.authUI].newValue);
+
+    const linkedTickTick = changes[STORAGE_KEYS.authUI]?.newValue?.provider === "TickTick" &&
+        changes[STORAGE_KEYS.authUI].newValue.status === "success";
+    const authKeysChanged =
+        linkedTickTick ||
+        changes[STORAGE_KEYS.signedIn] ||
+        changes[STORAGE_KEYS.userId] ||
+        changes[STORAGE_KEYS.token] ||
+        changes[STORAGE_KEYS.ticktickConnected] ||
+        changes[STORAGE_KEYS.legacyUserId] ||
+        changes[STORAGE_KEYS.legacyToken];
+
+    if (!authKeysChanged)
+    {
+        return;
+    }
 
     storageGet(
     [
-        STORAGE_KEYS.connected,
+        STORAGE_KEYS.signedIn,
         STORAGE_KEYS.userId,
-        STORAGE_KEYS.token
+        STORAGE_KEYS.token,
+        STORAGE_KEYS.ticktickConnected,
+        STORAGE_KEYS.legacyUserId,
+        STORAGE_KEYS.legacyToken
     ]).then(async (stored) =>
     {
-        const userId = stored[STORAGE_KEYS.userId];
-        const isConnected = Boolean(stored[STORAGE_KEYS.connected] && userId && stored[STORAGE_KEYS.token]);
+        const
+        {
+            userId,
+            isSignedIn,
+            isTickTickConnected
+        } = resolveAuthState(stored);
 
-        setConnectedUI(isConnected);
+        setConnectedUI(
+            isSignedIn,
+            isTickTickConnected
+        );
 
-        if (!isConnected) return;
+        if (!isSignedIn)
+        {
+            return;
+        }
 
         switchTab("save");
         fillTelegramCommand(userId);
         setUserIdDisplay(userId);
 
-        await Promise.allSettled(
+        const refreshTasks =
         [
             refreshPageData(),
             loadUserPreferences(),
-            loadTickTickProjects(),
             loadTags()
-        ]);
+        ];
 
-        setStatus("Ready", "success");
+        if (isTickTickConnected)
+        {
+            refreshTasks.push(loadTickTickProjects());
+        }
+        else
+        {
+            renderProjects([], "");
+        }
+
+        await Promise.allSettled(refreshTasks);
+
+        const latest = await storageGet([STORAGE_KEYS.authUI]);
+        if (latest[STORAGE_KEYS.authUI]) renderAuthUI(latest[STORAGE_KEYS.authUI]);
     }).catch((error) =>
     {
         console.error("[OAUTH] Popup refresh failed:", error);
     });
 });
+
+// Start with intrinsic 400 × 600 dimensions. Once Chrome has sized the
+// action popup, fit its actual height without creating a second outer scrollbar.
+// Ignore Chrome's provisional 25px viewport to avoid collapsing the popup.
+function fitPopupHeight()
+{
+    if (window.innerHeight >= 320)
+    {
+        document.documentElement.style.setProperty(
+            "--popup-height", `${Math.min(600, window.innerHeight)}px`
+        );
+    }
+}
+window.addEventListener("resize", fitPopupHeight);
+requestAnimationFrame(() => requestAnimationFrame(fitPopupHeight));
 
 document.addEventListener(
     "DOMContentLoaded",

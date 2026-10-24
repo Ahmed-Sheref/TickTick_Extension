@@ -35,6 +35,22 @@ const connectedAccountSchema = new mongoose.Schema(
         trim: true
     },
 
+    // Exact credential identity only; not a verified external account ID.
+    credentialFingerprint:
+    {
+        type: String,
+        default: null,
+        select: false,
+        validate:
+        {
+            validator: (value) =>
+            {
+                return value === null || value === undefined || /^[a-f0-9]{64}$/.test(value);
+            },
+            message: "Invalid credentialFingerprint"
+        }
+    },
+
     encryptedAccessToken:
     {
         type: String,
@@ -60,6 +76,15 @@ const connectedAccountSchema = new mongoose.Schema(
     {
         type: Date,
         default: null
+    },
+
+    // Notion-only distributed refresh claim. No automatic lease expiry: an
+    // uncertain rotated credential must be recovered through reauthorization.
+    notionRefreshLock:
+    {
+        type: String,
+        default: null,
+        select: false
     },
 
     metadata:
@@ -95,6 +120,22 @@ connectedAccountSchema.index(
             {
                 $type: "string"
             }
+        }
+    }
+);
+
+connectedAccountSchema.index(
+    {
+        provider: 1,
+        credentialFingerprint: 1
+    },
+    {
+        name: "ticktick_credential_fingerprint_unique",
+        unique: true,
+        partialFilterExpression:
+        {
+            provider: "ticktick",
+            credentialFingerprint: { $type: "string" }
         }
     }
 );

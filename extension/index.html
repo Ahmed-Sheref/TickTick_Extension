@@ -1,0 +1,1438 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Save Knowledge — Compact Prototype</title>
+<style>
+:root {
+  --primary:#3568f6;
+  --ink:#1c2943;
+  --muted:#8290a8;
+  --line:#e4eaf4;
+  --surface:#f6f8fd;
+  --green:#19b878;
+  --red:#e35a70;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  color:var(--ink);
+  font-family:Inter,"Segoe UI",Arial,sans-serif;
+  background:
+    radial-gradient(circle at 8% 0%,#e0e9ff,transparent 42%),
+    radial-gradient(circle at 95% 20%,#e5f2ff,transparent 40%),
+    #f7f9ff;
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{
+  outline:3px solid #a5c0ff;outline-offset:2px
+}
+[hidden]{display:none!important}
+header.site-header{
+  max-width:1370px;margin:auto;padding:25px 20px 22px;
+  display:flex;align-items:center;justify-content:space-between;gap:15px
+}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{
+  height:46px;width:46px;display:grid;place-items:center;
+  border-radius:15px;background:linear-gradient(135deg,#87b2ff,#2864ef);
+  color:#fff;font-size:26px;box-shadow:0 10px 23px #477af23a
+}
+h1,h2,h3,p{margin:0}
+h1{font-size:25px;letter-spacing:-.7px}
+.subtitle{font-size:12px;color:var(--muted);margin-top:4px}
+.demo-label{
+  background:#fff;border:1px solid #dce6ff;
+  padding:9px 12px;border-radius:30px;
+  color:var(--primary);font-size:11px;font-weight:800
+}
+.layout{
+  max-width:1370px;margin:auto;padding:0 20px 35px;
+  display:grid;grid-template-columns:432px minmax(0,1fr);
+  gap:22px;align-items:start
+}
+.popup,.dashboard{
+  background:#fff;border:1px solid #e0e7f2;
+  border-radius:19px;overflow:hidden;
+  box-shadow:0 20px 65px #425f9919
+}
+.window-bar{
+  height:32px;background:linear-gradient(#fcfdff,#f1f5fb);
+  border-bottom:1px solid var(--line);padding:0 13px;
+  display:flex;align-items:center;justify-content:space-between
+}
+.window-dots{display:flex;gap:5px}
+.window-dots i{height:8px;width:8px;border-radius:50%;background:#ff6e66}
+.window-dots i:nth-child(2){background:#ffbd4b}
+.window-dots i:nth-child(3){background:#27c965}
+.window-label{font-size:10px;color:#a0abc0}
+.popup-inner{height:720px;position:relative;display:flex;flex-direction:column;overflow:hidden}
+.popup-header{
+  padding:15px 17px;display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--line)
+}
+.small-logo{
+  width:34px;height:34px;display:grid;place-items:center;
+  color:white;background:linear-gradient(135deg,#73aeff,#3466f5);
+  border-radius:10px;font-size:20px
+}
+.popup-header strong{font-size:14px}
+.popup-header .subtitle{font-size:10px}
+.icon-button{
+  margin-left:auto;border:0;border-radius:10px;
+  background:#f3f6fd;color:#617492;font-size:19px;
+  height:35px;width:35px;transition:.2s
+}
+.icon-button:hover{background:#e9efff;transform:rotate(12deg)}
+.destination-area{
+  padding:13px 16px;border-bottom:1px solid var(--line);
+  background:linear-gradient(180deg,#fff,#fbfcff)
+}
+.label{
+  display:block;font-size:10px;font-weight:850;
+  color:#697993;margin-bottom:7px;letter-spacing:.2px
+}
+.segmented{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.segment{
+  border:1px solid var(--line);border-radius:9px;
+  background:white;padding:10px 4px;color:#65748d;
+  font-size:12px;font-weight:750;transition:.2s
+}
+.segment:hover{transform:translateY(-2px);border-color:#b2c6ff}
+.segment.active{
+  background:#edf3ff;border-color:#a6bfff;color:var(--primary);
+  box-shadow:0 3px 11px #3465ed14
+}
+.scroll{padding:14px 15px;overflow:auto;flex:1;min-height:0}
+.scroll::-webkit-scrollbar{width:5px}
+.scroll::-webkit-scrollbar-thumb{background:#d9e1ee;border-radius:8px}
+.section-card{
+  border:1px solid var(--line);border-radius:13px;
+  padding:14px;margin-bottom:11px;background:#fff
+}
+.section-head{display:flex;justify-content:space-between;align-items:center;gap:7px}
+.section-head strong{font-size:13px}
+.badge{
+  font-size:10px;font-weight:750;color:#3a6ef5;
+  background:#edf3ff;padding:5px 7px;border-radius:6px
+}
+.field{margin-top:13px}
+.input{
+  width:100%;border:1px solid #dfe6f1;background:#fff;
+  padding:10px 11px;border-radius:9px;font-size:12px;
+  color:var(--ink);transition:border-color .2s,box-shadow .2s
+}
+.input:focus{border-color:#94b2ff;box-shadow:0 0 0 3px #edf2ff;outline:none}
+textarea.input{min-height:88px;resize:vertical;line-height:1.6}
+.input::placeholder{color:#a7b1c3}
+.inline-source{
+  display:flex;align-items:center;gap:7px;color:#7588ac;
+  padding:9px 0 0;font-size:11px
+}
+.inline-source span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.text-button{
+  color:var(--primary);border:0;background:transparent;
+  padding:2px 0;font-size:11px;font-weight:800
+}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tag{
+  display:inline-flex;align-items:center;gap:5px;
+  background:#edf2fc;color:#506791;border-radius:7px;
+  padding:6px 8px;font-size:11px;animation:fadeUp .2s ease
+}
+.tag button{border:0;background:none;color:#8494b0;padding:0;font-size:14px}
+.tag-entry{
+  border:1px dashed #c8d5ea;border-radius:7px;
+  padding:6px 8px;width:94px;min-width:65px;font-size:11px
+}
+.capture-tools{display:flex;gap:7px;flex-wrap:wrap}
+.mini-button{
+  padding:9px 10px;background:#f6f8ff;border:1px solid #dde6f5;
+  border-radius:9px;color:#5271a9;font-size:11px;font-weight:750;
+  transition:.2s
+}
+.mini-button:hover{background:#eaf1ff;transform:translateY(-1px)}
+.image-list{display:flex;flex-wrap:wrap;gap:8px;margin-top:9px}
+.image-tile{
+  position:relative;width:73px;height:68px;border-radius:9px;
+  overflow:hidden;border:1px solid #dfe6f4;animation:fadeUp .2s ease
+}
+.image-tile img{width:100%;height:100%;object-fit:cover}
+.image-tile button{
+  position:absolute;right:3px;top:3px;border:0;border-radius:50%;
+  background:#223253d9;color:#fff;height:19px;width:19px
+}
+.dropzone{
+  padding:10px;border:1px dashed #d3ddec;border-radius:8px;
+  text-align:center;margin-top:8px;color:#9aa7bc;font-size:10px
+}
+.dropzone.drag{background:#edf3ff;border-color:#84a6fc}
+details.note-details{margin-top:13px;border-top:1px solid var(--line);padding-top:11px}
+.note-details summary{
+  cursor:pointer;color:var(--primary);font-size:11px;font-weight:750
+}
+.note-details textarea{margin-top:10px;min-height:64px}
+.locations{display:grid;gap:8px;margin-top:11px}
+.location{
+  display:flex;gap:10px;align-items:center;
+  border:1px solid #e4eaf4;background:#fafbff;
+  padding:10px;border-radius:10px;transition:.2s
+}
+.location:hover{border-color:#bed0ff;background:#f5f8ff}
+.platform-icon{
+  width:29px;height:29px;border-radius:9px;
+  background:#3976f7;color:#fff;
+  display:grid;place-items:center;font-weight:850;font-size:13px
+}
+.platform-icon.notion{background:#171c29}
+.location-info{flex:1;min-width:0}
+.location-info strong{font-size:12px}
+.location-info p{
+  font-size:10px;color:#93a0b4;margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.location button{
+  background:white;border:1px solid #dce6f5;border-radius:7px;
+  padding:7px 9px;color:#5974a1;font-size:10px;font-weight:750
+}
+.slim-row{
+  display:flex;align-items:center;gap:9px;
+  padding:11px 12px;margin-bottom:11px;border:1px solid var(--line);
+  border-radius:11px;background:#fff;font-size:12px
+}
+.slim-row span{flex:1}
+.slim-row small{color:#98a5b7;font-size:10px}
+.savebar{
+  padding:12px 15px;border-top:1px solid var(--line);
+  background:#ffffffec;backdrop-filter:blur(10px)
+}
+.save-hint{
+  display:flex;justify-content:space-between;align-items:center;
+  color:#91a0b6;font-size:10px;margin-bottom:9px
+}
+.primary{
+  background:linear-gradient(115deg,#3877ff,#2755ed);
+  color:white;border:0;border-radius:10px;
+  width:100%;min-height:44px;
+  font-size:12px;font-weight:850;
+  box-shadow:0 8px 22px #346ff533;
+  transition:filter .2s,transform .2s
+}
+.primary:hover{filter:brightness(1.04);transform:translateY(-1px)}
+.primary:active{transform:scale(.99)}
+.sheet{
+  position:absolute;inset:0;background:white;z-index:5;
+  transform:translateX(105%);
+  transition:transform .3s cubic-bezier(.2,.75,.2,1);
+  display:flex;flex-direction:column;pointer-events:none
+}
+.sheet.open{transform:translateX(0);pointer-events:auto}
+.sheet-header{
+  padding:19px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:12px
+}
+.sheet-header button{
+  border:0;background:#f3f6fd;border-radius:10px;
+  padding:8px 10px;color:#536789;font-size:17px
+}
+.sheet-header strong{font-size:15px}
+.sheet-header p{font-size:11px;color:var(--muted);margin-top:4px}
+.sheet-body{flex:1;overflow:auto;padding:18px}
+.sheet-footer{padding:15px;border-top:1px solid var(--line)}
+.checkline{display:flex;align-items:center;gap:9px;font-size:12px;margin-top:17px;color:#596b8d}
+.checkline input{accent-color:var(--primary)}
+.save-state{
+  position:absolute;inset:0;z-index:8;background:#fff;
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:30px;text-align:center
+}
+.save-state h2{font-size:19px;margin-top:15px}
+.save-state p{color:var(--muted);font-size:12px;line-height:1.6;margin-top:9px}
+.spinner{
+  width:49px;height:49px;border:4px solid #e3eaff;
+  border-top-color:var(--primary);border-radius:50%;
+  animation:spin .8s linear infinite
+}
+.success-icon{
+  height:66px;width:66px;border-radius:50%;
+  background:var(--green);display:grid;place-items:center;
+  color:white;font-size:31px;
+  box-shadow:0 0 0 10px #18b87816;animation:pop .5s ease
+}
+.success-icon.warning{background:#f0a64d;box-shadow:0 0 0 10px #f0a64d16}
+.success-icon.error{background:var(--red);box-shadow:0 0 0 10px #e35a7015}
+.result-summary{width:100%;margin:22px 0 15px;display:grid;gap:8px}
+.result-row{
+  border:1px solid var(--line);border-radius:10px;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px;font-size:12px;font-weight:750
+}
+.result-row .ok{color:var(--green)}
+.result-row .bad{color:var(--red)}
+.result-actions{width:100%;display:grid;gap:8px}
+.dashboard{display:grid;grid-template-columns:165px minmax(0,1fr);min-height:753px}
+.dash-side{
+  background:#f8faff;border-right:1px solid var(--line);
+  padding:18px 11px;display:flex;flex-direction:column
+}
+.dash-brand{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:24px}
+.dash-nav{display:grid;gap:5px}
+.nav{
+  width:100%;border:0;text-align:left;padding:11px 10px;
+  background:transparent;border-radius:9px;color:#7987a0;
+  font-size:12px;font-weight:700
+}
+.nav.active,.nav:hover{background:#eaf0ff;color:var(--primary)}
+.dash-main{padding:26px;min-width:0}
+.dash-title{display:flex;align-items:center;justify-content:space-between}
+.dash-title h2{font-size:21px}
+.avatar{
+  width:33px;height:33px;display:grid;place-items:center;
+  border-radius:50%;background:#e5edff;color:var(--primary);
+  font-weight:800;font-size:12px
+}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:21px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:16px}
+.stat strong{font-size:25px;letter-spacing:-1px}
+.stat p{font-size:11px;color:var(--muted);margin-top:5px}
+.search{
+  width:100%;border:1px solid var(--line);
+  border-radius:10px;padding:12px;background:#fbfcff;
+  margin:19px 0 13px;font-size:12px
+}
+.filters{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:15px}
+.filter{
+  background:#f1f4fa;border:0;border-radius:20px;padding:8px 12px;
+  color:#8190a7;font-size:11px;font-weight:750
+}
+.filter.active{background:var(--primary);color:#fff}
+.ai-banner{
+  padding:16px;border:1px solid #e0e7ff;border-radius:12px;
+  background:linear-gradient(105deg,#f0f5ff,#f9f3ff);
+  margin-bottom:17px
+}
+.ai-banner strong{font-size:12px}
+.ai-banner p{font-size:11px;color:#8693a9;line-height:1.6;margin-top:5px}
+.item-list{display:grid;gap:9px;max-height:335px;overflow:auto}
+.item{
+  border:1px solid var(--line);border-radius:11px;padding:13px;
+  display:flex;gap:12px;align-items:flex-start;animation:fadeUp .25s ease
+}
+.item-icon{
+  height:51px;width:51px;border-radius:10px;
+  background:linear-gradient(130deg,#e2ecff,#b4c9fa);
+  display:grid;place-items:center;color:#456ac5;font-size:22px;flex-shrink:0
+}
+.item-content{min-width:0;flex:1}
+.item-content strong{font-size:12px}
+.item-content p{
+  color:#8a97ad;font-size:11px;line-height:1.5;margin-top:5px;
+  display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden
+}
+.item-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.item-tags span{
+  font-size:10px;padding:4px 6px;border-radius:6px;
+  color:#6780ae;background:#edf3ff
+}
+.empty{padding:24px;text-align:center;color:var(--muted);font-size:12px}
+.toast{
+  position:fixed;bottom:22px;right:22px;z-index:20;
+  background:#20304f;color:#fff;border-radius:10px;
+  padding:13px 16px;box-shadow:0 15px 30px #20304f25;
+  font-size:12px;animation:fadeUp .2s ease
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+@media(max-width:1050px){.dashboard{grid-template-columns:1fr}.dash-side{display:none}}
+@media(max-width:830px){
+  .layout{grid-template-columns:1fr;max-width:510px;padding:0 12px 30px}
+  .dashboard{min-height:0}
+  .dash-main{padding:17px}
+  header.site-header{padding:20px 13px}
+  .demo-label{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<header class="site-header">
+  <div class="brand">
+    <div class="logo">▣</div>
+    <div>
+      <h1>Save Knowledge</h1>
+      <p class="subtitle">Capture once. Save anywhere.</p>
+    </div>
+  </div>
+  <span class="demo-label">INTERACTIVE DESIGN PREVIEW</span>
+</header>
+
+<div class="layout">
+  <section class="popup">
+    <div class="window-bar">
+      <div class="window-dots"><i></i><i></i><i></i></div>
+      <span class="window-label">Chrome Extension Preview</span>
+      <span class="window-label">×</span>
+    </div>
+
+    <div class="popup-inner">
+      <div class="popup-header">
+        <div class="small-logo">▣</div>
+        <div>
+          <strong>Save Knowledge</strong>
+          <p class="subtitle">Your ideas, organized.</p>
+        </div>
+        <button class="icon-button" id="settingsBtn" title="Preferences">⚙</button>
+      </div>
+
+      <div class="destination-area">
+        <span class="label">SAVE TO</span>
+        <div class="segmented">
+          <button class="segment" data-destination="ticktick">✓ TickTick</button>
+          <button class="segment" data-destination="notion">▣ Notion</button>
+          <button class="segment active" data-destination="both">✦ Both</button>
+        </div>
+      </div>
+
+      <div class="scroll">
+        <section class="section-card">
+          <div class="section-head">
+            <strong>Your Capture</strong>
+            <span class="badge">Shared across platforms</span>
+          </div>
+
+          <div class="field">
+            <label class="label" for="title">TITLE</label>
+            <input id="title" class="input" value="Understanding Gradient Descent">
+          </div>
+
+          <div class="inline-source">
+            <span id="sourcePreview">↗ example.com/gradient-descent</span>
+            <button class="text-button" id="editSource">Edit</button>
+          </div>
+          <div id="sourceEditor" hidden style="margin-top:7px">
+            <input id="source" class="input" value="https://example.com/gradient-descent">
+          </div>
+
+          <div class="field">
+            <label class="label" for="content">CAPTURED CONTENT</label>
+            <textarea id="content" class="input">Gradient descent is an optimization algorithm used to minimize the loss function by adjusting model parameters iteratively.</textarea>
+          </div>
+
+          <div class="field">
+            <label class="label">TAGS</label>
+            <div class="tags" id="tags"></div>
+          </div>
+
+          <div class="field">
+            <label class="label">IMAGES</label>
+            <div class="capture-tools">
+              <button class="mini-button" id="uploadBtn">＋ Upload</button>
+              <button class="mini-button" id="pasteBtn">▣ Paste</button>
+              <button class="mini-button" id="captureBtn">▧ Screenshot</button>
+            </div>
+            <input id="fileInput" type="file" accept="image/*" multiple hidden>
+            <div class="dropzone" id="dropzone">Drop images here</div>
+            <div class="image-list" id="imageList"></div>
+          </div>
+
+          <details class="note-details">
+            <summary>＋ Add a personal note</summary>
+            <textarea class="input" id="note" placeholder="A quick thought, explanation or study reminder..."></textarea>
+          </details>
+        </section>
+
+        <section class="section-card">
+          <div class="section-head">
+            <strong>Save Location</strong>
+            <span class="badge">Quick settings</span>
+          </div>
+          <div class="locations">
+            <div class="location" id="tickLocation">
+              <div class="platform-icon">✓</div>
+              <div class="location-info">
+                <strong>TickTick</strong>
+                <p id="tickSummary">Programming Notes · Inbox</p>
+              </div>
+              <button data-sheet="ticktick">Change</button>
+            </div>
+            <div class="location" id="notionLocation">
+              <div class="platform-icon notion">N</div>
+              <div class="location-info">
+                <strong>Notion</strong>
+                <p id="notionSummary">Study Notes · Database</p>
+              </div>
+              <button data-sheet="notion">Change</button>
+            </div>
+          </div>
+        </section>
+
+        <button class="slim-row" id="aiBtn" style="width:100%;text-align:left">
+          <span>✦ &nbsp; AI Features</span>
+          <small id="aiSummary">Optional · Configure</small>
+          <span style="flex:0">›</span>
+        </button>
+      </div>
+
+      <div class="savebar">
+        <div class="save-hint">
+          <span id="destinationSummary">TickTick + Notion</span>
+          <span>Local Demo</span>
+        </div>
+        <button class="primary" id="saveBtn">✦ Save to 2 Platforms</button>
+      </div>
+
+      <div class="sheet" id="sheet" aria-hidden="true">
+        <div class="sheet-header">
+          <button id="backBtn" aria-label="Go back">←</button>
+          <div>
+            <strong id="sheetTitle">Settings</strong>
+            <p id="sheetSubtitle">Customize your destination</p>
+          </div>
+        </div>
+        <div class="sheet-body" id="sheetBody"></div>
+        <div class="sheet-footer">
+          <button class="primary" id="applyBtn">Apply Settings</button>
+        </div>
+      </div>
+
+      <div class="save-state" id="saveState" hidden aria-live="polite">
+        <div id="loadingContent">
+          <div class="spinner" style="margin:auto"></div>
+          <h2>Saving your knowledge...</h2>
+          <p>Just a moment. We're taking care of it.</p>
+        </div>
+
+        <div id="resultContent" hidden style="width:100%">
+          <div class="success-icon" id="resultIcon" style="margin:auto">✓</div>
+          <h2 id="resultTitle">Saved!</h2>
+          <p id="resultDescription">Your knowledge is ready.</p>
+          <div class="result-summary" id="resultRows"></div>
+          <div class="result-actions">
+            <button class="primary" id="retryBtn" hidden>Retry Failed Destination</button>
+            <button class="primary" id="anotherBtn">＋ Save Another</button>
+            <button class="mini-button" id="dashboardBtn">View Dashboard ↗</button>
+          </div>
+          <p style="font-size:10px;margin-top:17px">Demo mode — no real external save was made.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard" id="dashboard">
+    <aside class="dash-side">
+      <div class="dash-brand">
+        <div class="small-logo">▣</div>
+        <strong>Save Knowledge</strong>
+      </div>
+      <div class="dash-nav">
+        <button class="nav active" data-filter="all">⌂ &nbsp; Overview</button>
+        <button class="nav" data-filter="ticktick">✓ &nbsp; TickTick</button>
+        <button class="nav" data-filter="notion">▣ &nbsp; Notion</button>
+        <button class="nav" data-filter="both">◈ &nbsp; Both Platforms</button>
+        <button class="nav" data-filter="images">▧ &nbsp; Images</button>
+      </div>
+    </aside>
+
+    <div class="dash-main">
+      <div class="dash-title">
+        <div>
+          <h2>Knowledge Dashboard</h2>
+          <p class="subtitle">Everything you've captured, in one place.</p>
+        </div>
+        <div class="avatar">A</div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">
+          <strong id="totalStat">0</strong>
+          <p>Saved Items</p>
+        </div>
+        <div class="stat">
+          <strong id="tickStat">0</strong>
+          <p>TickTick</p>
+        </div>
+        <div class="stat">
+          <strong id="notionStat">0</strong>
+          <p>Notion</p>
+        </div>
+      </div>
+
+      <input class="search" id="search" placeholder="⌕ Search your captured knowledge...">
+
+      <div class="filters" id="filters">
+        <button class="filter active" data-filter="all">All</button>
+        <button class="filter" data-filter="ticktick">TickTick</button>
+        <button class="filter" data-filter="notion">Notion</button>
+        <button class="filter" data-filter="both">Both</button>
+        <button class="filter" data-filter="images">Images</button>
+      </div>
+
+      <div class="ai-banner">
+        <strong>✦ Ask Your Library</strong>
+        <p>Search and explore your saved information with AI. Coming in a future release.</p>
+      </div>
+
+      <strong style="font-size:13px;display:block;margin-bottom:13px">Recent Captures</strong>
+      <div class="item-list" id="itemList"></div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const $ = selector => document.querySelector(selector);
+const $$ = selector => [...document.querySelectorAll(selector)];
+
+let destination = localStorage.getItem("demoDestination") || "both";
+let tags = ["Machine Learning", "Lecture 3"];
+let files = [];
+let activeFilter = "all";
+let activeSheet = null;
+let lastItem = null;
+
+let settings = {
+  tickProject: "Programming Notes",
+  tickSection: "Inbox",
+  notionType: "database",
+  notionDatabase: "Study Notes",
+  notionPage: "Computer Science",
+  notionSubject: "Machine Learning",
+  notionStatus: "To Review",
+  useSummary: false,
+  useAiTags: false,
+  useQuiz: false,
+  demoResult: "success"
+};
+
+const samples = [
+  {
+    id:"example1",
+    title:"JWT Authentication Explained",
+    text:"Understand tokens, authorization, and application security.",
+    tags:["Security","Backend"],
+    images:false,
+    statuses:{ticktick:"saved",notion:"saved"}
+  },
+  {
+    id:"example2",
+    title:"Gradient Descent Lecture",
+    text:"A visual guide to optimization and cost functions.",
+    tags:["ML","University"],
+    images:true,
+    statuses:{notion:"saved"}
+  },
+  {
+    id:"example3",
+    title:"Node.js Error Handling",
+    text:"Practical notes about throw, next, and global middleware.",
+    tags:["Node.js"],
+    images:false,
+    statuses:{ticktick:"saved"}
+  }
+];
+
+let library;
+
+try
+{
+  library = JSON.parse(localStorage.getItem("demoLibrary")) || [...samples];
+}
+catch
+{
+  library = [...samples];
+}
+
+function persist()
+{
+  localStorage.setItem("demoLibrary", JSON.stringify(library));
+}
+
+function toast(message)
+{
+  $("#toast").textContent = message;
+  $("#toast").hidden = false;
+
+  clearTimeout(toast.timer);
+
+  toast.timer = setTimeout(() =>
+  {
+    $("#toast").hidden = true;
+  }, 2700);
+}
+
+function textNode(tag, className, value)
+{
+  const element = document.createElement(tag);
+  element.className = className;
+  element.textContent = value;
+  return element;
+}
+
+function selectedPlatforms()
+{
+  return destination === "both" ? ["ticktick","notion"] : [destination];
+}
+
+function renderDestination()
+{
+  $$(".segment").forEach(button =>
+  {
+    button.classList.toggle("active", button.dataset.destination === destination);
+    button.setAttribute("aria-pressed", String(button.dataset.destination === destination));
+  });
+
+  $("#tickLocation").hidden = destination === "notion";
+  $("#notionLocation").hidden = destination === "ticktick";
+
+  $("#destinationSummary").textContent =
+    destination === "both" ? "TickTick + Notion" :
+    destination === "notion" ? "Notion" : "TickTick";
+
+  $("#saveBtn").textContent =
+    destination === "both" ? "✦ Save to 2 Platforms" :
+    destination === "notion" ? "▣ Save to Notion" : "✓ Save to TickTick";
+}
+
+$$(".segment").forEach(button =>
+{
+  button.addEventListener("click", () =>
+  {
+    destination = button.dataset.destination;
+    localStorage.setItem("demoDestination", destination);
+    renderDestination();
+  });
+});
+
+function renderTags()
+{
+  const target = $("#tags");
+  target.replaceChildren();
+
+  tags.forEach((tag, index) =>
+  {
+    const chip = textNode("span", "tag", tag + " ");
+    const remove = textNode("button", "", "×");
+    remove.type = "button";
+    remove.setAttribute("aria-label", "Remove " + tag);
+
+    remove.onclick = () =>
+    {
+      tags.splice(index,1);
+      renderTags();
+    };
+
+    chip.append(remove);
+    target.append(chip);
+  });
+
+  const input = document.createElement("input");
+  input.className = "tag-entry";
+  input.placeholder = "+ Add tag";
+  input.setAttribute("aria-label", "Add tag");
+
+  input.onkeydown = event =>
+  {
+    if (event.key === "Enter" || event.key === ",")
+    {
+      event.preventDefault();
+
+      const value = input.value.trim().replace(/,$/, "");
+
+      if (value && !tags.some(tag => tag.toLowerCase() === value.toLowerCase()))
+      {
+        tags.push(value);
+        renderTags();
+      }
+      else
+      {
+        input.value = "";
+      }
+    }
+  };
+
+  target.append(input);
+}
+
+$("#editSource").onclick = () =>
+{
+  $("#sourceEditor").hidden = !$("#sourceEditor").hidden;
+  $("#editSource").textContent = $("#sourceEditor").hidden ? "Edit" : "Done";
+};
+
+$("#source").oninput = () =>
+{
+  $("#sourcePreview").textContent = "↗ " + ($("#source").value || "No source");
+};
+
+function addImages(incoming)
+{
+  for (const file of incoming)
+  {
+    if (!file.type.startsWith("image/"))
+    {
+      toast("Please select image files only.");
+      continue;
+    }
+
+    if (file.size > 10 * 1024 * 1024)
+    {
+      toast("Demo maximum: 10 MB per image.");
+      continue;
+    }
+
+    files.push({
+      file,
+      url:URL.createObjectURL(file)
+    });
+  }
+
+  renderImages();
+}
+
+function renderImages()
+{
+  $("#imageList").replaceChildren();
+
+  files.forEach((entry,index) =>
+  {
+    const box = document.createElement("div");
+    box.className = "image-tile";
+
+    const img = document.createElement("img");
+    img.src = entry.url;
+    img.alt = entry.file.name;
+
+    const remove = textNode("button", "", "×");
+    remove.type = "button";
+
+    remove.onclick = () =>
+    {
+      URL.revokeObjectURL(entry.url);
+      files.splice(index,1);
+      renderImages();
+    };
+
+    box.append(img,remove);
+    $("#imageList").append(box);
+  });
+}
+
+$("#uploadBtn").onclick = () => $("#fileInput").click();
+
+$("#fileInput").onchange = event =>
+{
+  addImages([...event.target.files]);
+  event.target.value = "";
+};
+
+$("#captureBtn").onclick = () =>
+{
+  toast("Screenshot capture requires Chrome APIs — preview only.");
+};
+
+$("#pasteBtn").onclick = async () =>
+{
+  try
+  {
+    const entries = await navigator.clipboard.read();
+    let count = 0;
+
+    for (const entry of entries)
+    {
+      for (const type of entry.types.filter(type => type.startsWith("image/")))
+      {
+        const blob = await entry.getType(type);
+        const ext = type.split("/")[1] || "png";
+
+        addImages([
+          new File([blob], "pasted-image." + ext, {type})
+        ]);
+
+        count++;
+      }
+    }
+
+    if (!count) toast("No image found in clipboard.");
+  }
+  catch
+  {
+    toast("Try Ctrl+V. Clipboard permission may be unavailable.");
+  }
+};
+
+document.addEventListener("paste", event =>
+{
+  const images = [...(event.clipboardData?.files || [])]
+    .filter(file => file.type.startsWith("image/"));
+
+  if (images.length) addImages(images);
+});
+
+const zone = $("#dropzone");
+
+zone.ondragover = event =>
+{
+  event.preventDefault();
+  zone.classList.add("drag");
+};
+
+zone.ondragleave = () => zone.classList.remove("drag");
+
+zone.ondrop = event =>
+{
+  event.preventDefault();
+  zone.classList.remove("drag");
+  addImages([...event.dataTransfer.files]);
+};
+
+function updateLocationSummaries()
+{
+  $("#tickSummary").textContent =
+    settings.tickProject + " · " + settings.tickSection;
+
+  $("#notionSummary").textContent =
+    settings.notionType === "database"
+    ? settings.notionDatabase + " · Database"
+    : settings.notionPage + " · Page";
+
+  $("#aiSummary").textContent =
+    [settings.useSummary, settings.useAiTags, settings.useQuiz].some(Boolean)
+    ? "Enabled · Configure"
+    : "Optional · Configure";
+}
+
+function openSheet(type)
+{
+  activeSheet = type;
+
+  const titles = {
+    ticktick:["TickTick Settings","Choose where to save your knowledge."],
+    notion:["Notion Settings","Choose a destination and properties."],
+    ai:["AI Features","Choose optional AI enhancements."],
+    preferences:["Preferences","Customize the demo experience."]
+  };
+
+  $("#sheetTitle").textContent = titles[type][0];
+  $("#sheetSubtitle").textContent = titles[type][1];
+
+  let html = "";
+
+  if (type === "ticktick")
+  {
+    html = `
+      <label class="label">PROJECT / LIST</label>
+      <select class="input" id="editTickProject">
+        <option>Programming Notes</option>
+        <option>University</option>
+        <option>Research</option>
+        <option>Inbox</option>
+        <option>Personal Knowledge</option>
+      </select>
+
+      <div class="field">
+        <label class="label">SECTION</label>
+        <select class="input" id="editTickSection">
+          <option>Inbox</option>
+          <option>Lecture Notes</option>
+          <option>Important Knowledge</option>
+        </select>
+      </div>
+
+      <p class="subtitle" style="margin-top:17px">
+        Your shared title, text, images, and tags remain unchanged.
+        This panel only controls the save location.
+      </p>
+    `;
+  }
+  else if (type === "notion")
+  {
+    html = `
+      <label class="label">WORKSPACE</label>
+      <select class="input">
+        <option>My Workspace</option>
+        <option>University Workspace</option>
+      </select>
+
+      <div class="field">
+        <label class="label">DESTINATION TYPE</label>
+        <select class="input" id="editNotionType">
+          <option value="database">Database / Data Source</option>
+          <option value="page">Page / Subpage</option>
+        </select>
+      </div>
+
+      <div id="databaseOptions">
+        <div class="field">
+          <label class="label">DATABASE</label>
+          <select class="input" id="editNotionDB">
+            <option>Study Notes</option>
+            <option>Research Articles</option>
+            <option>Programming Notes</option>
+          </select>
+        </div>
+        <div id="dynamicNotionFields"></div>
+      </div>
+
+      <div id="pageOptions" hidden>
+        <div class="field">
+          <label class="label">PARENT PAGE</label>
+          <select class="input" id="editNotionPage">
+            <option>Computer Science</option>
+            <option>Personal Knowledge</option>
+            <option>Research Library</option>
+          </select>
+        </div>
+      </div>
+
+      <label class="checkline">
+        <input type="checkbox" checked>
+        Map shared tags when supported
+      </label>
+
+      <p class="subtitle" style="margin-top:17px">
+        Dynamic properties are examples. Real Notion fields
+        will come from the selected data source schema.
+      </p>
+    `;
+  }
+  else if (type === "ai")
+  {
+    html = `
+      <label class="checkline">
+        <input id="editSummary" type="checkbox">
+        Generate AI Summary
+      </label>
+      <label class="checkline">
+        <input id="editAiTags" type="checkbox">
+        Suggest AI Tags
+      </label>
+      <label class="checkline">
+        <input id="editQuiz" type="checkbox">
+        Generate Quiz
+      </label>
+      <p class="subtitle" style="margin-top:23px">
+        These controls simulate configuration only.
+        AI processing is not connected in this prototype.
+      </p>
+    `;
+  }
+  else
+  {
+    html = `
+      <label class="label">SAVE DEMO RESULT</label>
+      <select class="input" id="editDemoResult">
+        <option value="success">All platforms succeed</option>
+        <option value="partial">Simulate Notion failure</option>
+        <option value="failure">All platforms fail</option>
+      </select>
+      <p class="subtitle" style="margin-top:15px">
+        This setting lets you preview success and error states.
+        No real content is sent to external services.
+      </p>
+    `;
+  }
+
+  $("#sheetBody").innerHTML = html;
+  $("#sheet").classList.add("open");
+  $("#sheet").setAttribute("aria-hidden", "false");
+
+  if (type === "ticktick")
+  {
+    $("#editTickProject").value = settings.tickProject;
+    $("#editTickSection").value = settings.tickSection;
+  }
+
+  if (type === "notion")
+  {
+    $("#editNotionType").value = settings.notionType;
+    $("#editNotionDB").value = settings.notionDatabase;
+    $("#editNotionPage").value = settings.notionPage;
+
+    $("#editNotionType").onchange = updateNotionType;
+    $("#editNotionDB").onchange = renderNotionProperties;
+
+    updateNotionType();
+  }
+
+  if (type === "ai")
+  {
+    $("#editSummary").checked = settings.useSummary;
+    $("#editAiTags").checked = settings.useAiTags;
+    $("#editQuiz").checked = settings.useQuiz;
+  }
+
+  if (type === "preferences")
+  {
+    $("#editDemoResult").value = settings.demoResult;
+  }
+}
+
+function updateNotionType()
+{
+  const isDatabase = $("#editNotionType").value === "database";
+
+  $("#databaseOptions").hidden = !isDatabase;
+  $("#pageOptions").hidden = isDatabase;
+
+  if (isDatabase) renderNotionProperties();
+}
+
+function renderNotionProperties()
+{
+  const current = $("#editNotionDB").value;
+
+  const options = {
+    "Study Notes":["Subject","Lecture Number"],
+    "Research Articles":["Category","Reading Status"],
+    "Programming Notes":["Language","Topic"]
+  };
+
+  const target = $("#dynamicNotionFields");
+  target.replaceChildren();
+
+  (options[current] || []).forEach(name =>
+  {
+    const wrapper = document.createElement("div");
+    wrapper.className = "field";
+
+    const label = textNode("label", "label", name.toUpperCase());
+    const select = document.createElement("select");
+    select.className = "input";
+
+    const values = name === "Subject"
+      ? ["Machine Learning","GIS","Data Compression"]
+      : name === "Lecture Number"
+      ? ["Lecture 1","Lecture 2","Lecture 3"]
+      : name === "Category"
+      ? ["Technology","Science","Education"]
+      : name === "Reading Status"
+      ? ["To Review","Reviewed","Important"]
+      : name === "Language"
+      ? ["JavaScript","Python","Java"]
+      : ["Backend","Frontend","Algorithms"];
+
+    values.forEach(value =>
+    {
+      const option = document.createElement("option");
+      option.textContent = value;
+      select.append(option);
+    });
+
+    wrapper.append(label,select);
+    target.append(wrapper);
+  });
+}
+
+function closeSheet()
+{
+  $("#sheet").classList.remove("open");
+  $("#sheet").setAttribute("aria-hidden", "true");
+  activeSheet = null;
+}
+
+$("#backBtn").onclick = closeSheet;
+$("#settingsBtn").onclick = () => openSheet("preferences");
+$("#aiBtn").onclick = () => openSheet("ai");
+
+$$("[data-sheet]").forEach(button =>
+{
+  button.onclick = () => openSheet(button.dataset.sheet);
+});
+
+$("#applyBtn").onclick = () =>
+{
+  if (activeSheet === "ticktick")
+  {
+    settings.tickProject = $("#editTickProject").value;
+    settings.tickSection = $("#editTickSection").value;
+  }
+  else if (activeSheet === "notion")
+  {
+    settings.notionType = $("#editNotionType").value;
+    settings.notionDatabase = $("#editNotionDB").value;
+    settings.notionPage = $("#editNotionPage").value;
+  }
+  else if (activeSheet === "ai")
+  {
+    settings.useSummary = $("#editSummary").checked;
+    settings.useAiTags = $("#editAiTags").checked;
+    settings.useQuiz = $("#editQuiz").checked;
+  }
+  else if (activeSheet === "preferences")
+  {
+    settings.demoResult = $("#editDemoResult").value;
+  }
+
+  updateLocationSummaries();
+  closeSheet();
+  toast("Settings updated.");
+};
+
+document.addEventListener("keydown", event =>
+{
+  if (event.key === "Escape" && activeSheet) closeSheet();
+});
+
+function delay(ms)
+{
+  return new Promise(resolve => setTimeout(resolve,ms));
+}
+
+function getStatuses()
+{
+  const result = {};
+
+  selectedPlatforms().forEach(platform =>
+  {
+    const failed =
+      settings.demoResult === "failure" ||
+      (settings.demoResult === "partial" && platform === "notion");
+
+    result[platform] = failed ? "failed" : "saved";
+  });
+
+  return result;
+}
+
+$("#saveBtn").onclick = async () =>
+{
+  const title = $("#title").value.trim();
+  const content = $("#content").value.trim();
+
+  if (!title)
+  {
+    toast("Please enter a title.");
+    return;
+  }
+
+  if (!content && !files.length)
+  {
+    toast("Add some content or an image.");
+    return;
+  }
+
+  $("#saveState").hidden = false;
+  $("#loadingContent").hidden = false;
+  $("#resultContent").hidden = true;
+
+  await delay(1200);
+
+  const statuses = getStatuses();
+
+  lastItem = {
+    id:"capture-" + Date.now(),
+    title,
+    text:content,
+    note:$("#note").value.trim(),
+    tags:[...tags],
+    images:files.length > 0,
+    imageCount:files.length,
+    statuses
+  };
+
+  library.unshift(lastItem);
+  persist();
+  renderLibrary();
+  renderResult();
+};
+
+function renderResult()
+{
+  const statuses = lastItem.statuses;
+  const values = Object.values(statuses);
+
+  const successes = values.filter(value => value === "saved").length;
+  const failures = values.length - successes;
+
+  const icon = $("#resultIcon");
+  icon.className = "success-icon" +
+    (failures ? (successes ? " warning" : " error") : "");
+
+  icon.textContent = failures ? (successes ? "!" : "×") : "✓";
+
+  $("#resultTitle").textContent =
+    failures === 0 ? "All saved!" :
+    successes ? "Partially saved" : "Save failed";
+
+  $("#resultDescription").textContent =
+    failures === 0 ? "Your capture is ready in the selected destinations." :
+    successes ? "One destination needs another try." :
+    "We couldn't complete this demo save.";
+
+  $("#resultRows").replaceChildren();
+
+  Object.entries(statuses).forEach(([platform,status]) =>
+  {
+    const row = document.createElement("div");
+    row.className = "result-row";
+
+    row.append(
+      textNode("span", "", platform === "notion" ? "▣ Notion" : "✓ TickTick"),
+      textNode("span", status === "saved" ? "ok" : "bad",
+        status === "saved" ? "Saved" : "Failed")
+    );
+
+    $("#resultRows").append(row);
+  });
+
+  $("#retryBtn").hidden = failures === 0;
+  $("#loadingContent").hidden = true;
+  $("#resultContent").hidden = false;
+}
+
+$("#retryBtn").onclick = async () =>
+{
+  $("#retryBtn").disabled = true;
+  $("#retryBtn").textContent = "Retrying...";
+
+  await delay(750);
+
+  Object.keys(lastItem.statuses).forEach(platform =>
+  {
+    if (lastItem.statuses[platform] === "failed")
+    {
+      lastItem.statuses[platform] = "saved";
+    }
+  });
+
+  persist();
+  renderLibrary();
+  renderResult();
+
+  $("#retryBtn").disabled = false;
+  $("#retryBtn").textContent = "Retry Failed Destination";
+};
+
+$("#anotherBtn").onclick = () =>
+{
+  $("#saveState").hidden = true;
+};
+
+$("#dashboardBtn").onclick = () =>
+{
+  $("#dashboard").scrollIntoView({behavior:"smooth"});
+};
+
+let searchTerm = "";
+
+function setFilter(value)
+{
+  activeFilter = value;
+
+  $$("[data-filter]").forEach(button =>
+  {
+    button.classList.toggle("active", button.dataset.filter === value);
+  });
+
+  renderLibrary();
+}
+
+$$("[data-filter]").forEach(button =>
+{
+  button.onclick = () => setFilter(button.dataset.filter);
+});
+
+$("#search").oninput = event =>
+{
+  searchTerm = event.target.value.trim().toLowerCase();
+  renderLibrary();
+};
+
+function renderLibrary()
+{
+  $("#totalStat").textContent = library.length;
+
+  $("#tickStat").textContent = library.filter(item =>
+    item.statuses.ticktick === "saved").length;
+
+  $("#notionStat").textContent = library.filter(item =>
+    item.statuses.notion === "saved").length;
+
+  const items = library.filter(item =>
+  {
+    const matchesText =
+      [item.title,item.text,item.note,...item.tags]
+        .join(" ").toLowerCase().includes(searchTerm);
+
+    const status = item.statuses;
+
+    const matchesPlatform =
+      activeFilter === "all" ||
+      (activeFilter === "ticktick" && status.ticktick === "saved") ||
+      (activeFilter === "notion" && status.notion === "saved") ||
+      (activeFilter === "both" &&
+        status.ticktick === "saved" && status.notion === "saved") ||
+      (activeFilter === "images" && item.images);
+
+    return matchesText && matchesPlatform;
+  });
+
+  const target = $("#itemList");
+  target.replaceChildren();
+
+  if (!items.length)
+  {
+    target.append(textNode("div", "empty", "No captures found."));
+    return;
+  }
+
+  items.forEach(item =>
+  {
+    const card = document.createElement("div");
+    card.className = "item";
+
+    const preview = textNode("div", "item-icon", item.images ? "▧" : "▤");
+    const body = document.createElement("div");
+    body.className = "item-content";
+
+    body.append(
+      textNode("strong", "", item.title),
+      textNode("p", "", item.text || item.note || "Image capture")
+    );
+
+    const tags = document.createElement("div");
+    tags.className = "item-tags";
+
+    item.tags.slice(0,3).forEach(tag =>
+    {
+      tags.append(textNode("span", "", tag));
+    });
+
+    Object.entries(item.statuses).forEach(([platform,status]) =>
+    {
+      const name = platform === "notion" ? "Notion" : "TickTick";
+      const label = status === "saved" ? name : name + " failed";
+      const badge = textNode("span", "", label);
+
+      if (status === "failed")
+      {
+        badge.style.background = "#fff0f2";
+        badge.style.color = "#dc6375";
+      }
+
+      tags.append(badge);
+    });
+
+    body.append(tags);
+    card.append(preview,body);
+    target.append(card);
+  });
+}
+
+renderDestination();
+renderTags();
+renderImages();
+updateLocationSummaries();
+renderLibrary();
+</script>
+</body>
+</html>
