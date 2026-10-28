@@ -4,7 +4,7 @@
 
 Google remains the login provider. A public Notion connection is an external service attached to the existing application `User.userId` through one `ConnectedAccount` with `provider: "notion"`. Linking never creates a `User`, changes an `AuthIdentity`, issues an application JWT, or changes saved content ownership. Existing Google, TickTick, Telegram, AI, and extension flows are unchanged.
 
-This phase provides linking, reconnect, safe status, and an internal credential refresh service. It does not discover destinations, select pages/databases, save content to Notion, synchronize content, upload files, or change the extension UI.
+This document covers linking, reconnect, safe status, and the authoritative internal credential refresh service. Destination discovery, explicit selection and content synchronization are now implemented separately; see [Notion content saving](notion-content-saving.md). File upload and extension destination controls remain outside this backend phase.
 
 ## Official protocol references
 
@@ -60,7 +60,7 @@ Missing/empty credentials, malformed callback URLs, and any version other than t
 
 1. The extension sends its existing App JWT, final callback URI, and random client nonce to `/link`. `requireAuth` resolves the existing application user. The service requires a Google `AuthIdentity` for that user; client-supplied user/account identifiers are ignored.
 2. The service validates the exact extension allowlist and HTTPS `*.chromiumapp.org` host, checks encryption/OAuth configuration, generates 32 random bytes as base64url state, and stores only its SHA-256 hash with the authenticated owner, nonce, both callback URIs, and a ten-minute expiration.
-3. The response contains the Notion authorization URL. The caller opens it in the authorization window. Notion manages its own workspace/page permission prompt; this backend does not implement destination discovery or selection.
+3. The response contains the Notion authorization URL. The caller opens it in the authorization window. Notion manages its own workspace/page permission prompt; destination discovery and explicit selection are separate authenticated operations described in [Notion content saving](notion-content-saving.md).
 4. Notion calls the backend callback with `code` and `state`, or an OAuth error. There is no App JWT on this callback. Its authority is the previously authenticated server record.
 5. The backend atomically consumes the unexpired state, validates the callback shape, rechecks the extension allowlist, user existence and Google identity, then exchanges the code with Notion using the exact stored backend callback URI. Changed callback configuration requires starting again.
 6. The backend validates the provider response, establishes the workspace/user composite identity, checks conflicts, encrypts both tokens, and performs a single owner-scoped connection upsert. Unique indexes decide any concurrent conflict.
@@ -253,4 +253,4 @@ The optional integration test runs only when `NOTION_LINK_TEST_MONGODB_URI` expl
 - Only one Notion connection per application user; only verified user-owned UUID identity responses with usable token pairs are supported. Global identity protection requires canonical IDs and the existing unique index; preexisting differently formatted Notion rows require separate review.
 - No automatic recovery for abandoned refresh claims, ambiguous provider rotation, or database write outcomes; reconnect is deliberate recovery. Provider operations and MongoDB commits are not transactional together.
 - No live Notion authorization is performed by unit tests. Register a public client and perform a manual authorization/reconnect against a development backend before deployment. Actual MongoDB tests need the explicit disposable server configuration.
-- Future work: extension initiation/status UI with nonce verification, Notion page/database/data-source discovery and destination selection, schema mapping and content saving. Each must resolve credentials by the authenticated owning application user and bind selected resources to the verified connection. None is implemented here.
+- The next backend phase now provides owner-scoped credential use, page/data-source discovery, selection, schema mapping and content saving; see [Notion content saving](notion-content-saving.md) for its endpoints, concurrency safeguards, tests and limits. The existing refresh claim/rotation contract remains authoritative. Frontend destination controls and durable synchronization reconciliation remain separate work.

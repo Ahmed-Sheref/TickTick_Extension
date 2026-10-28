@@ -44,7 +44,12 @@ const createContent = async (req, res) =>
         return res.status(error.statusCode || 500).json(
         {
             status: "error",
-            message: error.message
+            message: error.statusCode && error.statusCode < 500 ? error.message : "Content save failed",
+            ...(typeof error.code === "string" && /^NOTION_[A-Z_]+$/.test(error.code) ?
+            {
+                code: error.code
+            } :
+            {})
         });
     }
 };
@@ -53,7 +58,10 @@ const getContentByUserId = async (req, res) =>
 {
     try
     {
-        const { userId } = req.params;
+        const
+        {
+            userId
+        } = req.params;
         const authenticatedUserId = req.user.userId;
 
         if (!userId || typeof userId !== "string" || userId.trim() === "")
@@ -74,8 +82,14 @@ const getContentByUserId = async (req, res) =>
             });
         }
 
-        const contents = await Content.find({ userId: authenticatedUserId })
-            .sort({ createdAt: -1 })
+        const contents = await Content.find(
+            {
+                userId: authenticatedUserId
+            })
+            .sort(
+            {
+                createdAt: -1
+            })
             .select("-__v");
 
         return res.status(200).json(
@@ -97,13 +111,12 @@ const getContentByUserId = async (req, res) =>
     }
 };
 
-const getAllProject = async(req, res) =>
+const getAllProject = async (req, res) =>
 {
     try
     {
         let user = req.user.userId;
 
-        
     }
     catch (error)
     {
@@ -133,9 +146,13 @@ const getUserTags = async (req, res) =>
     });
 };
 
-export { getAllContents, createContent, getContentByUserId, getUserTags };
-
-
+export
+{
+    getAllContents,
+    createContent,
+    getContentByUserId,
+    getUserTags
+};
 
 // import mongoose from "mongoose";
 // import Content from "../Models/Content.js";
@@ -174,32 +191,32 @@ export { getAllContents, createContent, getContentByUserId, getUserTags };
 // //     {
 // //         return null; // Quiz is optional
 // //     }
-    
+
 // //     if (!quiz.question || typeof quiz.question !== 'string' || quiz.question.trim() === '')
 // //     {
 // //         return 'quiz.question is required and must be a non-empty string';
 // //     }
-    
+
 // //     if (!Array.isArray(quiz.options) || quiz.options.length < 2)
 // //     {
 // //         return 'quiz.options must be an array with at least 2 options';
 // //     }
-    
+
 // //     if (quiz.options.some(option => !option || typeof option !== 'string' || option.trim() === ''))
 // //     {
 // //         return 'all quiz.options must be non-empty strings';
 // //     }
-    
+
 // //     if (!quiz.correctAnswer || typeof quiz.correctAnswer !== 'string' || quiz.correctAnswer.trim() === '')
 // //     {
 // //         return 'quiz.correctAnswer is required and must be a non-empty string';
 // //     }
-    
+
 // //     if (!quiz.options.includes(quiz.correctAnswer))
 // //     {
 // //         return 'quiz.correctAnswer must exist in quiz.options';
 // //     }
-    
+
 // //     return null;
 // // };
 
@@ -209,27 +226,27 @@ export { getAllContents, createContent, getContentByUserId, getUserTags };
 // //     {
 // //         return 'userId is required and must be a non-empty string';
 // //     }
-    
+
 // //     if (!title || typeof title !== 'string' || title.trim() === '')
 // //     {
 // //         return 'title is required and must be a non-empty string';
 // //     }
-    
+
 // //     if (!rawText || typeof rawText !== 'string' || rawText.trim() === '')
 // //     {
 // //         return 'rawText is required and must be a non-empty string';
 // //     }
-    
+
 // //     if (title.length > 500)
 // //     {
 // //         return 'title must be less than 500 characters';
 // //     }
-    
+
 // //     if (rawText.length > 100000)
 // //     {
 // //         return 'rawText must be less than 100,000 characters';
 // //     }
-    
+
 // //     return null;
 // // };
 

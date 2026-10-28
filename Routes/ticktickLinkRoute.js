@@ -35,8 +35,7 @@ export const createTickTickLinkRouter = ({ service = ticktickLinkService, authen
     {
         try
         {
-            const data = await service.startLink({ userId: req.user.userId,
-                redirectUri: req.body?.redirect_uri, clientNonce: req.body?.client_nonce });
+            const data = await service.startLink({ userId: req.user.userId,redirectUri: req.body?.redirect_uri, clientNonce: req.body?.client_nonce });
             return res.status(200).json({ status: "success", data });
         }
         catch (error)

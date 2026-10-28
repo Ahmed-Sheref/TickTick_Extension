@@ -5,6 +5,8 @@ import ConnectedAccount from "../Models/ConnectedAccount.js";
 import { assertTokenEncryptionConfigured, decryptProviderToken } from "../utils/providerTokenEncryption.js";
 import { getNotionLinkConfig, refreshNotionTokens, validateNotionTokens } from "../utils/notionLinkOAuth.js";
 import { encryptNotionPair, notionIdentity } from "./notionLinkService.js";
+import { notionFailure } from "../utils/notionErrors.js";
+import { notionId } from "../validators/notionValidator.js";
 
 const failure = code => Object.assign(new Error(code), { code });
 
@@ -91,7 +93,50 @@ export const createNotionCredentialService = (dependencies = {}) =>
             throw failure("NOTION_RECONNECT_REQUIRED");
         }
     };
-    return { refreshForUser };
+    // Internal only: never serialize this snapshot into an HTTP response. The
+    // access ciphertext is a CAS version for destination writes, not a new token.
+    const getForUser = async ({ userId, expectedConnection } = {}) =>
+    {
+        if (typeof userId !== "string" || !userId || !await UserModel.exists({ userId }) ||
+            !await AuthIdentityModel.exists({ userId, provider: "google" }))
+            throw notionFailure("GOOGLE_IDENTITY_REQUIRED");
+        const account = await ConnectedAccountModel.findOne({ userId, provider: "notion" })
+            .select("userId provider connected providerAccountId metadata +encryptedAccessToken +notionRefreshLock");
+        if (account?.metadata?.reconnectRequired) throw notionFailure("NOTION_RECONNECT_REQUIRED");
+        if (!account?.connected || account.userId !== userId || account.provider !== "notion")
+            throw notionFailure("NOTION_NOT_CONNECTED");
+        if (account.notionRefreshLock) throw notionFailure("NOTION_REFRESH_UNAVAILABLE");
+        const workspaceId = notionId(account.metadata?.workspaceId);
+        const authorizingUserId = notionId(account.metadata?.authorizingUserId);
+        if (!workspaceId || !authorizingUserId || !notionId(account.metadata?.botId) ||
+            account.providerAccountId !== `workspace:${workspaceId}:user:${authorizingUserId}`)
+            throw notionFailure("NOTION_RECONNECT_REQUIRED");
+        const connection = { accountId: String(account._id), providerAccountId: account.providerAccountId, workspaceId,
+            credentialVersion: account.encryptedAccessToken, destination: account.metadata?.notionDestination ?? null };
+        if (expectedConnection && (connection.accountId !== expectedConnection.accountId ||
+            connection.providerAccountId !== expectedConnection.providerAccountId || connection.workspaceId !== expectedConnection.workspaceId ||
+            (expectedConnection.selectionId && connection.destination?.selectionId !== expectedConnection.selectionId)))
+            throw notionFailure("NOTION_CONNECTION_CHANGED");
+        getConfig();
+        assertTokenEncryptionConfigured();
+        let accessToken;
+        try {
+            accessToken = decryptProviderToken(account.encryptedAccessToken, { userId, provider: "notion", tokenType: "access" });
+        } catch (error) {
+            if (error?.code === "TOKEN_ENCRYPTION_UNAVAILABLE") throw error;
+            throw notionFailure("NOTION_RECONNECT_REQUIRED");
+        }
+        if (!accessToken?.trim() || accessToken.length > 16384 || /[\r\n]/.test(accessToken))
+            throw notionFailure("NOTION_RECONNECT_REQUIRED");
+        return { accessToken, connection };
+    };
+
+    const markRejectedForUser = async ({ userId, connection }) =>
+        ConnectedAccountModel.findOneAndUpdate({ userId, provider: "notion", connected: true,
+            encryptedAccessToken: connection.credentialVersion },
+        { $set: { connected: false, "metadata.reconnectRequired": true } }, { runValidators: true });
+
+    return { refreshForUser, getForUser, markRejectedForUser };
 };
 
 export default createNotionCredentialService();

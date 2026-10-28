@@ -1,69 +1,51 @@
-import User from "../Models/User.js";
-import Content from "../Models/Content.js";
-import * as TickTickFunctions from "../utils/ticktick.js";
-import { getTickTickAccessToken } from "./ticktickCredentials.js";
+import ticktickContentService from "./ticktickContentService.js";
+import notionContentService from "./notionContentService.js";
+import { notionErrors } from "../utils/notionErrors.js";
 
-const syncContentToTickTick = async (
+const reportTickTickFailure = () =>
 {
-    userId,
-    contentId,
-    title,
-    rawText,
-    tags,
-    projectId
-}) =>
+    console.error("[CONTENT] TickTick synchronization needs attention");
+};
+
+const reportNotionFailure = error =>
 {
-    try
+    const code = Object.hasOwn(notionErrors, error?.code || "")
+        ? error.code
+        : "NOTION_SYNC_FAILED";
+    console.error("[CONTENT] Notion sync failed:", code);
+};
+
+// Best-effort dispatch after commit. Saved intent is not a durable queue.
+export const createPostContentCreationService = (
+{
+    syncTickTick = input => ticktickContentService.syncContent(input),
+    syncNotion = input => notionContentService.syncIfSelected(input)
+} = {}) =>
+{
+    const runPostCreationTasks = ({ content }) =>
     {
-        const user = await User.findOne({ userId });
-
-        const accessToken = await getTickTickAccessToken(userId, user);
-        if (!accessToken)
+        const input =
         {
-            return;
+            userId: content.userId,
+            contentId: content._id
+        };
+
+        if (content.destinations?.ticktick?.enabled)
+        {
+            void Promise.resolve()
+                .then(() => syncTickTick(input))
+                .catch(reportTickTickFailure);
         }
 
-        const task = await TickTickFunctions.createTickTickTask(
-            accessToken,
-            {
-                title,
-                rawText,
-                tags,
-                projectId
-            }
-        );
+        if (content.destinations?.notion?.enabled)
+        {
+            void Promise.resolve()
+                .then(() => syncNotion(input))
+                .catch(reportNotionFailure);
+        }
+    };
 
-        await Content.findByIdAndUpdate(
-            contentId,
-            {
-                $set:
-                {
-                    "integrations.tickTickId": task.id
-                }
-            }
-        );
-
-        console.log("[CONTENT] TickTick task created:", task.id);
-    }
-    catch (error)
-    {
-        console.error("[CONTENT] TickTick sync failed");
-    }
+    return { runPostCreationTasks };
 };
 
-const runPostCreationTasks = async ({userId,content,title,rawText,tags, projectId}) =>
-{
-    await syncContentToTickTick(
-    {
-        userId,
-        contentId: content._id,
-        title,
-        rawText,
-        tags,
-        projectId
-    });
-};
-
-export default {
-    runPostCreationTasks
-};
+export default createPostContentCreationService();

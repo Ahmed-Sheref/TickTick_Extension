@@ -4,6 +4,7 @@ import ticktickRouter from "./Routes/ticktickRoute.js";
 import googleAuthRouter from "./Routes/googleAuthRoute.js";
 import ticktickLinkRouter from "./Routes/ticktickLinkRoute.js";
 import notionLinkRouter from "./Routes/notionLinkRoute.js";
+import notionContentRouter from "./Routes/notionContentRoute.js";
 import settingsRouter from './Routes/userRoute.js';
 import telegramRouter from './Routes/telegramRoute.js';
 // import { generalLimiter, strictLimiter, authLimiter } from './middleware/rateLimiter.js';
@@ -28,6 +29,7 @@ app.use('/api/v1/ticktick', /*authLimiter */ ticktickRouter);  // Auth routes ne
 app.use('/api/v1/auth/google', googleAuthRouter);
 app.use('/api/v1/integrations/ticktick', ticktickLinkRouter);
 app.use('/api/v1/integrations/notion', notionLinkRouter);
+app.use('/api/v1/integrations/notion', notionContentRouter);
 app.use('/api/v1/User', requireAuth, settingsRouter);
 app.use("/api/v1/content", requireAuth, contentRouter);
 app.use('/api/v1/telegram', telegramRouter);

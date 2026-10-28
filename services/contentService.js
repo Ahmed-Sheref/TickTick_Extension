@@ -1,3 +1,16 @@
+import { buildInitialIntegrationStates } from "./contentIntegrationState.js";
+import
+{
+    contentDestinations,
+    invalidDestination
+}
+from "../validators/contentDestinations.js";
+import notionCredentials from "./notionCredentials.js";
+import
+{
+    selectedNotionDestination
+}
+from "./notionDestinationService.js";
 import mongoose from "mongoose";
 import Content from "../Models/Content.js";
 import parseInput from "../utils/parse.js";
@@ -5,15 +18,26 @@ import analyzeContent from "../utils/generativeAI.js";
 import normalizeTags from "../utils/normTags.js";
 import postContentCreationService from "./postContentCreationService.js";
 
-import {validateContentInput,validateQuizObject} from "../validators/contentValidator.js";
-import { getTickTickProjects } from "../utils/ticktick.js";
+import
+{
+    validateContentInput,
+    validateQuizObject
+}
+from "../validators/contentValidator.js";
 import User from "../Models/User.js";
-import { getTickTickAccessToken } from "./ticktickCredentials.js";
-
+import
+{
+    getTickTickAccessToken
+}
+from "./ticktickCredentials.js";
 
 const prepareContentInput = (userInput) =>
 {
-    const { listName, tags } = parseInput(userInput || "");
+    const
+    {
+        listName,
+        tags
+    } = parseInput(userInput || "");
 
     return {
         listName: listName || "inbox",
@@ -27,11 +51,9 @@ const applyAiToContent = async (
     tags,
     useTagsAi,
     useSummaryAi,
-    useQuiz,
-    mergeSummaryWithContent
+    useQuiz
 }) =>
 {
-    let finalRawText = rawText;
     let finalTags = [...tags];
     let summary = null;
     let quiz = null;
@@ -39,7 +61,6 @@ const applyAiToContent = async (
     if (!useTagsAi && !useSummaryAi && !useQuiz)
     {
         return {
-            finalRawText,
             finalTags,
             summary,
             quiz
@@ -53,11 +74,6 @@ const applyAiToContent = async (
         if (useSummaryAi && aiData.summary)
         {
             summary = aiData.summary;
-
-            if (mergeSummaryWithContent)
-            {
-                finalRawText = `${rawText}\n\nSummary:\n${summary}`;
-            }
         }
 
         if (useTagsAi && aiData.ai_tags)
@@ -76,13 +92,14 @@ const applyAiToContent = async (
     }
 
     return {
-        finalRawText,
         finalTags,
         summary,
         quiz
     };
 };
 
+// Historical delivery eligibility is contractual: active weekly services consume
+// these flags. Explicit destinations suppress only primary summary/tag AI.
 const buildContentOptions = (
 {
     useSummaryAi,
@@ -101,7 +118,8 @@ const buildContentOptions = (
     };
 };
 
-const createContentDocument = async ({
+const createContentDocument = async (
+{
     session,
     userId,
     title,
@@ -111,29 +129,92 @@ const createContentDocument = async ({
     tags,
     summary,
     quiz,
-    options
+    options,
+    destinations,
+    integrations
 }) =>
 {
     const [content] = await Content.create(
         [
-            {
-                userId,
-                title,
-                url,
-                rawText,
-                listName,
-                tags,
-                summary,
-                quiz,
-                options
-            }
-        ],
-        { session }
+        {
+            userId,
+            title,
+            url,
+            rawText,
+            listName,
+            tags,
+            summary,
+            quiz,
+            options,
+            destinations,
+            integrations
+        }],
+        {
+            session
+        }
     );
 
     return content;
 };
 
+// Legacy fields are selected solely for ticktickCredentials fallback; new linked
+// credentials remain owned by that module. Keep existence lookup before intent validation.
+const requireContentOwner = async userId =>
+{
+    const user = await User.findOne(
+    {
+        userId
+    }).select("tickTickAccessToken tickTickConnected");
+
+    if (!user)
+    {
+        const error = new Error("User not found");
+
+        error.statusCode = 404;
+        throw error;
+    }
+
+    return user;
+};
+
+// Preserve pre-commit prerequisite policy and provider ordering. Verification here
+// binds saved intent; external content writes remain exclusively in the workers.
+const verifySelectedDestinations = async (userId, user, destinations) =>
+{
+    if (destinations.notion.enabled)
+    {
+        const
+        {
+            connection
+        } = await notionCredentials.getForUser(
+        {
+            userId
+        });
+        const selection = selectedNotionDestination(connection);
+        if (destinations.notion.id &&
+            (destinations.notion.id !== selection.id || destinations.notion.type !== selection.type))
+        {
+            throw invalidDestination("Notion default changed. Confirm the current destination before saving");
+        }
+        Object.assign(destinations.notion, selection,
+        {
+            connectionId: connection.accountId,
+            connectionIdentity: connection.providerAccountId,
+            workspaceId: connection.workspaceId
+        });
+    }
+    if (destinations.ticktick.enabled)
+    {
+        // Token lookup keeps its existing linked-account and legacy fallback policy.
+        const accessToken = await getTickTickAccessToken(userId, user);
+        if (!accessToken)
+        {
+            const error = new Error("TickTick account is not connected");
+            error.statusCode = 401;
+            throw error;
+        }
+    }
+};
 
 const createContent = async (payload) =>
 {
@@ -141,7 +222,8 @@ const createContent = async (payload) =>
 
     try
     {
-        const {
+        const
+        {
             userId,
             title,
             url,
@@ -150,49 +232,8 @@ const createContent = async (payload) =>
             use_tagsAi,
             use_quiz,
             use_summaryAi,
-            mergeSummaryWithContent,
-            projectId = null
+            mergeSummaryWithContent
         } = payload;
-
-
-        const user = await User.findOne({userId}).select("tickTickAccessToken tickTickConnected");
-
-        if (!user)
-        {
-            const error = new Error(
-                "User not found"
-            );
-
-            error.statusCode = 404;
-            throw error;
-        }
-
-        if (projectId)
-        {
-            // Core library saves are independent of external destinations.
-            const accessToken = await getTickTickAccessToken(userId, user);
-            if (!accessToken)
-            {
-                const error = new Error("TickTick account is not connected");
-                error.statusCode = 401;
-                throw error;
-            }
-
-            const projects = await getTickTickProjects(accessToken);
-
-            const projectExists = projects.some((project) =>
-            {
-                return String(project.id) === String(projectId);
-            });
-            if (!projectExists)
-            {
-                const error = new Error("Selected TickTick project no longer exists");
-
-                error.statusCode = 400;
-                throw error;
-            }
-        }
-
 
         const validationError = validateContentInput(
         {
@@ -208,11 +249,19 @@ const createContent = async (payload) =>
             throw error;
         }
 
-        const { listName, tags } = prepareContentInput(user_input);
+        const user = await requireContentOwner(userId);
 
-        const 
+        const destinations = contentDestinations(payload);
+        await verifySelectedDestinations(userId, user, destinations);
+
+        const
         {
-            finalRawText,
+            listName,
+            tags
+        } = prepareContentInput(user_input);
+
+        const
+        {
             finalTags,
             summary,
             quiz
@@ -220,10 +269,9 @@ const createContent = async (payload) =>
         {
             rawText,
             tags,
-            useTagsAi: use_tagsAi,
-            useSummaryAi: use_summaryAi,
-            useQuiz: use_quiz,
-            mergeSummaryWithContent
+            useTagsAi: payload.destinations ? false : use_tagsAi,
+            useSummaryAi: payload.destinations ? false : use_summaryAi,
+            useQuiz: use_quiz
         });
 
         if (quiz)
@@ -240,8 +288,8 @@ const createContent = async (payload) =>
 
         const options = buildContentOptions(
         {
-            useSummaryAi: use_summaryAi,
-            useTagsAi: use_tagsAi,
+            useSummaryAi: payload.destinations ? false : use_summaryAi,
+            useTagsAi: payload.destinations ? false : use_tagsAi,
             useQuiz: use_quiz,
             mergeSummaryWithContent
         });
@@ -254,26 +302,19 @@ const createContent = async (payload) =>
             userId,
             title,
             url,
-            rawText: finalRawText,
+            rawText,
             listName,
             tags: finalTags,
             summary,
             quiz,
-            options
+            options,
+            destinations,
+            integrations: buildInitialIntegrationStates(destinations)
         });
-
 
         await session.commitTransaction();
 
-        await postContentCreationService.runPostCreationTasks(
-        {
-            userId,
-            content,
-            title,
-            rawText: finalRawText,
-            tags: finalTags,
-            projectId
-        });
+        postContentCreationService.runPostCreationTasks({ content });
 
         return {
             content,
@@ -294,19 +335,25 @@ const createContent = async (payload) =>
 
         console.error(
             "[CONTENT] Create error:",
-            error.message
+            error.statusCode || 500
         );
 
         throw error;
     }
     finally
     {
-        await session.endSession();
+        try
+        {
+            await session.endSession();
+        }
+        catch
+        {
+            console.error("[CONTENT] Session cleanup needs attention");
+        }
     }
 };
 
-
-
-export default {
+export default
+{
     createContent
 };

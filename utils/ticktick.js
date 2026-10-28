@@ -119,7 +119,6 @@ export const createTickTickTask = async (accessToken, { title, rawText, tags, pr
     try
     {
         // const projectId = projectId;
-        console.log('[TICKTICK] Using projectId:', projectId);
 
         const response = await axios.post(
             `${TICKTICK_API_URL}/task`,
@@ -131,7 +130,9 @@ export const createTickTickTask = async (accessToken, { title, rawText, tags, pr
                 kind: 'NOTE'
             },
             {
-                headers: { 'Authorization': `Bearer ${accessToken}` }
+                headers: { 'Authorization': `Bearer ${accessToken}` },
+                timeout: 20000,
+                maxRedirects: 0
             }
         );
 
@@ -140,7 +141,7 @@ export const createTickTickTask = async (accessToken, { title, rawText, tags, pr
     }
     catch (error)
     {
-        throw new Error(`Failed to create task: ${error.message}`);
+        throw error;
     }
 };
 
@@ -149,6 +150,8 @@ export const getTickTickProjects = async (accessToken) =>
     const response = await fetch("https://api.ticktick.com/open/v1/project", 
     {
         method: "GET",
+        redirect: "error",
+        signal: AbortSignal.timeout(15000),
         headers: 
         {
             Authorization: `Bearer ${accessToken}`
@@ -169,6 +172,8 @@ export const createTickTickProject = async (accessToken,projectName) =>
         "https://api.ticktick.com/open/v1/project",
         {
             method: "POST",
+            redirect: "error",
+            signal: AbortSignal.timeout(15000),
 
             headers:
             {
