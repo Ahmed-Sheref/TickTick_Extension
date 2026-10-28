@@ -1,3 +1,4 @@
+// LEGACY REFERENCE ONLY — not mounted. Maintained public contract: swagger/UI/swagger-ui.js and /api-docs.json.
 /**
  * TickTick Extension API Documentation
  * 
