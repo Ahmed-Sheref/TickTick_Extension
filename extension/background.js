@@ -1,11 +1,49 @@
 /* =========================================================================
-   background.js — Save Knowledge Extension Service Worker
+   background.js — Knowvia Extension Service Worker
    ========================================================================= */
 
 // const API_BASE = "https://carefree-alignment-production-7eff.up.railway.app/api/v1";
 const API_BASE = "http://localhost:3000/api/v1";
 
 let oauthInProgress = false;
+
+// Chrome action popups cannot contain the approved desktop composition.
+// Reuse the capture page in a bounded extension window instead.
+const showKnowviaWindow = async (sourceTab = null) =>
+{
+    if (!chrome.windows.create) return chrome.action.openPopup();
+    const stored = await chrome.storage.local.get(["knowvia_capture_window"]);
+    if (Number.isInteger(stored.knowvia_capture_window))
+    {
+        try
+        {
+            const existing = await chrome.windows.get(stored.knowvia_capture_window, { populate: true });
+            const capture = existing.tabs?.find(tab => tab.url?.startsWith(chrome.runtime.getURL("popup.html")));
+            if (capture)
+            {
+                if (sourceTab?.id) await chrome.tabs.update(capture.id, { url: chrome.runtime.getURL(`popup.html?sourceTab=${sourceTab.id}`) });
+                return chrome.windows.update(existing.id, { focused: true });
+            }
+        }
+        catch { /* The previous capture window was closed. */ }
+    }
+    const parent = sourceTab?.windowId ? await chrome.windows.get(sourceTab.windowId).catch(() => null) : null;
+    const width = Math.min(1270, Math.max(360, (parent?.width || 1440) - 80));
+    const height = Math.min(960, Math.max(420, (parent?.height || 1040) - 32));
+    const created = await chrome.windows.create({
+        url: chrome.runtime.getURL(`popup.html${sourceTab?.id ? `?sourceTab=${sourceTab.id}` : ""}`),
+        type: "popup", width, height, focused: true,
+        ...(Number.isFinite(parent?.left) && Number.isFinite(parent?.top) ? {
+            left: Math.round(parent.left + (parent.width - width) / 2),
+            top: Math.round(parent.top + (parent.height - height) / 2)
+        } : {})
+    });
+    await chrome.storage.local.set({ knowvia_capture_window: created.id });
+};
+chrome.action.onClicked?.addListener(tab =>
+{
+    void showKnowviaWindow(tab).catch(() => chrome.action.setBadgeText({ text: "!" }));
+});
 
 const startOAuthFlow = async (
 {
@@ -17,10 +55,13 @@ const startOAuthFlow = async (
     linking = false
 }) =>
 {
+    const linkConfig = provider === "Notion"
+        ? { path: "notion", origin: "https://api.notion.com", authorizePath: "/v1/oauth/authorize", marker: "notion_link" }
+        : { path: "ticktick", origin: "https://ticktick.com", authorizePath: "/oauth/authorize", marker: "ticktick_link" };
     const session = linking ? await chrome.storage.local.get(["sk_token", "sk_userId"]) : null;
     if (linking && (typeof session.sk_token !== "string" || !session.sk_token.trim()))
     {
-        throw new Error("Sign in with Google before connecting TickTick.");
+        throw new Error(`Sign in with Google before connecting ${provider}.`);
     }
     const [originalTab] = await chrome.tabs.query(
     {
@@ -39,7 +80,7 @@ const startOAuthFlow = async (
     let authUrl;
     if (linking)
     {
-        const response = await fetch(`${API_BASE}/integrations/ticktick/link`,
+        const response = await fetch(`${API_BASE}/integrations/${linkConfig.path}/link`,
         {
             method: "POST",
             headers:
@@ -53,14 +94,21 @@ const startOAuthFlow = async (
         });
         if (!response.ok)
         {
-            throw new Error(`TickTick linking failed: HTTP ${response.status}`);
+            const messages = {
+                400: "This extension's callback is not allowed. Check the backend's extension configuration.",
+                401: "Your session expired. Sign in with Google again.",
+                403: "Sign in with Google before connecting an integration.",
+                409: `${provider} belongs to another account. No connection was replaced.`,
+                503: `${provider} linking is not configured on this server. Please try again after setup.`
+            };
+            throw Object.assign(new Error(messages[response.status] || `${provider} is unavailable. Please try again.`), { safeMessage: true });
         }
         const result = await response.json();
         const authorizationUrl = new URL(result?.data?.authorizationUrl);
-        if (authorizationUrl.origin !== "https://ticktick.com" || authorizationUrl.pathname !== "/oauth/authorize" ||
+        if (authorizationUrl.origin !== linkConfig.origin || authorizationUrl.pathname !== linkConfig.authorizePath ||
             authorizationUrl.username || authorizationUrl.password || authorizationUrl.hash)
         {
-            throw new Error("Invalid TickTick authorization URL");
+            throw new Error(`Invalid ${provider} authorization URL`);
         }
         authUrl = authorizationUrl.href;
     }
@@ -79,8 +127,8 @@ const startOAuthFlow = async (
         chrome.windows.onCreated.removeListener(resizeAuthWindow);
 
         // Keep the provider window inside the originating browser window.
-        const preferredWidth = provider === "Google" ? 480 : 460;
-        const preferredHeight = provider === "Google" ? 600 : 580;
+        const preferredWidth = 560;
+        const preferredHeight = 700;
         const width = Math.min(preferredWidth, Math.max(320, (originalWindow?.width || 512) - 32));
         const height = Math.min(preferredHeight, Math.max(320, (originalWindow?.height || 648) - 48));
         const updateInfo = { width, height };
@@ -134,22 +182,24 @@ const startOAuthFlow = async (
     {
         if (url.searchParams.getAll("client_nonce").length !== 1 ||
             url.searchParams.get("client_nonce") !== clientNonce ||
-            url.searchParams.getAll("ticktick_link").length !== 1 ||
-            url.searchParams.get("ticktick_link") !== "connected" ||
-            [...url.searchParams.keys()].some(key => !["client_nonce", "ticktick_link"].includes(key)))
+            url.searchParams.getAll(linkConfig.marker).length !== 1 ||
+            url.searchParams.get(linkConfig.marker) !== "connected" ||
+            [...url.searchParams.keys()].some(key => !["client_nonce", linkConfig.marker].includes(key)))
         {
-            throw new Error("Invalid TickTick linking callback");
+            throw new Error(`Invalid ${provider} linking callback`);
         }
         const currentSession = await chrome.storage.local.get(["sk_token", "sk_userId"]);
         if (currentSession.sk_token !== session.sk_token || currentSession.sk_userId !== session.sk_userId)
         {
-            throw new Error("Application session changed; connect TickTick again.");
+            throw new Error(`Application session changed; connect ${provider} again.`);
         }
         // A reconnect may select another account. Discard its predecessor's lists.
         await chrome.storage.local.set({
-            ticktick_connected: true,
-            ticktick_projects: [],
-            ticktick_selectedProjectId: "",
+            ...(provider === "TickTick" ? {
+                ticktick_connected: true,
+                ticktick_projects: [],
+                ticktick_selectedProjectId: ""
+            } : {}),
             sk_auth_ui: { provider, status: "success", updatedAt: Date.now() }
         });
     }
@@ -222,11 +272,7 @@ const startOAuthFlow = async (
 
     try
     {
-        await chrome.action.openPopup(
-            typeof originalWindowId === "number"
-                ? { windowId: originalWindowId }
-                : {}
-        );
+        await showKnowviaWindow();
         await chrome.action.setBadgeText({ text: "" });
     }
     catch (error)
@@ -246,8 +292,10 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) =>
     }
     const isGoogle = message.action === "startGoogleAuth";
     const isTickTick = message.action === "startTickTickAuth";
+    const isNotion = message.action === "startNotionAuth";
+    const provider = isGoogle ? "Google" : isNotion ? "Notion" : "TickTick";
 
-    if (!isGoogle && !isTickTick) return;
+    if (!isGoogle && !isTickTick && !isNotion) return;
 
     if (oauthInProgress)
     {
@@ -261,7 +309,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) =>
     (async () =>
     {
         await chrome.storage.local.set({
-            sk_auth_ui: { provider: isGoogle ? "Google" : "TickTick", status: "pending", updatedAt: Date.now() }
+            sk_auth_ui: { provider, status: "pending", updatedAt: Date.now() }
         });
         sendResponse({ started: true });
         responseSent = true;
@@ -286,27 +334,30 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) =>
 
         await startOAuthFlow(
         {
-            provider: "TickTick",
-            redirectPath: "ticktick",
+            provider,
+            redirectPath: isNotion ? "notion" : "ticktick",
             linking: true
         });
     })().catch(async (error) =>
     {
-        console.error("[OAUTH] Login failed:", error);
+        // Provider errors can contain callback URLs. Persist only controlled UI text.
+        const cancelled = /cancel|closed|did not approve/i.test(error.message || "");
         await chrome.storage.local.set({
             sk_auth_ui: {
-                provider: isGoogle ? "Google" : "TickTick",
+                provider,
                 status: "error",
-                message: "Connection wasn't completed. Try again when you're ready.",
+                message: error.safeMessage ? error.message : cancelled
+                    ? "Connection cancelled. Try again when you're ready."
+                    : "Connection wasn't completed. Try again when you're ready.",
                 updatedAt: Date.now()
             }
         });
         // The action popup closes when a provider window gains focus.
-        await chrome.action.openPopup().catch(() => {});
+        await showKnowviaWindow().catch(() => {});
 
         if (!responseSent)
         {
-            sendResponse({ error: error.message || "Failed to start auth." });
+            sendResponse({ error: "Could not open the connection window. Please try again." });
         }
     }).finally(() =>
     {
@@ -321,7 +372,7 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) =>
 chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.create({
     id:       "save-to-ticktick",
-    title:    "Send to Save Knowledge",
+    title:    "Capture with Knowvia",
     contexts: ["selection", "page"],
   });
 });

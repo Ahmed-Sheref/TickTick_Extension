@@ -1,24 +1,63 @@
 <!DOCTYPE html>
 
-<html lang="en">
+<html lang="en" data-booting>
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>Save Knowledge</title>
+<title>Knowvia — Capture knowledge</title>
+<script src="boot.js"></script>
 <link href="popup.css" rel="stylesheet"/>
+<link href="v2.css" rel="stylesheet"/>
 </head>
 <body>
+<div id="bootShell" role="status" aria-label="Opening Knowvia"><img src="assets/knowvia-approved-wordmark.png" alt="Knowvia"/><p>Opening your capture…</p><div class="boot-columns" aria-hidden="true"><div></div><div></div></div></div>
+<svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+  <!-- Interface glyphs share a 24px grid; stroke and size inherit from the UI. -->
+  <symbol id="icon-settings" viewBox="0 0 24 24"><path d="m9 3-.6 2.2-1.7 1-2.2-.6L2 9.9l1.6 1.6v2L2 15.1l2.5 4.3 2.2-.6 1.7 1L9 22h5l.6-2.2 1.7-1 2.2.6 2.5-4.3-1.6-1.6v-2L21 9.9l-2.5-4.3-2.2.6-1.7-1L14 3Z" transform="translate(.5 -1) scale(.96)"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="icon-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="icon-edit" viewBox="0 0 24 24"><path d="m15 5 4 4M4 20l5-1L20 8a2.8 2.8 0 0 0-4-4L5 15l-1 5Z"/></symbol>
+  <symbol id="icon-refresh" viewBox="0 0 24 24"><path d="M20 4v6h-6M4 20v-6h6M19 10a7.5 7.5 0 0 0-12.5-4L4 8m1 6a7.5 7.5 0 0 0 12.5 4L20 16"/></symbol>
+  <symbol id="icon-document" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/><path d="M14 3v5h5M8 12h7M8 16h5"/></symbol>
+  <symbol id="icon-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z"/></symbol>
+  <symbol id="icon-folder" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l3 3h7a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" transform="translate(0 -1)"/></symbol>
+  <symbol id="icon-tag" viewBox="0 0 24 24"><path d="m20 13-7 7-9-9V4h7l9 9Z"/><circle cx="8.5" cy="8.5" r="1"/></symbol>
+  <symbol id="icon-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="icon-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="icon-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+  <symbol id="icon-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v7m0 3v1"/></symbol>
+  <symbol id="icon-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+  <symbol id="icon-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5m6-6-6 6 6 6"/></symbol>
+  <symbol id="icon-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+  <symbol id="icon-arrow-up-right" viewBox="0 0 24 24"><path d="M6 18 18 6M6 6h12v12"/></symbol>
+  <symbol id="icon-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="icon-article" viewBox="0 0 24 24"><path d="M7 4h12v16H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Zm0 0v16M10 8h6M10 12h6"/></symbol>
+  <symbol id="icon-summary" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="icon-sliders" viewBox="0 0 24 24"><path d="M3 7h4m6 0h8M3 17h8m6 0h4"/><circle cx="10" cy="7" r="3"/><circle cx="14" cy="17" r="3"/></symbol>
+  <symbol id="icon-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></symbol>
+  <symbol id="icon-inbox" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 14h4l2 3h4l2-3h4"/></symbol>
+  <symbol id="icon-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+  <symbol id="icon-telegram" viewBox="0 0 24 24"><path d="m21 4-3 16-6-4-3 3 .7-5.2L18 7.5 7.5 12 3 10.5 21 4Z"/></symbol>
+  <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 15v6h16v-6"/></symbol>
+  <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+  <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M21 13a9 9 0 1 1-10-10 7 7 0 0 0 10 10Z"/></symbol>
+  <symbol id="icon-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+  <symbol id="icon-data-source" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 4 16 4 16 0V5M4 12v7c0 4 16 4 16 0v-7"/></symbol>
+  <!-- Provider marks keep their own proportions and intentional brand colors. -->
+  <symbol id="icon-notion" viewBox="0 0 40 40"><path d="m7 5 23-2 5 5v26L11 37l-6-5V8Z"/><path d="m5 8 6 4 24-4M11 12v25M16 29V16h3l8 12V15m-14 1 7-1m4 0h6m-16 15h6"/></symbol>
+  <symbol id="icon-ticktick" viewBox="0 0 40 40"><path d="M33 22a14 14 0 1 1-14-16" stroke="#4776f5" stroke-width="3.5"/><path d="m15 18 6 6L34 8" stroke="#e7a700" stroke-width="3.5"/></symbol>
+</svg>
+
 <div class="shell">
 <!-- Onboarding -->
 <div class="full-screen-center" id="onboardingView">
 <div class="onboard-container">
-<div class="welcome-brand"><div class="brand-logo" aria-hidden="true"></div><span>Save Knowledge</span><span class="welcome-version">WORKSPACE</span></div>
-<div class="welcome-heading"><span class="onboard-eyebrow">A HOME FOR YOUR NEXT GOOD IDEA</span><h1>Read something great.<br/><span>Keep what matters.</span></h1><p class="onboard-lead">Your articles, key ideas, and next steps.<br/>Together in one thoughtful workspace.</p></div>
-<div class="welcome-preview" aria-hidden="true">
-<div class="preview-top"><span class="preview-bookmark">✓</span><span>FROM READING TO REMEMBERING</span><span class="preview-spark">✦</span></div>
-<div class="preview-title">More than a bookmark.</div>
-<div class="preview-lines"><i></i><i></i></div>
-<div class="preview-bottom"><span>✦ AI summary</span><span># Smart tags</span><span class="preview-saved">✓ Saved</span></div>
+<div class="welcome-brand"><span class="brand-lockup" role="img" aria-label="Knowvia"><img class="brand-mark" src="assets/knowvia-mark.svg" alt=""/><span aria-hidden="true">Knowvia</span></span><span class="welcome-version">BROWSER COMPANION</span></div>
+<div class="welcome-heading"><span class="onboard-eyebrow">SAVE · ORGANIZE · TAKE ACTION</span><h1>Capture knowledge.<br/><span>Turn it into action.</span></h1><p class="onboard-lead">Keep the articles, notes, and ideas that matter.<br/>Ready for your next step.</p></div>
+<div class="welcome-preview">
+<div class="preview-top"><span class="preview-bookmark" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-arrow-up-right"/></svg></span><span>A LITTLE LESS LOST. A LITTLE MORE DONE.</span></div>
+<div class="preview-title">From this tab to your knowledge.</div>
+<p class="preview-description">Capture a page or selection, add your tags, and save it to Knowvia. Connect TickTick to send a copy to your lists.</p>
+<div class="preview-bottom"><span>01 &nbsp; Capture</span><span>02 &nbsp; Organize</span><span>03 &nbsp; Save</span></div>
 </div>
 <div class="welcome-action-copy"><strong>Your knowledge starts here</strong><span>Sign in to save your first article.</span></div>
 <button class="google-auth-btn" id="connectGoogleBtn" type="button">
@@ -26,13 +65,10 @@
 <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.23c0-.71-.06-1.39-.18-2.05H12v3.88h5.38a4.6 4.6 0 0 1-2 3.02v2.51h3.24c1.9-1.75 2.98-4.33 2.98-7.36Z"/><path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.62-2.41l-3.24-2.51c-.9.6-2.05.97-3.38.97-2.6 0-4.8-1.76-5.59-4.12H3.07v2.59A10 10 0 0 0 12 22Z"/><path fill="#FBBC05" d="M6.41 13.93a6 6 0 0 1 0-3.86V7.48H3.07a10 10 0 0 0 0 9.04l3.34-2.59Z"/><path fill="#EA4335" d="M12 5.95c1.47 0 2.79.51 3.82 1.51l2.87-2.87A9.6 9.6 0 0 0 12 2a10 10 0 0 0-8.93 5.48l3.34 2.59C7.2 7.71 9.4 5.95 12 5.95Z"/></svg>
 </span>
 <span class="google-auth-label">Continue with Google</span>
-<span aria-hidden="true" class="google-auth-arrow">→</span>
+<span aria-hidden="true" class="google-auth-arrow"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-arrow-right"/></svg></span>
 </button>
 <div class="onboard-footer-note">
-<svg aria-hidden="true" viewBox="0 0 24 24" width="12" height="12">
-<rect x="4" y="11" width="16" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
-<path d="M8 11V7a4 4 0 0 1 8 0v4" fill="none" stroke="currentColor" stroke-width="2"/>
-</svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-lock"/></svg>
 <span>Secure sign-in with Google</span>
 </div>
 <p class="auth-status" id="onboardingAuthStatus" role="status" aria-live="polite" hidden></p>
@@ -40,62 +76,90 @@
 </div>
 <!-- Main App -->
 <div id="appView" style="display: none;">
-<header class="app-header-two-tier">
-<div class="header-top-row">
-<div class="brand-wrap">
-<div class="brand-logo"></div>
-<div><span class="brand-text">Save Knowledge</span><span class="brand-caption">Your personal knowledge space</span></div>
-</div>
+<header class="popup-header">
+<span class="brand-lockup" role="img" aria-label="Knowvia"><img class="brand-mark" src="assets/knowvia-mark.svg" alt=""/><span aria-hidden="true">Knowvia</span></span>
 <div class="header-actions">
-<button aria-label="Toggle theme" class="theme-toggle-btn" data-tooltip="Toggle theme" id="themeToggleBtn" type="button"></button>
-</div>
-</div>
-<div class="header-bottom-row" role="tablist" aria-label="Workspace">
-<button class="line-tab active" id="tabSave" role="tab" aria-controls="panelSave" aria-selected="true" type="button">
-                        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h12v17l-6-4-6 4V4Z"/></svg> Capture
-                    </button>
-<button class="line-tab" id="tabSettings" role="tab" aria-controls="panelSettings" aria-selected="false" tabindex="-1" type="button">
-                        <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></svg> Settings
-                    </button>
+<button class="icon-button" id="tabSettings" type="button" aria-label="Open settings" aria-controls="panelSettings" aria-expanded="false" title="Settings"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-settings"/></svg></button>
+<button class="icon-button" id="closePopupBtn" type="button" aria-label="Close popup" title="Close"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-close"/></svg></button>
 </div>
 </header>
 <main class="main-scroll">
 <!-- Save Panel -->
-<section class="panel" id="panelSave" role="tabpanel" aria-labelledby="tabSave">
-<div class="capture-card">
-<div class="capture-heading"><span>ARTICLE DETAILS</span><span class="capture-editable"><i></i> Ready to edit</span></div>
-<label class="sr-only" for="title">Article title</label>
-<input class="input capture-title" dir="auto" id="title" required maxlength="500" placeholder="Give your article a title" type="text"/>
-<div class="capture-url-row"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m10 13 4-4M8 16l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 10a4 4 0 0 0 6 0l4-4a4 4 0 0 0-6-6l-1 1"/></svg><label class="sr-only" for="url">Article URL</label><input class="input capture-url" id="url" placeholder="https://example.com/article" type="text"/></div>
-<label class="sr-only" for="rawText">Article text</label>
-<textarea class="textarea capture-content" dir="auto" id="rawText" required maxlength="100000" placeholder="Your selected text or article content…" rows="3"></textarea>
+<section class="panel" id="panelSave" aria-labelledby="captureHeading">
+<h1 class="sr-only" id="captureHeading">Save your capture</h1>
+<article class="article-preview" id="articlePreview">
+<div class="preview-cover" id="previewCover"><img id="previewImage" alt="" referrerpolicy="no-referrer" hidden/><span class="preview-cover-fallback" id="previewCoverFallback" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-document"/></svg></span></div>
+<div class="article-preview-copy"><h2 id="previewTitle" dir="auto">Your next good idea.</h2><p id="previewExcerpt" dir="auto">Reading this page…</p><div class="preview-source"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-globe"/></svg><span id="previewDomain">Current page</span><span class="source-divider">·</span><span id="captureSource">Web page</span></div></div>
+<div class="preview-actions"><button class="icon-button small" id="editCaptureBtn" type="button" aria-label="Edit captured content" aria-controls="captureEditor" aria-expanded="false" title="Edit capture"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-edit"/></svg></button><button class="icon-button small" id="refreshPageBtn" type="button" aria-label="Recapture current page" title="Recapture"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-refresh"/></svg></button></div>
+</article>
+<div class="capture-editor" id="captureEditor" hidden>
+<div class="editor-heading"><strong>Edit your capture</strong><button class="text-button" id="doneEditingBtn" type="button">Done <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></button></div>
+<label class="label" for="title">Title</label><input class="input" dir="auto" id="title" required maxlength="500" placeholder="Give your capture a title" type="text"/>
+<label class="label" for="url">Source URL</label><input class="input" id="url" placeholder="https://example.com/article" type="text"/>
+<div class="label-with-meta"><label class="label" for="rawText">Content / notes</label><span class="field-meta" id="captureCount">0 characters</span></div><textarea class="textarea" dir="auto" id="rawText" required maxlength="100000" placeholder="Your selected text, article content, or notes…" rows="4"></textarea>
+<div class="ai-block">
+<button class="disclosure-button" id="captureOptionsBtn" type="button" aria-expanded="false" aria-controls="captureOptions"><span>Capture options</span><span class="section-optional">OPTIONAL</span><span class="disclosure-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-chevron-down"/></svg></span></button>
+<div class="disclosure-panel" id="captureOptions" inert><div class="disclosure-inner">
+<div class="ai-options-grid">
+<label class="toggle-row" for="useSummaryAi">
+<span>TickTick AI Summary</span>
+<div class="toggle-wrap">
+<input id="useSummaryAi" type="checkbox"/>
+<span class="toggle-track">
+<span class="toggle-thumb"></span>
+</span>
 </div>
-<div class="destination-note" id="ticktickConnectHint" hidden="">
-<div class="destination-note-icon" aria-hidden="true">
-<svg viewBox="0 0 24 24">
-<path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"/>
-</svg>
+</label>
+<label class="toggle-row" for="useTagsAi">
+<span>TickTick AI Tags</span>
+<div class="toggle-wrap">
+<input id="useTagsAi" type="checkbox"/>
+<span class="toggle-track">
+<span class="toggle-thumb"></span>
+</span>
 </div>
-<div class="destination-note-copy">
-<strong>Connect TickTick</strong>
-<p>Send articles straight to your lists.</p>
+</label>
+<label class="toggle-row" for="useQuiz">
+<span>Telegram quiz</span>
+<div class="toggle-wrap">
+<input id="useQuiz" type="checkbox"/>
+<span class="toggle-track">
+<span class="toggle-thumb"></span>
+</span>
 </div>
-<button class="btn btn-secondary btn-sm destination-connect-btn" id="connectTickTickFromSaveBtn" type="button">
-                            Connect →
-                        </button>
+</label>
+<label class="toggle-row" for="mergeSummaryWithContent">
+<span title="Append the summary to the TickTick copy only">Append summary</span>
+<div class="toggle-wrap">
+<input id="mergeSummaryWithContent" type="checkbox"/>
+<span class="toggle-track">
+<span class="toggle-thumb"></span>
+</span>
 </div>
+</label>
+</div>
+<p class="hint">AI summary and tags apply only to TickTick. The original article stays in Knowvia.</p>
+</div></div>
+</div>
+</div>
+<section class="destination-section" aria-labelledby="destinationHeading">
+<div class="section-heading"><h2 id="destinationHeading">Save a copy to</h2><span id="destinationHelp">Knowvia always keeps a copy</span></div>
+<div class="destination-grid">
+<button class="destination-card" id="notionDestination" aria-pressed="false" type="button" disabled aria-haspopup="dialog" aria-controls="notionDestinationDialog" aria-describedby="notionCaptureHint"><span class="platform-logo notion-logo" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-notion"/></svg></span><span class="destination-copy"><strong>Notion</strong><span id="notionCaptureHint">Checking connection…</span></span><span class="selection-indicator" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></span></button>
+<button class="destination-card" id="connectTickTickFromSaveBtn" aria-pressed="false" type="button" aria-describedby="ticktickCaptureHint"><span class="platform-logo ticktick-logo" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-ticktick"/></svg></span><span class="destination-copy"><strong>TickTick</strong><span id="ticktickCaptureHint">Checking connection…</span></span><span class="selection-indicator" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></span></button>
+</div>
+<div id="notionSaveConfig" hidden><span id="notionSaveDestinationName">Choose a destination</span><button id="chooseNotionSaveDestinationBtn" class="text-button" type="button">Choose / change</button></div>
+</section>
 <!-- TickTick destination folder -->
 <div class="form-group compact-form-group" id="projectField">
-<label class="label" id="projectFieldLabel">
-                            Save to
+<label class="label label-with-meta" id="projectFieldLabel">
+                            <span>TickTick list</span><span class="field-meta">Optional destination</span>
                         </label>
 <div class="project-picker-row">
 <div class="picker project-picker-main">
 <div aria-disabled="false" class="picker-control project-search-box" id="projectPickerBtn">
 <span aria-hidden="true" class="picker-leading-icon">
-<svg viewBox="0 0 24 24">
-<path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"></path>
-</svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-folder"/></svg>
 </span>
 <span class="sr-only" id="projectPickerLabel">
             Loading lists...
@@ -103,9 +167,7 @@
 <input aria-autocomplete="list" aria-controls="projectMenu" aria-describedby="projectSearchHint" aria-expanded="false" aria-labelledby="projectFieldLabel" autocomplete="off" class="project-search-input" id="projectSearchInput" role="combobox" aria-haspopup="listbox" placeholder="Search or choose a list…" spellcheck="false" type="text"/>
 <button aria-controls="projectMenu" aria-expanded="false" aria-label="Toggle TickTick lists" class="project-picker-toggle" id="projectPickerToggleBtn" type="button">
 <span class="picker-chevron">
-<svg aria-hidden="true" viewBox="0 0 20 20">
-<path d="m5.75 7.75 4.25 4.25 4.25-4.25"></path>
-</svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-chevron-down"/></svg>
 </span>
 </button>
 </div>
@@ -117,9 +179,7 @@
 </select>
 </div>
 <button aria-label="Add new list" class="project-add-button" id="openCreateProjectBtn" title="Add new list" type="button">
-<svg aria-hidden="true" viewBox="0 0 24 24">
-<path d="M12 5v14M5 12h14"></path>
-</svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-plus"/></svg>
 </button>
 </div><p class="sr-only project-search-hint" id="projectSearchHint">Default destination: Inbox</p>
 <div class="project-create-panel" hidden="" id="projectCreatePanel">
@@ -140,6 +200,8 @@
 </div>
 </div>
 </div>
+<div class="form-group" id="libraryDestination"><div class="section-heading"><h2>Your library</h2></div><div class="library-destination"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-document"/></svg><span>My Knowvia collection</span><span class="destination-included">Always included</span></div></div>
+<section class="settings-card" id="syncReceipt" hidden aria-label="Last saved capture synchronization"><strong>Last saved capture</strong><p id="syncReceiptDetail" role="status" aria-live="polite"></p><div id="ticktickSyncRow" hidden><span>TickTick: </span><span id="ticktickSyncState"></span> <button class="text-button" id="ticktickSyncRetry" type="button" hidden>Retry TickTick</button></div><div id="notionSyncRow" hidden><span>Notion: </span><span id="notionSyncState"></span> <button class="text-button" id="notionSyncRetry" type="button" hidden>Retry Notion</button></div><button id="refreshSyncStatusBtn" class="text-button" type="button">Refresh status</button> <button id="openConfirmedNotionBtn" class="text-button" type="button" hidden>Open in Notion</button></section>
 <!-- Tags picker -->
 <div class="form-group compact-form-group" id="tagsField">
 <label class="label" id="tagsFieldLabel">
@@ -148,82 +210,40 @@
 <div class="picker tags-picker">
 <div class="picker-control tags-input-box" id="tagsInputBox">
 <span class="picker-leading-icon">
-<svg aria-hidden="true" viewBox="0 0 24 24">
-<path d="M20 13 13 20 4 11V4h7l9 9Z"></path>
-<circle cx="8.5" cy="8.5" r="1.25"></circle>
-</svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-tag"/></svg>
 </span>
 <div class="tags-picker-value">
 <div class="selected-tags-container" id="selectedTagsContainer"></div>
-<input aria-autocomplete="list" aria-controls="tagSuggestions" aria-expanded="false" aria-labelledby="tagsFieldLabel" autocomplete="off" class="tag-text-input" id="tagInput" aria-describedby="tagInputHint" role="combobox" aria-haspopup="listbox" placeholder="Add tags…" spellcheck="false" type="text"/>
+<input aria-autocomplete="list" aria-controls="tagSuggestions" aria-expanded="false" aria-labelledby="tagsFieldLabel" autocomplete="off" class="tag-text-input" id="tagInput" aria-describedby="tagInputHint" role="combobox" aria-haspopup="listbox" placeholder="Add tag" spellcheck="false" type="text"/>
 </div>
 <button aria-controls="tagSuggestions" aria-expanded="false" aria-label="Toggle tag suggestions" class="tag-picker-toggle" id="tagPickerToggleBtn" type="button">
 <span class="picker-chevron">
-<svg aria-hidden="true" viewBox="0 0 20 20">
-<path d="m5.75 7.75 4.25 4.25 4.25-4.25"></path>
-</svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-chevron-down"/></svg>
 </span>
 </button>
 </div>
 <div class="picker-menu tag-suggestions" id="tagSuggestions" role="listbox" aria-labelledby="tagsFieldLabel" style="display: none;"></div>
 </div>
 <p class="sr-only" id="tagInputHint">Press Enter, comma, or space to add a tag.</p>
+<p class="hint" id="tagsLoadStatus" role="status" hidden>Suggestions unavailable. You can still add your own tags.</p>
 </div>
-<div class="ai-block">
-<span class="ai-block-label">
-                            <span class="ai-heading-icon" aria-hidden="true">✦</span> Enrich your article <span class="section-optional">OPTIONAL</span>
-                        </span>
-<div class="ai-options-grid">
-<label class="toggle-row" for="useSummaryAi">
-<span title="Generate a summary and include this article in your weekly email">Summary &amp; digest</span>
-<div class="toggle-wrap">
-<input id="useSummaryAi" type="checkbox"/>
-<span class="toggle-track">
-<span class="toggle-thumb"></span>
-</span>
-</div>
-</label>
-<label class="toggle-row" for="useTagsAi">
-<span>AI Tags</span>
-<div class="toggle-wrap">
-<input id="useTagsAi" type="checkbox"/>
-<span class="toggle-track">
-<span class="toggle-thumb"></span>
-</span>
-</div>
-</label>
-<label class="toggle-row" for="useQuiz">
-<span>Telegram quiz</span>
-<div class="toggle-wrap">
-<input id="useQuiz" type="checkbox"/>
-<span class="toggle-track">
-<span class="toggle-thumb"></span>
-</span>
-</div>
-</label>
-<label class="toggle-row" for="mergeSummaryWithContent">
-<span title="Add the generated summary to the saved article text">Append summary</span>
-<div class="toggle-wrap">
-<input id="mergeSummaryWithContent" type="checkbox"/>
-<span class="toggle-track">
-<span class="toggle-thumb"></span>
-</span>
-</div>
-</label>
-</div>
-</div>
+<section class="save-options-section" aria-labelledby="saveOptionsHeading"><div class="section-heading"><h2 id="saveOptionsHeading">TickTick export format</h2><button class="text-button" id="advancedOptionsBtn" type="button">More options</button></div>
+<div class="save-options" role="radiogroup" aria-label="TickTick export format">
+<button class="save-option selected" id="articleOption" role="radio" aria-checked="true" type="button"><span class="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-article"/></svg></span><span><strong>Article</strong><small>Captured text</small></span><span class="option-check" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></span></button>
+<button class="save-option" id="summaryOption" role="radio" aria-checked="false" aria-describedby="summaryOptionHint" title="Append an AI summary to the TickTick copy." tabindex="-1" type="button"><span class="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-summary"/></svg></span><span><strong>Summary</strong><small>Article + recap</small></span><span class="option-check" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></span></button>
+<button class="save-option" id="customOption" role="radio" aria-checked="false" tabindex="-1" type="button"><span class="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-sliders"/></svg></span><span><strong>Custom</strong><small>Edit content</small></span><span class="option-check" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></span></button>
+</div><p class="sr-only" id="summaryOptionHint">Keeps original captured text in Knowvia and appends a summary only to the TickTick copy.</p></section>
 </section>
 <!-- Settings Panel -->
-<section class="panel settings-panel" id="panelSettings" role="tabpanel" aria-labelledby="tabSettings">
-<div class="settings-intro"><h2>Make it your workspace.</h2><p>Accounts, connections, and ways to revisit.</p></div>
+<section class="panel settings-panel" id="panelSettings" aria-labelledby="settingsHeading">
+<div class="settings-navigation"><button class="text-button" id="tabSave" type="button"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-arrow-left"/></svg> Back to capture</button><button aria-label="Toggle theme" class="icon-button" id="themeToggleBtn" type="button"></button></div>
+<div class="settings-intro"><div><h2 id="settingsHeading">Make it yours.</h2><p>Your account, connections, and preferences.</p></div><button class="btn btn-ghost btn-sm" id="refreshConnectionsBtn" type="button">Refresh</button></div>
+<p class="inline-feedback" id="preferencesStatus" role="status" hidden></p>
 <article class="settings-card settings-card--account">
 <div class="settings-card-header">
 <h3 class="settings-card-title">
 <span aria-hidden="true" class="settings-title-icon">
-<svg viewBox="0 0 24 24">
-<circle cx="12" cy="8" r="3.5"></circle>
-<path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6"></path>
-</svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-user"/></svg>
 </span>
 <span>Google account</span>
 </h3>
@@ -232,14 +252,15 @@
                                 Signed in
                             </div>
 </div>
-<div class="settings-control-row">
+<details class="account-details"><summary>Account details</summary><div class="settings-control-row">
 <input aria-label="User ID" class="input input--mono" id="userId" placeholder="User ID" readonly="" title="Full account ID" type="text"/>
 <button class="btn btn-secondary btn-sm settings-action-button" id="copyUserIdBtn" type="button">
                                 Copy ID
                             </button>
 </div>
+</details>
 <div class="settings-secondary-row">
-
+<button class="btn btn-secondary btn-sm" id="reauthGoogleBtn" type="button">Sign in again</button>
 <button aria-label="Sign out" class="btn btn-ghost btn-sm settings-action-button" id="signOutBtn" hidden disabled title="Sign out is not available yet" type="button">Sign out</button>
 </div>
 </article>
@@ -247,40 +268,41 @@
 <div class="settings-card-header">
 <h3 class="settings-card-title">
 <span aria-hidden="true" class="settings-title-icon">
-<svg viewBox="0 0 24 24">
-<path d="M4 5.75A1.75 1.75 0 0 1 5.75 4h12.5A1.75 1.75 0 0 1 20 5.75v12.5A1.75 1.75 0 0 1 18.25 20H5.75A1.75 1.75 0 0 1 4 18.25V5.75Z"></path>
-<path d="M4 14h4l1.5 2h5l1.5-2h4"></path>
-</svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-ticktick"/></svg>
 </span>
 <span>TickTick destination</span>
 </h3>
 <div class="status-pill status-pill--danger" id="ticktickStatusSecondary">
 <span class="pill-dot"></span>
-                                Not connected
+                                Checking…
                             </div>
 </div>
 <div class="settings-secondary-row">
-<span class="settings-helper">
-                                Choose where your saved articles go.
+<span class="settings-helper" id="ticktickConnectionHint">
+                                Checking access to your lists…
                             </span>
 <button aria-label="Connect TickTick account" class="btn btn-ghost btn-sm settings-action-button" id="connectTickTickBtn" title="Connect TickTick account" type="button">Connect</button>
 <button aria-label="Reconnect TickTick account" class="btn btn-ghost btn-sm settings-action-button" hidden="" id="reconnectTickTickBtn" title="Reconnect TickTick account" type="button">Reconnect</button>
 </div>
 </article>
-<article class="settings-card settings-card--email">
+<article class="settings-card settings-card--notion">
+<div class="settings-card-header"><h3 class="settings-card-title"><span class="settings-title-icon notion-logo" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-notion"/></svg></span><span>Notion</span></h3><span class="status-pill" id="notionStatus" role="status">Checking…</span></div>
+<div class="settings-secondary-row"><span class="settings-helper" id="notionConnectionHint">Checking your workspace connection…</span><button class="btn btn-ghost btn-sm settings-action-button" id="connectNotionBtn" type="button">Connect</button></div>
+<div class="notion-default-row" id="notionDefaultRow" hidden><div class="notion-default-copy"><span class="settings-meta-label">Default destination</span><strong id="notionDefaultName" dir="auto">Choose a page or data source</strong></div><button class="btn btn-secondary btn-sm" id="manageNotionDestinationBtn" type="button" aria-haspopup="dialog" aria-controls="notionDestinationDialog">Choose</button></div>
+<p class="capability-note" id="notionCapabilityNote">Choose a default, then enable Notion for each capture you want to send.</p>
+
+</article>
+<article class="settings-card settings-card--email" hidden inert>
 <div class="settings-card-header">
 <h3 class="settings-card-title">
 <span aria-hidden="true" class="settings-title-icon">
-<svg viewBox="0 0 24 24">
-<rect height="13" rx="2" width="17" x="3.5" y="5.5"></rect>
-<path d="m5 8 7 5 7-5"></path>
-</svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-mail"/></svg>
 </span>
-<span>Weekly digest</span>
+<span>Email · Weekly digest</span>
 </h3>
 </div>
 <div class="settings-control-row">
-<input aria-label="Delivery email" class="input" id="email" placeholder="you@example.com" type="email"/>
+<label class="sr-only" for="email">Delivery email</label><input aria-label="Delivery email" class="input" id="email" placeholder="you@example.com" type="email"/>
 <button class="btn btn-secondary btn-sm settings-action-button" id="saveEmailSettingsBtn" type="button">
                                 Save
                             </button>
@@ -303,13 +325,11 @@
 </label>
 </div>
 </article>
-<article class="settings-card settings-card--telegram">
+<article class="settings-card settings-card--telegram" hidden inert>
 <div class="settings-card-header">
 <h3 class="settings-card-title">
 <span aria-hidden="true" class="settings-title-icon">
-<svg viewBox="0 0 24 24">
-<path d="m21 4-3 16-6-4-3 3 .7-5.2L18 7.5 7.5 12 3 10.5 21 4Z"></path>
-</svg>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-telegram"/></svg>
 </span>
 <span>Telegram quiz</span>
 </h3>
@@ -331,7 +351,7 @@
 </label>
 <div class="settings-telegram-options" id="telegramOptions" style="display: block;"><div class="telegram-action-row telegram-open-row"><button class="btn btn-primary btn-sm settings-open-bot settings-action-button" id="openTelegramBotBtn" type="button">
                                 Open Bot
-                            </button></div><div class="settings-command-group" hidden="">
+                            </button></div><div class="settings-command-group">
 <div class="settings-control-row">
 <code aria-label="Telegram connection command" class="settings-command" id="telegramCommand">
                                         /start ...
@@ -345,23 +365,22 @@
 </section>
 </main>
 <footer class="app-footer" id="appFooter">
-<div class="save-actions" id="saveActions">
-<button class="btn btn-ghost" id="refreshPageBtn" type="button">
-                        Refresh page
-                    </button>
-<button class="btn btn-primary" id="saveArticleBtn" type="button">
-                        Save Article
-                    </button>
-</div>
-<div aria-atomic="true" aria-live="polite" class="status-bar status-bar--info" id="statusBar" role="status">
-<span aria-hidden="true" class="status-icon"></span>
-<span class="status-message" id="statusText">
-                        Ready
-                    </span>
-</div>
+<div class="save-actions" id="saveActions"><button class="btn btn-primary" id="saveArticleBtn" type="button" disabled><svg class="save-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-download"/></svg><span id="saveButtonLabel">Save capture</span><kbd id="saveShortcut" aria-hidden="true">Ctrl S</kbd></button></div>
+<div aria-atomic="true" aria-live="polite" class="status-bar status-bar--info" id="statusBar" role="status"><span aria-hidden="true" class="status-icon"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></span><div class="status-copy"><strong id="statusTitle">Ready to capture</strong><span class="status-message" id="statusText">Your next good idea, kept close.</span></div><div class="status-progress" aria-hidden="true"><span></span></div></div>
 </footer>
 </div>
 </div>
+<dialog class="destination-dialog" id="notionDestinationDialog" aria-labelledby="notionDialogTitle" aria-describedby="notionDialogDescription">
+<header class="destination-dialog-header"><span class="dialog-provider-icon notion-logo" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-notion"/></svg></span><div><h2 id="notionDialogTitle">Choose a destination</h2><p id="notionDialogDescription">Pages and data sources shared with Knowvia.</p></div><button class="icon-button" id="closeNotionDialogBtn" type="button" aria-label="Close Notion destinations"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-close"/></svg></button></header>
+<div class="destination-search-row"><label class="destination-search" for="notionSearchInput"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-search"/></svg><span class="sr-only">Search Notion destinations</span><input id="notionSearchInput" type="search" placeholder="Search pages and data sources…" maxlength="200" autocomplete="off" spellcheck="false"/></label><button class="icon-button" id="refreshNotionDestinationsBtn" type="button" aria-label="Refresh Notion destinations" title="Refresh destinations"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-refresh"/></svg></button></div>
+<p class="destination-results-caption" id="notionResultsCaption" role="status" aria-live="polite">Choose where new captures will go.</p>
+<div class="destination-results-scroll" id="notionResultsScroll"><div class="destination-results" id="notionDestinationResults" role="listbox" aria-label="Notion destinations"></div><div class="destination-empty" id="notionDestinationState" role="status" aria-live="polite" hidden><span class="empty-state-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-search"/></svg></span><h3 id="notionDestinationStateTitle">No destinations found</h3><p id="notionDestinationStateText">Try another title, or share a page with Knowvia in Notion.</p><button class="btn btn-secondary" id="retryNotionDestinationsBtn" type="button" hidden>Try again</button></div><button class="btn btn-secondary load-more" id="loadMoreNotionDestinationsBtn" type="button" hidden>Load more destinations</button></div>
+<p class="destination-dialog-error" id="notionDestinationError" role="alert" hidden></p>
+<footer class="destination-dialog-footer"><p>Default for captures with Notion enabled.</p><div class="destination-dialog-actions"><button class="text-button destructive-text" id="clearNotionDestinationBtn" type="button" hidden>Clear default</button><span class="dialog-actions-spacer"></span><button class="btn btn-secondary" id="cancelNotionDestinationBtn" type="button">Cancel</button><button class="btn btn-primary" id="confirmNotionDestinationBtn" type="button" disabled>Use destination</button></div></footer>
+</dialog>
+<script src="v2-layout.js"></script>
+<script src="notion.js"></script>
+<script src="sync-status.js"></script>
 <script src="popup.js"></script>
 </body>
 </html>

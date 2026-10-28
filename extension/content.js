@@ -56,6 +56,18 @@
     return (target?.textContent || "").trim().slice(0, 15000);
   }
 
+  // Optional, display-only cover. It never changes captured text or save payloads.
+  function extractPreviewImage() {
+    const candidate = document.querySelector('meta[property="og:image"]')?.content
+      || document.querySelector('meta[name="twitter:image"]')?.content;
+    if (!candidate) return null;
+    try {
+      const url = new URL(candidate, window.location.href);
+      return ["https:", "http:"].includes(url.protocol) && !url.username && !url.password
+        ? url.href : null;
+    } catch { return null; }
+  }
+
   // Helper to check if the extension was reloaded/invalidated
   function isExtensionValid() {
     return typeof chrome !== 'undefined' && chrome.runtime && !!chrome.runtime.id;
@@ -80,6 +92,7 @@
             text,
             title: extractBestTitle(),
             url:   window.location.href,
+            previewImage: extractPreviewImage(),
           },
         });
       } catch (e) {
@@ -106,6 +119,7 @@
           text,
           title: extractBestTitle(),
           url:   window.location.href,
+          previewImage: extractPreviewImage(),
         },
       });
     } catch (e) {
@@ -132,6 +146,7 @@
             url:          window.location.href,
             selectedText: getSelectedText(),
             pageText:     getReadableText(),
+            previewImage: extractPreviewImage(),
           },
         });
       } catch (error) {

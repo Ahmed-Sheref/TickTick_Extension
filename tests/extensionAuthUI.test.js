@@ -7,7 +7,9 @@ import { webcrypto } from "node:crypto";
 const source = await readFile(new URL("../extension/background.js", import.meta.url), "utf8");
 
 function fixture({ cancel = false, width = 420, height = 550, stored = {}, transformRedirect,
-    status = 200, authorizationUrl = "https://ticktick.com/oauth/authorize?state=example" } = {})
+    status = 200, linkProvider = "ticktick", authorizationUrl = linkProvider === "notion"
+        ? "https://api.notion.com/v1/oauth/authorize?state=example"
+        : "https://ticktick.com/oauth/authorize?state=example" } = {})
 {
     let messageListener;
     let windowListener;
@@ -44,10 +46,10 @@ function fixture({ cancel = false, width = 420, height = 550, stored = {}, trans
                 await gate;
                 if (cancel) throw new Error("The user cancelled sign-in");
                 const auth = new URL(url);
-                const linking = auth.origin === "https://ticktick.com";
+                const linking = ["https://ticktick.com", "https://api.notion.com"].includes(auth.origin);
                 const request = linking ? exchanges[0].body : null;
                 const redirect = linking
-                    ? `${request.redirect_uri}?ticktick_link=connected&client_nonce=${request.client_nonce}`
+                    ? `${request.redirect_uri}?${linkProvider}_link=connected&client_nonce=${request.client_nonce}`
                     : `${auth.searchParams.get("redirect_uri")}?exchange_code=example&client_nonce=${auth.searchParams.get("client_nonce")}`;
                 return transformRedirect ? transformRedirect(redirect) : redirect;
             }
@@ -68,7 +70,7 @@ function fixture({ cancel = false, width = 420, height = 550, stored = {}, trans
         console: { log() {}, warn() {}, error() {} },
         fetch: async (url, options) => {
             exchanges.push({ url, ...options, body: JSON.parse(options.body) });
-            return { ok: status === 200, status, json: async () => ({ data: url.endsWith("/integrations/ticktick/link")
+            return { ok: status === 200, status, json: async () => ({ data: url.endsWith(`/integrations/${linkProvider}/link`)
                 ? { authorizationUrl } : { userId: "example-user", token: "example-token" } }) };
         }
     });
@@ -138,9 +140,9 @@ test("cancelled connection reports a retryable error and reopens the popup", asy
     assert.equal((await ui.send("getConnectionState")).pending, false);
 });
 
-for (const [provider, expectedWidth, expectedHeight] of [["Google", 480, 600], ["TickTick", 460, 580]]) {
+for (const [provider, expectedWidth, expectedHeight] of [["Google", 560, 700], ["TickTick", 560, 700], ["Notion", 560, 700]]) {
     test(`${provider}: authorization window stays compact on a large display`, async () => {
-        const ui = fixture({ width: 1440, height: 900 });
+        const ui = fixture({ width: 1440, height: 900, linkProvider: provider === "Notion" ? "notion" : "ticktick" });
         await ui.send(`start${provider}Auth`);
         ui.releaseFlow();
         await ui.done;
@@ -297,7 +299,10 @@ test("an already-open popup reloads TickTick lists after confirmed reconnect", a
         storageGet: async () => ({ sk_auth_ui: { provider: "TickTick", status: "success" } }),
         resolveAuthState: () => ({ userId: "google-user", isSignedIn: true, isTickTickConnected: true }),
         renderAuthUI() {}, setConnectedUI() {}, switchTab() {}, fillTelegramCommand() {}, setUserIdDisplay() {},
-        refreshPageData() {}, loadUserPreferences() {}, loadTags() {},
+        refreshPageData() {}, loadUserPreferences() {}, loadTags() {}, loadNotionStatus() {},
+        draftOwnerId: "google-user", syncUI: { restore() {}, reset() {} },
+        notionUI: { reset() {} }, ticktickSelected: false, notionSelected: false,
+        selectedTags: [], renderSelectedTags() {},
         loadTickTickProjects: async () => { projectLoads++; }, console
     };
     runInNewContext(listener, context);
@@ -307,4 +312,99 @@ test("an already-open popup reloads TickTick lists after confirmed reconnect", a
     onChanged({ sk_auth_ui: { newValue: { provider: "TickTick", status: "success" } } }, "local");
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(projectLoads, 1);
+});
+
+test("Notion links the current Google account without changing its session or TickTick destination", async () =>
+{
+    const ui = fixture({ linkProvider: "notion", stored: oldConnection });
+    assert.equal((await ui.send("startNotionAuth")).started, true);
+    assert.equal((await ui.send("startTickTickAuth")).error, "Sign-in is already in progress.");
+    assert.equal(ui.values.sk_auth_ui.status, "pending");
+    ui.releaseFlow();
+    await ui.done;
+    assert.equal(ui.values.sk_auth_ui.status, "success");
+    assert.equal(ui.values.sk_auth_ui.provider, "Notion");
+    assert.equal(ui.exchanges.length, 1);
+    assert.equal(ui.exchanges[0].url, "http://localhost:3000/api/v1/integrations/notion/link");
+    assert.equal(ui.exchanges[0].headers.Authorization, "Bearer google-jwt");
+    assert.equal(ui.exchanges[0].redirect, "error");
+    assert.equal(ui.exchanges[0].body.redirect_uri, "https://test.chromiumapp.org/notion");
+    assert.match(ui.exchanges[0].body.client_nonce, /^[a-f0-9]{64}$/);
+    assert.deepEqual(Object.keys(ui.exchanges[0].body).sort(), ["client_nonce", "redirect_uri"]);
+    assert.equal(ui.values.sk_token, "google-jwt");
+    assert.equal(ui.values.sk_userId, "google-user");
+    assert.equal(ui.values.ticktick_selectedProjectId, "old-project");
+    assert.deepEqual(ui.values.ticktick_projects, oldConnection.ticktick_projects);
+    assert.equal(ui.values.notion_token, undefined);
+    assert.equal(ui.listenerRemoved, true);
+});
+
+for (const [name, transformRedirect] of [
+    ["wrong origin", value => value.replace("test.chromiumapp.org", "evil.example")],
+    ["wrong path", value => value.replace("/notion?", "/ticktick?")],
+    ["wrong nonce", value => value.replace(/client_nonce=[^&]+/, "client_nonce=wrong")],
+    ["duplicate nonce", value => `${value}&client_nonce=wrong`],
+    ["wrong marker", value => value.replace("notion_link", "ticktick_link")],
+    ["duplicate marker", value => `${value}&notion_link=connected`],
+    ["unexpected credentials", value => `${value}&access_token=must-not-be-stored`],
+    ["fragment", value => `${value}#access_token=must-not-be-stored`],
+    ["empty redirect", () => undefined]
+])
+{
+    test(`Notion rejects ${name} and preserves existing connections`, async () =>
+    {
+        const ui = fixture({ linkProvider: "notion", stored: oldConnection, transformRedirect });
+        await ui.send("startNotionAuth");
+        ui.releaseFlow();
+        await ui.done;
+        assert.equal(ui.values.sk_auth_ui.status, "error");
+        assert.equal(ui.values.sk_token, "google-jwt");
+        assert.equal(ui.values.ticktick_selectedProjectId, "old-project");
+        assert.equal(ui.listenerRemoved, true);
+        assert.doesNotMatch(JSON.stringify(ui.values.sk_auth_ui), /must-not-be-stored|evil\.example/);
+    });
+}
+
+for (const status of [400, 401, 403, 409, 502, 503])
+{
+    test(`Notion initiation HTTP ${status} remains retryable without launching OAuth`, async () =>
+    {
+        const ui = fixture({ linkProvider: "notion", status });
+        await ui.send("startNotionAuth");
+        await ui.done;
+        assert.equal(ui.values.sk_auth_ui.status, "error");
+        assert.equal(ui.launches.length, 0);
+        assert.equal(ui.values.sk_token, "google-jwt");
+    });
+}
+
+test("Notion cancellation reports cancellation without marking a connection successful", async () =>
+{
+    const ui = fixture({ linkProvider: "notion", cancel: true });
+    await ui.send("startNotionAuth");
+    ui.releaseFlow();
+    await ui.done;
+    assert.equal(ui.values.sk_auth_ui.status, "error");
+    assert.match(ui.values.sk_auth_ui.message, /cancelled/);
+});
+
+test("Notion rejects a provider URL outside its exact authorization origin and path", async () =>
+{
+    const ui = fixture({ linkProvider: "notion", authorizationUrl: "https://api.notion.com/other" });
+    await ui.send("startNotionAuth");
+    await ui.done;
+    assert.equal(ui.launches.length, 0);
+    assert.equal(ui.values.sk_auth_ui.status, "error");
+});
+
+test("Notion cannot attach a completed authorization to a changed application session", async () =>
+{
+    const ui = fixture({ linkProvider: "notion" });
+    await ui.send("startNotionAuth");
+    await new Promise(resolve => setImmediate(resolve));
+    ui.values.sk_token = "another-session";
+    ui.releaseFlow();
+    await ui.done;
+    assert.equal(ui.values.sk_auth_ui.status, "error");
+    assert.equal(ui.values.sk_token, "another-session");
 });

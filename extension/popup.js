@@ -1,5 +1,5 @@
 /* =========================================================================
-   popup.js — Save Knowledge Extension
+   popup.js — Knowvia Extension
    ========================================================================= */
 
 // const API_BASE = "https://lionfish-app-jxpvk.ondigitalocean.app/api/v1";
@@ -48,6 +48,36 @@ const el =
     connectTickTickBtn: document.getElementById("connectTickTickBtn"),
     connectTickTickFromSaveBtn: document.getElementById("connectTickTickFromSaveBtn"),
     reconnectTickTickBtn: document.getElementById("reconnectTickTickBtn"),
+    connectNotionBtn: document.getElementById("connectNotionBtn"),
+    notionStatus: document.getElementById("notionStatus"),
+    notionConnectionHint: document.getElementById("notionConnectionHint"),
+    ticktickConnectionHint: document.getElementById("ticktickConnectionHint"),
+    ticktickCaptureHint: document.getElementById("ticktickCaptureHint"),
+    refreshConnectionsBtn: document.getElementById("refreshConnectionsBtn"),
+    reauthGoogleBtn: document.getElementById("reauthGoogleBtn"),
+    preferencesStatus: document.getElementById("preferencesStatus"),
+    googleStatus: document.getElementById("googleStatusSecondary"),
+    tagsLoadStatus: document.getElementById("tagsLoadStatus"),
+    captureSource: document.getElementById("captureSource"),
+    captureCount: document.getElementById("captureCount"),
+    captureOptionsBtn: document.getElementById("captureOptionsBtn"),
+    captureOptions: document.getElementById("captureOptions"),
+    previewTitle: document.getElementById("previewTitle"),
+    previewExcerpt: document.getElementById("previewExcerpt"),
+    previewDomain: document.getElementById("previewDomain"),
+    previewImage: document.getElementById("previewImage"),
+    previewCoverFallback: document.getElementById("previewCoverFallback"),
+    captureEditor: document.getElementById("captureEditor"),
+    editCaptureBtn: document.getElementById("editCaptureBtn"),
+    doneEditingBtn: document.getElementById("doneEditingBtn"),
+    advancedOptionsBtn: document.getElementById("advancedOptionsBtn"),
+    articleOption: document.getElementById("articleOption"),
+    summaryOption: document.getElementById("summaryOption"),
+    customOption: document.getElementById("customOption"),
+    libraryDestination: document.getElementById("libraryDestination"),
+    closePopupBtn: document.getElementById("closePopupBtn"),
+    saveButtonLabel: document.getElementById("saveButtonLabel"),
+    statusTitle: document.getElementById("statusTitle"),
     ticktickConnectHint: document.getElementById("ticktickConnectHint"),
 
     tabSave: document.getElementById("tabSave"),
@@ -117,6 +147,206 @@ let availableTags = [];
 let selectedTags = [];
 let activeTagSuggestionIndex = -1;
 let activeProjectSuggestionIndex = -1;
+let ticktickAccess = "checking";
+let authPending = false;
+let savePending = false;
+let capturePending = false;
+let preferencesLoaded = false;
+let connectionsPending = false;
+let projectsPending = false;
+let emailPending = false;
+let quizPending = false;
+let notionSelectionPending = false;
+let projectsRefreshQueued = false;
+let captureFormat = "article";
+let lastKnownProjectId = "";
+
+let ticktickSelected = false;
+let notionSelected = false;
+let draftOwnerId = null;
+const syncUI = KnowviaSync.create({
+    apiFetch,
+    getOwner: async () => {
+        const stored = await storageGet([STORAGE_KEYS.userId, STORAGE_KEYS.token, STORAGE_KEYS.signedIn, STORAGE_KEYS.legacyUserId, STORAGE_KEYS.legacyToken]);
+        return { ...resolveAuthState(stored), session: stored[STORAGE_KEYS.token] || stored[STORAGE_KEYS.legacyToken] || "" };
+    },
+    readLocal: async key => (await storageGet([key]))[key],
+    writeLocal: (key, value) => storageSet({ [key]: value }),
+    isBlocked: () => savePending || authPending
+});
+function renderDestinationSelection()
+{
+    const selected = ticktickSelected;
+    el.projectField.hidden = false;
+    setProjectPickerDisabled(!selected || ticktickAccess !== "connected" || authPending || savePending);
+    el.openCreateProjectBtn.disabled = !selected || ticktickAccess !== "connected" || authPending || savePending;
+    el.libraryDestination.hidden = false;
+    el.tagsField.hidden = false;
+    document.querySelector(".save-options-section").hidden = true;
+    for (const input of [el.useSummaryAi, el.useTagsAi, el.mergeSummaryWithContent]) input.closest("label").hidden = !selected;
+    el.connectTickTickFromSaveBtn.classList.toggle("selected", selected);
+    el.connectTickTickFromSaveBtn.setAttribute("aria-pressed", String(selected));
+    el.connectTickTickFromSaveBtn.setAttribute("aria-label", selected ? "Disable TickTick for this capture" : "Enable TickTick for this capture");
+    el.ticktickCaptureHint.textContent = selected ? ticktickAccess === "connected" ? "Save as a task with link" : "Connect account" : "Not selected";
+    document.getElementById("notionSaveConfig").hidden = false;
+    if (!selected) { hideProjectMenu(); hideTagSuggestions(); hideProjectCreatePanel(); }
+    updateSaveAvailability();
+}
+const notionUI = KnowviaNotion.create({
+    isSelected: () => notionSelected,
+    toggleSelected: () => { notionSelected = !notionSelected; renderDestinationSelection(); },
+    apiFetch,
+    getOwner: async () => {
+        const stored = await storageGet([STORAGE_KEYS.userId, STORAGE_KEYS.token, STORAGE_KEYS.signedIn,
+            STORAGE_KEYS.legacyUserId, STORAGE_KEYS.legacyToken, STORAGE_KEYS.ticktickConnected]);
+        return { ...resolveAuthState(stored), session: stored[STORAGE_KEYS.token] || stored[STORAGE_KEYS.legacyToken] || "" };
+    },
+    readLocal: async key => (await storageGet([key]))[key],
+    writeLocal: (key, value) => storageSet({ [key]: value }),
+    connect: () => startConnection("Notion", "startNotionAuth"),
+    isBlocked: () => savePending || authPending,
+    onMutation: pending => { notionSelectionPending = pending; updateSaveAvailability(); },
+    onChange: () => updateSaveAvailability(),
+    notify: (message, type, title) => {
+        setStatus(message, type);
+        if (title) el.statusTitle.textContent = title;
+    }
+});
+
+function setSaveButtonLabel(label)
+{
+    el.saveButtonLabel.textContent = label;
+    el.saveArticleBtn?.querySelector(".save-icon use")?.setAttribute("href", label === "Capture saved" ? "#icon-check" : "#icon-download");
+}
+
+function defaultSaveLabel()
+{
+    if (ticktickSelected && (ticktickAccess !== "connected" || !el.projectSelect.value) || notionSelected && !notionUI.hasDestination())
+        return "Choose destinations";
+    if (ticktickSelected && notionSelected) return "Save to 2 platforms";
+    if (ticktickSelected) return "Save to TickTick";
+    if (notionSelected) return "Save to Notion";
+    return "Save to Knowvia";
+}
+
+function updateSaveAvailability()
+{
+    if (el.saveArticleBtn) el.saveArticleBtn.disabled = savePending || capturePending || authPending || notionSelectionPending || (ticktickSelected && ticktickAccess === "checking");
+    if (el.saveButtonLabel && !savePending && el.saveArticleBtn.dataset.state !== "success") setSaveButtonLabel(defaultSaveLabel());
+    window.KnowviaV2?.refresh();
+}
+
+function updateCapturePreview(source)
+{
+    if (source && el.captureSource)
+    {
+        const sources = { "CURRENT PAGE": "Web page", "SELECTED TEXT": "Selection", "FROM YOUR CLIPBOARD": "Clipboard", "MANUAL CAPTURE": "Note", "READY FOR YOUR NEXT CAPTURE": "New capture" };
+        el.captureSource.textContent = sources[source] || source;
+    }
+    if (el.captureCount) el.captureCount.textContent = `${(el.rawText?.value.length || 0).toLocaleString()} characters`;
+    el.previewTitle.textContent = el.title.value.trim() || "Untitled capture";
+    el.previewTitle.title = el.title.value.trim();
+    el.previewExcerpt.textContent = el.rawText.value.trim().replace(/\s+/g, " ").slice(0, 240) || "Capture a page, select a passage, or add a note of your own.";
+    try
+    {
+        const url = new URL(el.url.value);
+        el.previewDomain.textContent = ["https:", "http:"].includes(url.protocol) ? url.hostname.replace(/^www\./, "") : "Personal note";
+    }
+    catch { el.previewDomain.textContent = "Personal note"; }
+    window.KnowviaV2?.refresh();
+}
+
+function setPreviewImage(value)
+{
+    // Presentation only: no image URL or asset is included in the save payload.
+    el.previewImage.hidden = true;
+    el.previewImage.removeAttribute("src");
+    el.previewCoverFallback.hidden = false;
+    try
+    {
+        const url = new URL(value);
+        if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) return;
+        el.previewImage.src = url.href;
+    }
+    catch { /* Pages without a safe cover keep the neutral document artwork. */ }
+}
+
+function setCaptureEditor(open, focus = true)
+{
+    el.captureEditor.hidden = false;
+    el.editCaptureBtn.setAttribute("aria-expanded", String(open));
+    if (open && focus) el.title.focus();
+    if (!open && focus) el.editCaptureBtn.focus();
+}
+
+function selectCaptureFormat(format, focusEditor = true)
+{
+    captureFormat = format;
+    for (const [value, button] of [["article", el.articleOption], ["summary", el.summaryOption], ["custom", el.customOption]])
+    {
+        const selected = value === format;
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-checked", String(selected));
+        button.tabIndex = selected ? 0 : -1;
+    }
+    if (format !== "custom")
+    {
+        el.useSummaryAi.checked = format === "summary";
+        el.mergeSummaryWithContent.checked = format === "summary";
+        el.mergeSummaryWithContent.disabled = format !== "summary";
+        setCaptureEditor(false, false);
+    }
+    else setCaptureEditor(true, focusEditor);
+}
+
+function renderTickTickState(state, message)
+{
+    ticktickAccess = state;
+    updateSaveAvailability();
+    const connected = state === "connected";
+    const checking = state === "checking";
+    const error = state === "error";
+    const label = connected ? "Connected" : checking ? "Checking…" : error ? "Check connection" : "Not connected";
+    if (el.ticktickStatusSecondary)
+    {
+        el.ticktickStatusSecondary.textContent = label;
+        el.ticktickStatusSecondary.className = `status-pill status-pill--${connected ? "success" : checking ? "loading" : error ? "warning" : "danger"}`;
+    }
+    if (el.projectField) el.projectField.hidden = false;
+    if (el.libraryDestination) el.libraryDestination.hidden = false;
+    if (el.ticktickConnectHint) el.ticktickConnectHint.hidden = connected || checking;
+
+    if (el.ticktickConnectionHint) el.ticktickConnectionHint.textContent = message || (connected
+        ? "Access verified. Enable TickTick on the captures you want to send."
+        : checking ? "Checking access to your lists…" : "Connect to choose TickTick as an optional destination.");
+    if (el.connectTickTickBtn)
+    {
+        el.connectTickTickBtn.textContent = connected || error ? "Reconnect" : "Connect";
+        el.connectTickTickBtn.setAttribute("aria-label", `${el.connectTickTickBtn.textContent} TickTick account`);
+        el.connectTickTickBtn.title = el.connectTickTickBtn.getAttribute("aria-label");
+    }
+    renderDestinationSelection();
+}
+
+async function loadNotionStatus()
+{
+    return notionUI.refresh();
+}
+
+async function refreshConnections()
+{
+    if (connectionsPending || authPending || emailPending || quizPending) return;
+    connectionsPending = true;
+    el.refreshConnectionsBtn.disabled = true;
+    el.refreshConnectionsBtn.setAttribute("aria-busy", "true");
+    try { await Promise.allSettled([loadTickTickProjects(), loadNotionStatus(), loadUserPreferences()]); }
+    finally
+    {
+        connectionsPending = false;
+        el.refreshConnectionsBtn.disabled = authPending;
+        el.refreshConnectionsBtn.removeAttribute("aria-busy");
+    }
+}
 
 
 // ─── Storage Helpers ─────────────────────────────────────────────────────────
@@ -150,57 +380,13 @@ function storageRemove(keys)
 
 const ICONS =
 {
-    sun:
-    `
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-        >
-            <circle cx="12" cy="12" r="5"/>
-
-            <line x1="12" y1="1" x2="12" y2="3"/>
-            <line x1="12" y1="21" x2="12" y2="23"/>
-
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-
-            <line x1="1" y1="12" x2="3" y2="12"/>
-            <line x1="21" y1="12" x2="23" y2="12"/>
-
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-        </svg>
-    `,
-
-    moon:
-    `
-        <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-        >
-            <path
-                d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-            />
-        </svg>
-    `
+    sun: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-sun"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-moon"/></svg>'
 };
 
 function applyTheme(theme)
 {
+    try { localStorage.setItem("knowvia_paint_theme", theme === "dark" ? "dark" : "light"); } catch { /* Optional theme-only cache. */ }
     document.documentElement.setAttribute("data-theme", theme);
 
     if (el.themeToggleBtn)
@@ -270,8 +456,15 @@ function setStatus(message, type = "info")
     el.statusBar.className =
         `status-bar status-bar--${type}`;
 
+    const statusGlyph = type === "success" ? "check" : type === "loading" ? "refresh" : ["danger", "warning"].includes(type) ? "alert" : "info";
+    el.statusBar.querySelector(".status-icon use")?.setAttribute("href", `#icon-${statusGlyph}`);
     el.statusBar.title =
         normalizedMessage;
+    if (el.statusTitle) el.statusTitle.textContent = type === "loading"
+        ? (savePending ? "Saving your capture…" : authPending ? "Connecting your account…" : "Getting things ready…")
+        : type === "danger" ? "Let's try that again" : type === "warning" ? "A little attention needed"
+        : type === "success" ? normalizedMessage.startsWith("Saved to Knowvia") ? "Saved in Knowvia" : "Completed" : "Ready when you are";
+    window.KnowviaV2?.refresh();
 }
 
 
@@ -301,18 +494,9 @@ function switchTab(tab)
         !isSave
     );
 
-    el.tabSave?.setAttribute(
-        "aria-selected",
-        String(isSave)
-    );
-
-    el.tabSettings?.setAttribute(
-        "aria-selected",
-        String(!isSave)
-    );
-
-    el.tabSave.tabIndex = isSave ? 0 : -1;
-    el.tabSettings.tabIndex = isSave ? -1 : 0;
+    el.tabSettings?.setAttribute("aria-expanded", String(!isSave));
+    el.tabSave.tabIndex = 0;
+    el.tabSettings.tabIndex = 0;
 
     hideTagSuggestions();
     hideProjectMenu(false);
@@ -354,6 +538,11 @@ function resolveAuthState(stored = {})
 
 function setConnectedUI(isSignedIn, isTickTickConnected = false)
 {
+    document.documentElement.removeAttribute("data-booting");
+    if (!isSignedIn) {
+        notionUI.reset(); syncUI.reset();
+        ticktickSelected = false; notionSelected = false; renderDestinationSelection();
+    }
     if (el.onboardingView)
     {
         el.onboardingView.style.display =
@@ -425,6 +614,8 @@ function setConnectedUI(isSignedIn, isTickTickConnected = false)
     }
     // Both existing buttons trigger the same flow; expose one clear action.
     if (el.reconnectTickTickBtn) el.reconnectTickTickBtn.hidden = true;
+    // Cached linking state is never proof of current provider access.
+    renderTickTickState(ticktickAccess);
 }
 
 
@@ -432,6 +623,8 @@ function setConnectedUI(isSignedIn, isTickTickConnected = false)
 
 async function apiFetch(path, options = {})
 {
+    const { timeoutMs = 60000, signal, ...requestOptions } = options;
+    const mutating = ["POST", "PUT", "DELETE", "PATCH"].includes(options.method);
     const stored = await storageGet(
     [
         STORAGE_KEYS.token,
@@ -442,10 +635,13 @@ async function apiFetch(path, options = {})
         stored[STORAGE_KEYS.token] ||
         stored[STORAGE_KEYS.legacyToken];
 
-    const response = await fetch(
+    let response;
+    try { response = await fetch(
         `${API_BASE}${path}`,
         {
-            ...options,
+            ...requestOptions,
+            redirect: "error",
+            signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
 
             headers:
             {
@@ -460,24 +656,45 @@ async function apiFetch(path, options = {})
                 ...options.headers
             }
         }
-    );
+    ); }
+    catch (error)
+    {
+        if (signal?.aborted) throw Object.assign(new Error("Request cancelled"), { code: "REQUEST_ABORTED" });
+        throw Object.assign(new Error(error.name === "TimeoutError"
+            ? "The request timed out. If you were saving, check your content before retrying."
+            : "Cannot reach Knowvia. Check your connection and try again."), { uncertain: mutating });
+    }
 
     const contentType =
         response.headers.get("content-type") || "";
 
-    const data =
-        contentType.includes("application/json")
-            ? await response.json()
-            : await response.text();
+    let data;
+    try
+    {
+        data = contentType.includes("application/json") ? await response.json() : null;
+    }
+    catch
+    {
+        throw Object.assign(new Error("The server response could not be read. Check your content before retrying a save."), { uncertain: mutating });
+    }
 
-    if (!response.ok)
+    if (!response.ok || data?.status !== "success")
     {
         const message =
             typeof data === "object" && data?.message
                 ? data.message
-                : `Request failed with status ${response.status}`;
+                : response.ok ? "The server response could not be confirmed. Refresh before trying again."
+                    : `Request failed with status ${response.status}`;
 
-        throw new Error(message);
+        if (response.status === 401 && /invalid.*token|expired.*token|missing authorization|invalid token user/i.test(message)) {
+            await storageSet({ [STORAGE_KEYS.token]: null, [STORAGE_KEYS.legacyToken]: null, [STORAGE_KEYS.signedIn]: false });
+            setConnectedUI(false, false);
+        }
+        const retryAfter = response.headers.get("retry-after");
+        throw Object.assign(new Error(message), { status: response.status,
+            code: typeof data?.code === "string" ? data.code : undefined,
+            retryAfter: /^\d{1,7}$/.test(retryAfter || "") ? Number(retryAfter) : undefined,
+            uncertain: mutating && response.ok });
     }
 
     return data;
@@ -494,7 +711,7 @@ function getSelectedProjectName()
     return (
         selectedOption?.textContent?.trim()
         || el.projectPickerLabel?.textContent?.trim()
-        || "Inbox"
+        || "Choose a list"
     );
 }
 
@@ -541,7 +758,7 @@ function restoreProjectSearchValue()
             : "";
 
     el.projectSearchInput.placeholder =
-        "Search or choose a list…";
+        selectedProjectId ? "Search or choose a list…" : "Choose a TickTick list…";
 
     el.projectSearchInput.removeAttribute(
         "title"
@@ -588,7 +805,7 @@ function getVisibleProjectOptions()
 
     return Array.from(
         el.projectMenu.querySelectorAll(
-            ".picker-option[data-project-id]:not([hidden])"
+            ".picker-option[data-project-id]:not([hidden]):not(:disabled)"
         )
     );
 }
@@ -696,6 +913,19 @@ function filterProjectOptions(query = "")
     el.projectSearchInput?.removeAttribute("aria-activedescendant");
 }
 
+// Place both shared pickers inside the scrolling viewport, keeping the input
+// visible rather than scrolling the entire form to reveal a dropdown.
+function positionPickerMenu(menu, control)
+{
+    const viewport = el.mainScroll.getBoundingClientRect();
+    const anchor = control.getBoundingClientRect();
+    const below = viewport.bottom - anchor.bottom - 8;
+    const above = anchor.top - viewport.top - 8;
+    const opensUp = below < Math.min(menu.scrollHeight, 150) && above > below;
+    menu.classList.toggle("opens-up", opensUp);
+    menu.style.maxHeight = `${Math.max(36, Math.min(150, opensUp ? above : below))}px`;
+}
+
 function showProjectMenu(query = "")
 {
     if (
@@ -725,7 +955,7 @@ function showProjectMenu(query = "")
     );
 
     el.projectPickerBtn.classList.add("open");
-    el.projectMenu.scrollIntoView({ block: "nearest" });
+    positionPickerMenu(el.projectMenu, el.projectPickerBtn);
 }
 
 function toggleProjectMenu()
@@ -871,6 +1101,7 @@ function setSelectedProject(projectId, shouldSave = true)
 
     const normalizedProjectId =
         String(projectId || "");
+    lastKnownProjectId = normalizedProjectId;
 
     const option =
         Array.from(el.projectSelect.options)
@@ -885,11 +1116,12 @@ function setSelectedProject(projectId, shouldSave = true)
     }
 
     el.projectSelect.value = normalizedProjectId;
+    updateSaveAvailability();
 
     const destinationName =
         normalizedProjectId
             ? option.textContent || "Unnamed Project"
-            : "Inbox";
+            : "Choose a list";
 
     if (el.projectPickerLabel)
     {
@@ -905,7 +1137,7 @@ function setSelectedProject(projectId, shouldSave = true)
                 : "";
 
         el.projectSearchInput.placeholder =
-            "Search or choose a list…";
+            normalizedProjectId ? "Search or choose a list…" : "Choose a TickTick list…";
 
         el.projectSearchInput.removeAttribute(
             "title"
@@ -956,7 +1188,7 @@ function createInboxOption()
         document.createElement("option");
 
     option.value = "";
-    option.textContent = "Inbox";
+    option.textContent = "Choose a list";
 
     el.projectSelect.appendChild(option);
 
@@ -966,6 +1198,8 @@ function createInboxOption()
     button.type = "button";
     button.className = "picker-option";
     button.dataset.projectId = "";
+    button.disabled = true;
+    button.setAttribute("aria-disabled", "true");
     button.setAttribute("role", "option");
     button.tabIndex = -1;
 
@@ -975,23 +1209,20 @@ function createInboxOption()
     icon.className = "picker-option-icon";
     icon.innerHTML =
     `
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 5.75A1.75 1.75 0 0 1 5.75 4h12.5A1.75 1.75 0 0 1 20 5.75v12.5A1.75 1.75 0 0 1 18.25 20H5.75A1.75 1.75 0 0 1 4 18.25V5.75Z"/>
-            <path d="M4 14h4l1.5 2h5l1.5-2h4"/>
-        </svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-inbox"/></svg>
     `;
 
     const name =
         document.createElement("span");
 
     name.className = "picker-option-name";
-    name.textContent = "Inbox";
+    name.textContent = "Choose a list";
 
     const check =
         document.createElement("span");
 
     check.className = "picker-option-check";
-    check.textContent = "✓";
+    check.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg>';
 
     button.appendChild(icon);
     button.appendChild(name);
@@ -1039,9 +1270,7 @@ function createProjectOption(project)
     icon.className = "picker-option-icon";
     icon.innerHTML =
     `
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M3.75 6.75A1.75 1.75 0 0 1 5.5 5h4.18c.46 0 .9.18 1.22.5l1.1 1.1c.33.33.77.52 1.23.52h5.27a1.75 1.75 0 0 1 1.75 1.75v8.63a1.75 1.75 0 0 1-1.75 1.75h-13a1.75 1.75 0 0 1-1.75-1.75V6.75Z"/>
-        </svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-folder"/></svg>
     `;
 
     const name =
@@ -1054,7 +1283,7 @@ function createProjectOption(project)
         document.createElement("span");
 
     check.className = "picker-option-check";
-    check.textContent = "✓";
+    check.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg>';
 
     button.appendChild(icon);
     button.appendChild(name);
@@ -1104,7 +1333,7 @@ function renderProjects(projects, selectedProjectId = "")
 
         emptyMessage.className = "picker-empty-state";
         emptyMessage.textContent =
-            "No TickTick lists yet. New articles will be saved to Inbox.";
+            "No TickTick lists yet. Create a list or save to Knowvia only.";
 
         el.projectMenu.appendChild(emptyMessage);
     }
@@ -1140,6 +1369,7 @@ function renderProjects(projects, selectedProjectId = "")
 
 async function createTickTickProject()
 {
+    if (el.confirmCreateProjectBtn?.disabled || ticktickAccess !== "connected" || savePending) return;
     const projectName =
         el.projectNameInput?.value.trim() || "";
 
@@ -1185,7 +1415,9 @@ async function createTickTickProject()
         {
             button.disabled = true;
             button.textContent = "Creating...";
+            button.setAttribute("aria-busy", "true");
         }
+        el.cancelCreateProjectBtn.disabled = true;
 
         if (el.projectNameInput)
         {
@@ -1259,10 +1491,12 @@ async function createTickTickProject()
     }
     finally
     {
+        el.cancelCreateProjectBtn.disabled = false;
         if (button)
         {
             button.disabled = false;
             button.textContent = originalText;
+            button.removeAttribute("aria-busy");
         }
 
         if (el.projectNameInput)
@@ -1274,110 +1508,39 @@ async function createTickTickProject()
 
 async function loadTickTickProjects()
 {
-    if (
-        !el.projectSelect ||
-        !el.projectPickerBtn
-    )
-    {
-        return;
-    }
-
+    if (projectsPending) { projectsRefreshQueued = true; return; }
+    projectsPending = true;
+    renderTickTickState("checking");
+    setProjectPickerDisabled(true);
     try
     {
-        const stored = await storageGet(
-        [
-            STORAGE_KEYS.projects,
-            STORAGE_KEYS.selectedProjectId
-        ]);
-
-        const cachedProjects =
-            stored[STORAGE_KEYS.projects];
-
-        const selectedProjectId =
-            stored[STORAGE_KEYS.selectedProjectId] || "";
-
-        if (Array.isArray(cachedProjects))
-        {
-            renderProjects(
-                cachedProjects,
-                selectedProjectId
-            );
-        }
-        else
-        {
-            if (el.projectPickerLabel)
-            {
-                el.projectPickerLabel.textContent =
-                    "Loading lists...";
-            }
-
-            if (el.projectSearchInput)
-            {
-                el.projectSearchInput.value =
-                    "Loading lists...";
-            }
-
-            setProjectPickerDisabled(true);
-        }
-
-        const result = await apiFetch(
-            "/content/projects",
-            {
-                method: "GET"
-            }
-        );
-
-        const projects =
-            Array.isArray(result?.data)
-                ? result.data
-                : [];
-
-        await storageSet(
-        {
-            [STORAGE_KEYS.projects]:
-                projects
-        });
-
-        renderProjects(
-            projects,
-            selectedProjectId
-        );
+        const stored = await storageGet([STORAGE_KEYS.selectedProjectId]);
+        lastKnownProjectId = stored[STORAGE_KEYS.selectedProjectId] || "";
+        const result = await apiFetch("/content/projects", { method: "GET", cache: "no-store" });
+        if (result?.status !== "success" || !Array.isArray(result.data))
+            throw new Error("Could not verify your TickTick lists. Refresh to try again.");
+        renderProjects(result.data, stored[STORAGE_KEYS.selectedProjectId] || "");
+        await storageSet({ [STORAGE_KEYS.projects]: result.data });
+        renderTickTickState("connected");
     }
     catch (error)
     {
-        console.warn(
-            "Failed to load TickTick projects:",
-            error
-        );
-
-        const stored = await storageGet(
-        [
-            STORAGE_KEYS.projects,
-            STORAGE_KEYS.selectedProjectId
-        ]);
-
-        const cachedProjects =
-            stored[STORAGE_KEYS.projects];
-
-        if (Array.isArray(cachedProjects))
+        // No TickTick status route exists. A successful list request verifies access;
+        // a network/server failure leaves status unknown, never optimistically connected.
+        const disconnected = error.status === 401 && /TickTick account is not connected/i.test(error.message);
+        setProjectPickerDisabled(true);
+        renderTickTickState(disconnected ? "disconnected" : "error", disconnected ? undefined : error.message);
+    }
+    finally
+    {
+        projectsPending = false;
+        if (projectsRefreshQueued)
         {
-            renderProjects(
-                cachedProjects,
-                stored[STORAGE_KEYS.selectedProjectId] || ""
-            );
+            projectsRefreshQueued = false;
+            await loadTickTickProjects();
         }
-        else
-        {
-            renderProjects([], "");
-        }
-
-        setStatus(
-            "Could not refresh lists. Showing saved data.",
-            "warning"
-        );
     }
 }
-
 
 // ─── Tags ────────────────────────────────────────────────────────────────────
 
@@ -1495,14 +1658,14 @@ function renderSelectedTags()
             document.createElement("span");
 
         text.className = "tag-chip-text";
-        text.textContent = `#${tag}`;
+        text.textContent = tag;
 
         const removeButton =
             document.createElement("button");
 
         removeButton.type = "button";
         removeButton.className = "tag-chip-remove";
-        removeButton.textContent = "×";
+        removeButton.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-close"/></svg>';
         removeButton.title = `Remove ${tag}`;
         removeButton.setAttribute(
             "aria-label",
@@ -1744,7 +1907,7 @@ function renderTagSuggestions()
     }
 
     el.tagSuggestions.style.display = "block";
-    el.tagSuggestions.scrollIntoView({ block: "nearest" });
+    positionPickerMenu(el.tagSuggestions, el.tagsInputBox);
 
     el.tagInput.setAttribute(
         "aria-expanded",
@@ -1764,6 +1927,7 @@ function renderTagSuggestions()
 
 async function loadTags()
 {
+    el.tagsLoadStatus.hidden = true;
     try
     {
         const stored = await storageGet(
@@ -1790,6 +1954,7 @@ async function loadTags()
                 method: "GET"
             }
         );
+        if (!Array.isArray(result?.data)) throw new Error("Tag suggestions could not be read.");
 
         availableTags =
             Array.isArray(result?.data)
@@ -1808,10 +1973,7 @@ async function loadTags()
     }
     catch (error)
     {
-        console.warn(
-            "Failed to load tags:",
-            error
-        );
+        el.tagsLoadStatus.hidden = false;
     }
 }
 
@@ -2055,7 +2217,7 @@ async function copyToClipboardWithFeedback(text, button)
 
         if (button)
         {
-            button.textContent = "Copied! ✓";
+            button.textContent = "Copied";
             button.style.color = "var(--green)";
             button.style.borderColor = "var(--green)";
         }
@@ -2141,18 +2303,22 @@ function showCurrentEmail(email, isEnabled)
 function renderAuthUI(state)
 {
     const pending = state?.status === "pending";
+    authPending = pending;
+    notionUI.setBlocked(pending);
     const failed = state?.status === "error";
     const provider = state?.provider || "Google";
     const message = pending
         ? `Continue in the ${provider} window. This popup will reopen when you're done.`
         : failed ? state.message : state?.status === "success" ? `${provider} connected successfully.` : "";
 
-    for (const button of [el.connectGoogleBtn, el.connectTickTickBtn, el.connectTickTickFromSaveBtn, el.reconnectTickTickBtn])
+    for (const button of [el.connectGoogleBtn, el.reauthGoogleBtn, el.connectTickTickBtn, el.connectTickTickFromSaveBtn, el.reconnectTickTickBtn, el.connectNotionBtn])
     {
         if (!button) continue;
         button.disabled = pending;
         button.setAttribute("aria-busy", String(pending));
     }
+    updateSaveAvailability();
+    if (el.refreshConnectionsBtn) el.refreshConnectionsBtn.disabled = pending || connectionsPending;
     // Keep the existing connected-state rule for the reconnect button.
     if (!pending && el.reconnectTickTickBtn?.hidden) el.reconnectTickTickBtn.disabled = true;
     const googleLabel = el.connectGoogleBtn?.querySelector(".google-auth-label");
@@ -2163,17 +2329,31 @@ function renderAuthUI(state)
         el.onboardingAuthStatus.textContent = message;
         el.onboardingAuthStatus.dataset.state = failed ? "error" : "info";
     }
-    if (message) setStatus(message, failed ? "danger" : pending ? "info" : "success");
+    // Connection outcomes stay with that integration; they do not replace capture feedback.
+    const key = provider.toLowerCase();
+    const anchor = provider === "Notion" ? el.connectNotionBtn : provider === "TickTick" ? el.connectTickTickBtn : el.reauthGoogleBtn;
+    let feedback = document.getElementById(`${key}AuthFeedback`);
+    if (!feedback && anchor) {
+        feedback = document.createElement("p"); feedback.id = `${key}AuthFeedback`;
+        feedback.className = "v2-integration-feedback"; feedback.setAttribute("role", "status");
+        anchor.closest(".settings-card")?.append(feedback);
+    }
+    if (feedback) { feedback.textContent = message; feedback.hidden = !message; feedback.dataset.state = state?.status || ""; }
+    const row = document.querySelector(`.v2-destination-row[data-provider="${key}"] .v2-provider-config`);
+    let inline = document.getElementById(`${key}CaptureAuthFeedback`);
+    if (!inline && row) { inline = document.createElement("p"); inline.id = `${key}CaptureAuthFeedback`; inline.className = "v2-integration-feedback"; inline.setAttribute("role", "status"); row.append(inline); }
+    if (inline) { inline.textContent = message; inline.hidden = !message; inline.dataset.state = state?.status || ""; }
 }
 
 function startConnection(provider, action)
 {
+    if (authPending || savePending || notionSelectionPending) return;
     renderAuthUI({ provider, status: "pending" });
     try
     {
         chrome.runtime.sendMessage({ action }, response =>
         {
-            const error = chrome.runtime.lastError?.message || response?.error;
+            const error = chrome.runtime.lastError ? "Could not open the connection window. Please try again." : response?.error;
             if (error || !response?.started)
             {
                 renderAuthUI({ provider, status: "error", message: error || "Could not open the connection window. Please try again." });
@@ -2182,7 +2362,7 @@ function startConnection(provider, action)
     }
     catch (error)
     {
-        renderAuthUI({ provider, status: "error", message: error.message || "Could not open the connection window." });
+        renderAuthUI({ provider, status: "error", message: "Could not open the connection window. Please try again." });
     }
 }
 
@@ -2197,383 +2377,229 @@ function connectTickTick()
 
 async function saveArticle()
 {
-    const button =
-        el.saveArticleBtn;
-
-    const originalText =
-        button?.textContent || "Save Article";
-
+    if (savePending || capturePending || authPending || notionSelectionPending || document.querySelector("dialog[open]") || (ticktickSelected && ticktickAccess === "checking")) return;
+    savePending = true;
+    const button = el.saveArticleBtn;
+    const controls = [...el.panelSave.querySelectorAll("input, textarea, button")];
+    const previouslyDisabled = controls.map(control => control.disabled);
+    let saved = false;
     try
     {
-        const stored = await storageGet(
-        [
-            STORAGE_KEYS.token,
-            STORAGE_KEYS.legacyToken
-        ]);
-
-        const token =
-            stored[STORAGE_KEYS.token] ||
-            stored[STORAGE_KEYS.legacyToken];
-
-        if (!token)
+        const saveIdentity = await storageGet([STORAGE_KEYS.userId, STORAGE_KEYS.token, STORAGE_KEYS.legacyUserId, STORAGE_KEYS.legacyToken]);
+        if (ticktickSelected && ticktickAccess !== "connected") throw new Error("Connect TickTick or deselect it before saving.");
+        if (ticktickSelected && !el.projectSelect.value)
         {
-            throw new Error(
-                "Authentication token is missing. Please sign in again."
-            );
+            el.projectSearchInput.focus();
+            showProjectMenu("");
+            throw new Error("Choose a TickTick list before saving, or deselect TickTick.");
         }
-
-        const projectId =
-            el.projectSelect?.value || "";
-
-        const destinationName =
-            projectId
-                ? el.projectPickerLabel?.textContent?.trim() ||
-                    "selected project"
-                : "TickTick Inbox";
-
-        const tags =
-            getTagsForSave();
-
-        const payload =
-        {
-            title:
-                el.title?.value.trim(),
-
-            url:
-                el.url?.value.trim(),
-
-            rawText:
-                el.rawText?.value.trim(),
-
-            projectId:
-                projectId || null,
-
-            user_input:
-                tags
-                    .map((tag) => `#${tag}`)
-                    .join(" "),
-
-            use_summaryAi:
-                Boolean(el.useSummaryAi?.checked),
-
-            use_tagsAi:
-                Boolean(el.useTagsAi?.checked),
-
-            use_quiz:
-                Boolean(el.useQuiz?.checked),
-
-            mergeSummaryWithContent:
-                Boolean(el.mergeSummaryWithContent?.checked)
+        if (notionSelected && !notionUI.hasDestination()) throw new Error("Choose a verified Notion destination or deselect Notion before saving.");
+        const payload = {
+            title: el.title.value.trim(),
+            url: el.url.value.trim(),
+            rawText: el.rawText.value.trim(),
+            destinations:
+            {
+                ticktick: ticktickSelected ?
+                {
+                    enabled: true,
+                    projectId: el.projectSelect.value || lastKnownProjectId || null
+                } :
+                {
+                    enabled: false
+                },
+                notion: notionSelected ?
+                {
+                    enabled: true,
+                    ...notionUI.destination()
+                } :
+                {
+                    enabled: false
+                }
+            },
+            ...(ticktickSelected ?
+            {
+                ticktickOptions:
+                {
+                    useAiSummary: Boolean(el.useSummaryAi.checked),
+                    useAiTags: Boolean(el.useTagsAi.checked),
+                    mergeSummaryWithContent: Boolean(el.mergeSummaryWithContent.checked),
+                    tags: getTagsForSave()
+                }
+            } :
+            {}),
+            user_input: getTagsForSave().map(tag => `#${tag}`).join(" "),
+            use_summaryAi: false,
+            use_tagsAi: false,
+            use_quiz: false,
+            mergeSummaryWithContent: false
         };
-
-        if (!payload.title)
+        for (const [key, label, limit] of [
+                ["title", "Title", 500],
+                ["rawText", "Content", 100000]
+            ])
         {
-            el.title?.setAttribute("aria-invalid", "true");
-            el.title?.focus();
-            throw new Error(
-                "Title is required."
-            );
+            if (!payload[key] || payload[key].length > limit)
+            {
+                el[key].setAttribute("aria-invalid", "true");
+                setCaptureEditor(true, false);
+                el[key].focus();
+                const message = !payload[key] ? `${label} is required${key === "rawText" ? " by this server, including URL captures" : ""}.` : `${label} must be at most ${limit.toLocaleString()} characters.`;
+                const error = document.getElementById(`${key}Error`);
+                error.textContent = message;
+                error.hidden = false;
+                throw new Error(message);
+            }
         }
-
-        if (!payload.rawText)
+        button.disabled = true;
+        setSaveButtonLabel("Saving your capture…");
+        button.setAttribute("aria-busy", "true");
+        delete button.dataset.state;
+        el.refreshPageBtn.disabled = true;
+        controls.forEach(control =>
         {
-            el.rawText?.setAttribute("aria-invalid", "true");
-            el.rawText?.focus();
-            throw new Error(
-                "Article text is required."
-            );
-        }
-
-        if (button)
-        {
-            button.disabled = true;
-            button.textContent = "Saving...";
-            button.style.opacity = "0.8";
-            button.setAttribute(
-                "aria-busy",
-                "true"
-            );
-        }
-
+            control.disabled = true;
+        });
         hideTagSuggestions();
         hideProjectMenu();
-
-        setStatus(
-            "Saving article...",
-            "info"
-        );
-
-        await apiFetch(
-            "/content",
-            {
-                method: "POST",
-                body: JSON.stringify(payload)
-            }
-        );
-
-        if (button)
+        setStatus("Saving to your knowledge collection…", "loading");
+        window.KnowviaV2?.reset();
+        const result = await apiFetch("/content",
         {
-            button.textContent = "Saved! ✓";
-            button.style.backgroundColor = "var(--green)";
-            button.style.borderColor = "var(--green)";
-            button.style.opacity = "1";
-            button.removeAttribute(
-                "aria-busy"
-            );
-        }
-
-        setStatus(
-            `Saved to ${destinationName} successfully.`,
-            "success"
-        );
-
-        if (el.title)
+            method: "POST",
+            body: JSON.stringify(payload)
+        });
+        const currentIdentity = await storageGet([STORAGE_KEYS.userId, STORAGE_KEYS.token, STORAGE_KEYS.legacyUserId, STORAGE_KEYS.legacyToken]);
+        if (Object.keys(saveIdentity).some(key => saveIdentity[key] !== currentIdentity[key]))
+            throw new Error("Your account changed. Check the previous account for this capture before retrying.");
+        if (result?.status !== "success" || !/^[a-f0-9]{24}$/i.test(String(result.data?.content?._id || "")))
+            throw new Error("The save could not be confirmed. Check your content before retrying.");
+        saved = true;
+        setSaveButtonLabel("Capture saved");
+        button.dataset.state = "success";
+        setStatus("Saved to Knowvia. External copies are confirmed separately below.", "success");
+        await syncUI.saved(String(result.data.content._id));
+        await storageSet(
         {
-            el.title.value = "";
-        }
-
-        if (el.url)
-        {
-            el.url.value = "";
-        }
-
-        if (el.rawText)
-        {
-            el.rawText.value = "";
-        }
-
+            knowvia_capture_draft: null
+        });
+        el.title.value = "";
+        el.url.value = "";
+        el.rawText.value = "";
         selectedTags = [];
         renderSelectedTags();
-
-        if (el.tagInput)
-        {
-            el.tagInput.value = "";
-        }
-
-        await loadTags();
-
-        setTimeout(() =>
-        {
-            if (!button)
-            {
-                return;
-            }
-
-            button.disabled = false;
-            button.textContent = originalText;
-            button.style.backgroundColor = "";
-            button.style.borderColor = "";
-            button.style.opacity = "1";
-        }, 2000);
+        el.tagInput.value = "";
+        updateCapturePreview("READY FOR YOUR NEXT CAPTURE");
+        setPreviewImage(null);
+        setCaptureEditor(false, false);
+        void loadTags();
     }
     catch (error)
     {
-        if (button)
+        setStatus(error.message, "danger");
+        delete button.dataset.state;
+        setSaveButtonLabel(defaultSaveLabel());
+    }
+    finally
+    {
+        savePending = false;
+        controls.forEach((control, index) =>
         {
-            button.disabled = false;
-            button.textContent = originalText;
-            button.style.opacity = "1";
-            button.removeAttribute(
-                "aria-busy"
-            );
-        }
-
-        setStatus(
-            error.message,
-            "danger"
-        );
+            control.disabled = previouslyDisabled[index];
+        });
+        updateSaveAvailability();
+        notionUI.setBlocked(authPending);
+        button.removeAttribute("aria-busy");
+        el.refreshPageBtn.disabled = false;
+        if (saved) setTimeout(() =>
+        {
+            if (!savePending)
+            {
+                delete button.dataset.state;
+                setSaveButtonLabel(defaultSaveLabel());
+            }
+        }, 2000);
     }
 }
-
 
 // ─── Refresh Page Data ───────────────────────────────────────────────────────
 
 async function refreshPageData()
 {
+    if (capturePending || savePending) return;
+    capturePending = true;
+    updateSaveAvailability();
+    el.refreshPageBtn.disabled = true;
+    el.refreshPageBtn.setAttribute("aria-busy", "true");
+    setStatus("Reading your capture…", "loading");
+    const showCapture = (title, url, text, source, previewImage = null) => {
+        el.title.value = title || "";
+        el.url.value = url || "";
+        el.rawText.value = text || "";
+        updateCapturePreview(source);
+        setPreviewImage(previewImage);
+        setStatus(text ? "Capture ready. Make any edits before saving." : "Add content or a note to save this page.", text ? "info" : "warning");
+    };
     try
     {
-        const tabs = await new Promise((resolve) =>
-        {
-            chrome.tabs.query(
-                {
-                    active: true,
-                    currentWindow: true
-                },
-                resolve
-            );
-        });
-
-        const currentTab =
-            tabs[0];
-
-        const stored = await storageGet(
-        [
-            STORAGE_KEYS.contextData
-        ]);
-
-        const cached =
-            stored[STORAGE_KEYS.contextData];
-
+        const requestedTab = new URLSearchParams(location.search).get("sourceTab");
+        const sourceId = /^\d+$/.test(requestedTab || "") ? Number(requestedTab) : null;
+        const tabs = sourceId !== null ? [await chrome.tabs.get(sourceId)] : await chrome.tabs.query({ active: true, currentWindow: true });
+        const currentTab = tabs[0];
+        const stored = await storageGet([STORAGE_KEYS.contextData]);
+        const cached = stored[STORAGE_KEYS.contextData];
+        // Preserve the existing capture order: cached selection, clipboard, page.
         if (cached?.text)
         {
-            if (el.title)
-            {
-                el.title.value =
-                    cached.title ||
-                    currentTab?.title ||
-                    "";
-            }
-
-            if (el.url)
-            {
-                el.url.value =
-                    cached.url ||
-                    currentTab?.url ||
-                    "";
-            }
-
-            if (el.rawText)
-            {
-                el.rawText.value =
-                    cached.text;
-            }
-
-            setStatus(
-                "Data captured from selection.",
-                "success"
-            );
-
-            await storageRemove(
-                STORAGE_KEYS.contextData
-            );
-
+            showCapture(cached.title || currentTab?.title, cached.url || currentTab?.url, cached.text, "SELECTED TEXT", cached.previewImage);
+            await storageRemove(STORAGE_KEYS.contextData);
             return;
         }
-
         let clipboardText = "";
-
-        try
-        {
-            clipboardText =
-                await navigator.clipboard.readText();
-        }
-        catch
-        {
-            clipboardText = "";
-        }
-
+        try { clipboardText = await navigator.clipboard.readText(); } catch { /* Clipboard is optional. */ }
         if (clipboardText.trim())
         {
-            if (el.title)
-            {
-                el.title.value =
-                    currentTab?.title ||
-                    "Copied Text";
-            }
-
-            if (el.url)
-            {
-                el.url.value =
-                    currentTab?.url ||
-                    "";
-            }
-
-            if (el.rawText)
-            {
-                el.rawText.value =
-                    clipboardText;
-            }
-
-            setStatus(
-                "Data loaded from clipboard.",
-                "success"
-            );
-
+            showCapture(currentTab?.title || "Copied text", currentTab?.url, clipboardText, "FROM YOUR CLIPBOARD");
             return;
         }
-
         if (!currentTab?.id)
         {
+            showCapture("", "", "", "MANUAL CAPTURE");
             return;
         }
-
-        chrome.tabs.sendMessage(
-            currentTab.id,
-            {
-                type: "GET_PAGE_CONTEXT"
-            },
-            (response) =>
-            {
-                if (chrome.runtime.lastError)
-                {
-                    if (el.title)
-                    {
-                        el.title.value =
-                            currentTab?.title || "";
-                    }
-
-                    if (el.url)
-                    {
-                        el.url.value =
-                            currentTab?.url || "";
-                    }
-
-                    setStatus(
-                        "Refresh the page to read its content.",
-                        "warning"
-                    );
-
-                    return;
-                }
-
-                if (response?.ok)
-                {
-                    if (el.title)
-                    {
-                        el.title.value =
-                            response.data.selectedText
-                                ? response.data.title
-                                : currentTab.title || "";
-                    }
-
-                    if (el.url)
-                    {
-                        el.url.value =
-                            response.data.url ||
-                            currentTab.url ||
-                            "";
-                    }
-
-                    if (el.rawText)
-                    {
-                        el.rawText.value =
-                            response.data.selectedText ||
-                            response.data.pageText ||
-                            "";
-                    }
-
-                    setStatus(
-                        "Page content loaded.",
-                        "success"
-                    );
-                }
-            }
-        );
+        const response = await new Promise(resolve => chrome.tabs.sendMessage(currentTab.id,
+            { type: "GET_PAGE_CONTEXT" }, result => resolve(chrome.runtime.lastError ? null : result)));
+        if (!response?.ok)
+        {
+            showCapture(currentTab.title, currentTab.url, "", "MANUAL CAPTURE");
+            setStatus("This page cannot be read. Paste text, or refresh the page and recapture.", "warning");
+            return;
+        }
+        const data = response.data;
+        showCapture(data.selectedText ? data.title : currentTab.title,
+            data.url || currentTab.url, data.selectedText || data.pageText,
+            data.selectedText ? "SELECTED TEXT" : "CURRENT PAGE", data.previewImage);
     }
-    catch
+    catch { setStatus("Could not read this page. Paste your content or try Recapture.", "danger"); }
+    finally
     {
-        setStatus(
-            "Failed to load page data.",
-            "danger"
-        );
+        capturePending = false;
+        updateSaveAvailability();
+        el.refreshPageBtn.disabled = false;
+        el.refreshPageBtn.removeAttribute("aria-busy");
     }
 }
-
 
 // ─── Load User Preferences ───────────────────────────────────────────────────
 
 async function loadUserPreferences()
 {
+    if (emailPending || quizPending) return;
+    preferencesLoaded = false;
+    el.preferencesStatus.hidden = true;
+    el.weeklyEmailToggle.disabled = true;
+    el.telegramQuizToggle.disabled = true;
+    el.saveEmailSettingsBtn.disabled = true;
     try
     {
         const stored = await storageGet(
@@ -2612,7 +2638,7 @@ async function loadUserPreferences()
             !result?.data
         )
         {
-            return;
+            throw new Error("Could not load your preferences. Refresh to try again.");
         }
 
         const
@@ -2645,6 +2671,8 @@ async function loadUserPreferences()
             {
                 el.currentEmailContainer.style.display =
                     "none";
+                el.currentEmailDisplay.textContent = "No email set";
+                el.weeklyEmailToggle.checked = false;
             }
 
             if (el.email)
@@ -2705,13 +2733,24 @@ async function loadUserPreferences()
                 }
             }
         }
+        preferencesLoaded = true;
+        el.googleStatus.textContent = "Signed in";
+        el.googleStatus.className = "status-pill status-pill--success";
+        el.weeklyEmailToggle.disabled = false;
+        el.telegramQuizToggle.disabled = false;
+        el.saveEmailSettingsBtn.disabled = false;
     }
     catch (error)
     {
-        console.warn(
-            "Failed to load user preferences:",
-            error
-        );
+        if (error.status === 401)
+        {
+            el.googleStatus.textContent = "Sign in again";
+            el.googleStatus.className = "status-pill status-pill--warning";
+        }
+        el.preferencesStatus.hidden = false;
+        el.preferencesStatus.textContent = `${error.message} Use Refresh to retry, or sign in again if your session expired.`;
+        el.telegramStatusText.textContent = "Unavailable";
+        el.telegramStatusPill.className = "status-pill status-pill--warning";
     }
 }
 
@@ -2720,6 +2759,10 @@ async function loadUserPreferences()
 
 async function saveEmailSettings()
 {
+    if (!preferencesLoaded || emailPending) return;
+    emailPending = true;
+    el.saveEmailSettingsBtn.disabled = true;
+    const previousToggle = (await storageGet([STORAGE_KEYS.weeklyEmailToggle]))[STORAGE_KEYS.weeklyEmailToggle];
     const button =
         el.saveEmailSettingsBtn;
 
@@ -2741,6 +2784,12 @@ async function saveEmailSettings()
                 "Please enter an email address."
             );
         }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailValue))
+        {
+            el.email.setAttribute("aria-invalid", "true");
+            el.email.focus();
+            throw new Error("Enter a valid email address.");
+        }
 
         const isEnabled =
             enteredEmail
@@ -2753,7 +2802,10 @@ async function saveEmailSettings()
         {
             button.disabled = true;
             button.textContent = "Saving...";
+            button.setAttribute("aria-busy", "true");
         }
+        el.weeklyEmailToggle.disabled = true;
+        el.email.disabled = true;
 
         setStatus(
             "Saving email settings...",
@@ -2799,6 +2851,7 @@ async function saveEmailSettings()
     }
     catch (error)
     {
+        el.weeklyEmailToggle.checked = Boolean(previousToggle);
         setStatus(
             error.message,
             "danger"
@@ -2806,10 +2859,14 @@ async function saveEmailSettings()
     }
     finally
     {
+        emailPending = false;
+        el.weeklyEmailToggle.disabled = false;
+        el.email.disabled = false;
         if (button)
         {
             button.disabled = false;
             button.textContent = "Save";
+            button.removeAttribute("aria-busy");
         }
     }
 }
@@ -2819,6 +2876,9 @@ async function saveEmailSettings()
 
 async function saveQuizPreference()
 {
+    if (!preferencesLoaded || quizPending) return;
+    quizPending = true;
+    el.telegramQuizToggle.disabled = true;
     try
     {
         const isEnabled =
@@ -2868,6 +2928,7 @@ async function saveQuizPreference()
                 !el.telegramQuizToggle.checked;
         }
     }
+    finally { quizPending = false; el.telegramQuizToggle.disabled = false; }
 }
 
 
@@ -2875,6 +2936,95 @@ async function saveQuizPreference()
 
 function bindEvents()
 {
+    const updateScrollState = () => {
+        const scroll = el.mainScroll;
+        const overflows = scroll.scrollHeight > scroll.clientHeight + 1;
+        el.appView.classList.toggle("has-scrolled", scroll.scrollTop > 1);
+        el.appView.classList.toggle("has-more-content", overflows && scroll.scrollTop + scroll.clientHeight < scroll.scrollHeight - 1);
+        scroll.tabIndex = overflows ? 0 : -1;
+        scroll.setAttribute("aria-label", el.appView.classList.contains("settings-active") ? "Settings content" : "Capture content");
+    };
+    el.mainScroll.addEventListener("scroll", () => {
+        updateScrollState();
+        if (el.projectMenu.style.display === "block") positionPickerMenu(el.projectMenu, el.projectPickerBtn);
+        if (el.tagSuggestions.style.display === "block") positionPickerMenu(el.tagSuggestions, el.tagsInputBox);
+    }, { passive: true });
+    const scrollObserver = new ResizeObserver(updateScrollState);
+    for (const node of [el.mainScroll, el.panelSave, el.panelSettings]) scrollObserver.observe(node);
+    updateScrollState();
+    renderDestinationSelection();
+    let draftTimer;
+    for (const input of [el.title, el.url, el.rawText]) input.addEventListener("input", () => {
+        clearTimeout(draftTimer);
+        const draft = { userId: draftOwnerId, title: el.title.value, url: el.url.value, rawText: el.rawText.value };
+        draftTimer = setTimeout(() => {
+            void storageGet([STORAGE_KEYS.userId, STORAGE_KEYS.legacyUserId]).then(stored => {
+                if (!savePending && draft.userId && draft.userId === (stored[STORAGE_KEYS.userId] || stored[STORAGE_KEYS.legacyUserId]))
+                    return storageSet({ knowvia_capture_draft: draft });
+            }).catch(() => setStatus("Your edits are available in this popup, but the local draft could not be stored.", "warning"));
+        }, 150);
+    });
+    el.closePopupBtn.addEventListener("click", () => window.close());
+    el.editCaptureBtn.addEventListener("click", () => selectCaptureFormat("custom"));
+    el.doneEditingBtn.addEventListener("click", () => setCaptureEditor(false));
+    el.articleOption.addEventListener("click", () => selectCaptureFormat("article"));
+    el.summaryOption.addEventListener("click", () => selectCaptureFormat("summary"));
+    el.customOption.addEventListener("click", () => selectCaptureFormat("custom"));
+    el.advancedOptionsBtn.addEventListener("click", () => {
+        selectCaptureFormat("custom", false);
+        el.captureOptionsBtn.setAttribute("aria-expanded", "true");
+        el.captureOptions.classList.add("is-open");
+        el.captureOptions.inert = false;
+        el.captureOptionsBtn.focus();
+    });
+    document.querySelector('.save-options').addEventListener("keydown", event => {
+        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const formats = ["article", "summary", "custom"];
+        const buttons = [el.articleOption, el.summaryOption, el.customOption];
+        const current = formats.indexOf(captureFormat);
+        const next = event.key === "Home" ? 0 : event.key === "End" ? 2
+            : (current + (["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : 2)) % 3;
+        selectCaptureFormat(formats[next], false);
+        buttons[next].focus();
+    });
+    document.addEventListener("keydown", event => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s")
+        {
+            event.preventDefault();
+            if (el.appView.classList.contains("settings-active") || document.querySelector("dialog[open]")) return;
+            if (!event.repeat && !el.saveArticleBtn.disabled) void saveArticle();
+        }
+    });
+    if (/Mac/.test(navigator.platform || "")) document.getElementById("saveShortcut").textContent = "⌘ S";
+    el.previewImage.addEventListener("load", () => {
+        el.previewImage.hidden = false;
+        el.previewCoverFallback.hidden = true;
+    });
+    el.previewImage.addEventListener("error", () => {
+        el.previewImage.hidden = true;
+        el.previewImage.removeAttribute("src");
+        el.previewCoverFallback.hidden = false;
+    });
+    el.connectNotionBtn.addEventListener("click", () => startConnection("Notion", "startNotionAuth"));
+    el.reauthGoogleBtn.addEventListener("click", connectGoogle);
+    el.refreshConnectionsBtn.addEventListener("click", refreshConnections);
+    for (const input of [el.title, el.url, el.rawText]) input.addEventListener("input", () => updateCapturePreview());
+    el.url.addEventListener("input", () => setPreviewImage(null));
+    el.email.addEventListener("input", () => el.email.removeAttribute("aria-invalid"));
+    el.captureOptionsBtn.addEventListener("click", () => {
+        const expanded = el.captureOptionsBtn.getAttribute("aria-expanded") !== "true";
+        el.captureOptionsBtn.setAttribute("aria-expanded", String(expanded));
+        el.captureOptions.classList.toggle("is-open", expanded);
+        el.captureOptions.inert = !expanded;
+    });
+    el.useSummaryAi.addEventListener("change", () => {
+        el.mergeSummaryWithContent.disabled = !el.useSummaryAi.checked;
+        if (!el.useSummaryAi.checked) el.mergeSummaryWithContent.checked = false;
+    });
+    for (const input of [el.useSummaryAi, el.useTagsAi, el.useQuiz, el.mergeSummaryWithContent])
+        input.addEventListener("change", () => selectCaptureFormat("custom", false));
+    el.mergeSummaryWithContent.disabled = !el.useSummaryAi.checked;
     for (const input of [el.title, el.rawText])
     {
         input?.setAttribute("aria-describedby", "statusText");
@@ -2899,7 +3049,12 @@ function bindEvents()
 
     el.connectTickTickFromSaveBtn?.addEventListener(
         "click",
-        connectTickTick
+        () => {
+            if (savePending || authPending) return;
+            ticktickSelected = !ticktickSelected;
+            renderDestinationSelection();
+            if (ticktickSelected && ticktickAccess !== "connected") void connectTickTick();
+        }
     );
 
     el.reconnectTickTickBtn?.addEventListener(
@@ -2912,6 +3067,7 @@ function bindEvents()
         () =>
         {
             switchTab("save");
+            el.tabSettings.focus();
         }
     );
 
@@ -2919,7 +3075,7 @@ function bindEvents()
         "click",
         () =>
         {
-            switchTab("settings");
+            switchTab(el.appView.classList.contains("settings-active") ? "save" : "settings");
         }
     );
 
@@ -3291,6 +3447,7 @@ async function bootstrap()
         isTickTickConnected
     } = resolveAuthState(stored);
 
+    draftOwnerId = userId || null;
     const savedTheme =
         stored[STORAGE_KEYS.theme];
 
@@ -3300,14 +3457,7 @@ async function bootstrap()
     }
     else
     {
-        const preferredTheme =
-            window.matchMedia(
-                "(prefers-color-scheme: dark)"
-            ).matches
-                ? "dark"
-                : "light";
-
-        applyTheme(preferredTheme);
+        applyTheme("light");
     }
 
     bindEvents();
@@ -3346,19 +3496,19 @@ async function bootstrap()
         [
             refreshPageData(),
             loadUserPreferences(),
-            loadTags()
+            loadTags(),
+            loadTickTickProjects(),
+            loadNotionStatus(),
+            syncUI.restore()
         ];
 
-        if (isTickTickConnected)
-        {
-            initialTasks.push(loadTickTickProjects());
-        }
-        else
-        {
-            renderProjects([], "");
-        }
-
         await Promise.allSettled(initialTasks);
+        const draftStore = await storageGet(["knowvia_capture_draft"]);
+        const draft = draftStore.knowvia_capture_draft;
+        if (draft?.userId === userId && typeof draft.title === "string" && typeof draft.rawText === "string" && draft.rawText.trim()) {
+            el.title.value = draft.title.slice(0, 500); el.url.value = typeof draft.url === "string" ? draft.url : ""; el.rawText.value = draft.rawText.slice(0, 100000);
+            updateCapturePreview("MANUAL CAPTURE");
+        }
 
         if (el.statusText?.textContent === "Loading...") setStatus("Ready", "success");
         const connectionUI = stored[STORAGE_KEYS.authUI];
@@ -3375,6 +3525,12 @@ chrome.storage.onChanged.addListener((changes, areaName) =>
     }
 
     if (changes[STORAGE_KEYS.authUI]) renderAuthUI(changes[STORAGE_KEYS.authUI].newValue);
+
+    if (changes[STORAGE_KEYS.authUI]?.newValue?.provider === "Notion" &&
+        changes[STORAGE_KEYS.authUI].newValue.status === "success")
+    {
+        void loadNotionStatus();
+    }
 
     const linkedTickTick = changes[STORAGE_KEYS.authUI]?.newValue?.provider === "TickTick" &&
         changes[STORAGE_KEYS.authUI].newValue.status === "success";
@@ -3409,6 +3565,11 @@ chrome.storage.onChanged.addListener((changes, areaName) =>
             isTickTickConnected
         } = resolveAuthState(stored);
 
+        if (draftOwnerId && draftOwnerId !== userId) {
+            ticktickSelected = false; notionSelected = false;
+            syncUI.reset(); notionUI.reset(); selectedTags = []; renderSelectedTags();
+        }
+        draftOwnerId = userId || null;
         setConnectedUI(
             isSignedIn,
             isTickTickConnected
@@ -3419,24 +3580,22 @@ chrome.storage.onChanged.addListener((changes, areaName) =>
             return;
         }
 
-        switchTab("save");
+        if (!linkedTickTick) switchTab("save");
         fillTelegramCommand(userId);
         setUserIdDisplay(userId);
 
         const refreshTasks =
         [
-            refreshPageData(),
             loadUserPreferences(),
-            loadTags()
+            loadTags(),
+            loadTickTickProjects(),
+            loadNotionStatus(),
+            syncUI.restore()
         ];
 
-        if (isTickTickConnected)
+        if (!linkedTickTick)
         {
-            refreshTasks.push(loadTickTickProjects());
-        }
-        else
-        {
-            renderProjects([], "");
+            refreshTasks.push(refreshPageData());
         }
 
         await Promise.allSettled(refreshTasks);
@@ -3449,7 +3608,7 @@ chrome.storage.onChanged.addListener((changes, areaName) =>
     });
 });
 
-// Start with intrinsic 400 × 600 dimensions. Once Chrome has sized the
+// Start with intrinsic 480 × 600 dimensions. Once Chrome has sized the
 // action popup, fit its actual height without creating a second outer scrollbar.
 // Ignore Chrome's provisional 25px viewport to avoid collapsing the popup.
 function fitPopupHeight()
