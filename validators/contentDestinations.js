@@ -1,3 +1,4 @@
+import normalizeTags from "../utils/normTags.js";
 import
 {
     notionId
@@ -63,5 +64,18 @@ export function contentDestinations(payload)
         mergeSummaryWithContent: options.mergeSummaryWithContent ?? false,
         tags: options.tags ?? []
     };
+    if (payload.notionOptions !== undefined)
+    {
+        if (!result.notion.enabled || !keys(payload.notionOptions, ["tags"]))
+        {
+            throw invalidDestination("Invalid Notion options");
+        }
+        const tags = payload.notionOptions.tags;
+        if (!Array.isArray(tags) || tags.length > 30 || tags.some(tag => typeof tag !== "string" || !tag.trim() || tag.length > 60))
+        {
+            throw invalidDestination("Invalid Notion tags");
+        }
+        result.notion.options = { tags: normalizeTags(tags) };
+    }
     return result;
 }

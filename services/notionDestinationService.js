@@ -177,6 +177,10 @@ export const createNotionDestinationService = (
                 type
             },
             titleProperty,
+            tagProperties: type === "data_source" ? Object.entries(response.data.properties)
+                .filter(([name, value]) => /^tags?$/i.test(name.trim()) && value?.type === "multi_select" &&
+                    typeof value.id === "string" && value.id.length > 0 && value.id.length <= 200 && Array.isArray(value.multi_select?.options))
+                .map(([, value]) => ({ id: value.id, options: value.multi_select.options })) : [],
             connection: response.connection
         };
     };

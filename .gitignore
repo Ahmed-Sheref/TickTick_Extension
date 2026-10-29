@@ -8,3 +8,5 @@ logs/
 .vscode/
 coverage/
 .tmp/
+
+!.env.example

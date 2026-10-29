@@ -83,7 +83,7 @@ const notionSyncSchema = new mongoose.Schema(
     phase:
     {
         type: String,
-        enum: ["preparing", "creating", "appending", "complete"],
+        enum: ["preparing", "creating", "appending", "images", "complete"],
         default: "preparing"
     },
     pageId:
@@ -328,7 +328,12 @@ const contentSchema = new mongoose.Schema(
                     selectionId: String,
                     connectionId: String,
                     connectionIdentity: String,
-                    workspaceId: String
+                    workspaceId: String,
+                    options:
+                    {
+                        type: new mongoose.Schema({ tags: [String] }, { _id: false }),
+                        default: undefined
+                    }
                 },
                 {
                     _id: false
@@ -347,6 +352,10 @@ const contentSchema = new mongoose.Schema(
         default: () => (
         {})
     },
+
+    imageRetention: { type: Boolean, default: undefined },
+    imageNotionIncluded: { type: Boolean, default: undefined },
+    images: { type: [{ type: mongoose.Schema.Types.ObjectId, ref: "ImageAsset" }], default: undefined },
 
     isRead:
     {

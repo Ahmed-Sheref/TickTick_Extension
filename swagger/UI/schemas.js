@@ -777,3 +777,13 @@ schemas.ContentSyncStatus = {
         }
     }
 };
+// Provider-specific tags do not alter the original Knowvia metadata.
+schemas.CreateContentRequest.properties.notionOptions = {
+    type: 'object', additionalProperties: false, required: ['tags'],
+    description: 'Valid only when Notion is selected. Tags become text blocks, not database multi-select properties. Omitted options retain historical Content.tags fallback; an explicit empty list exports no tags.',
+    properties: { tags: { type: 'array', maxItems: 30, items: { type: 'string', minLength: 1, maxLength: 60 } } }
+};
+schemas.CreateContentRequest.properties.ticktickOptions.properties.mergeSummaryWithContent.deprecated = true;
+schemas.CreateContentRequest.properties.ticktickOptions.properties.mergeSummaryWithContent.description = 'Accepted for saved-record/request compatibility; destination-aware TickTick exports always preserve original text and append successful AI Summary. No modern append/replace toggle.';
+schemas.CreateContentRequest.properties.ticktickOptions.properties.useAiSummary.description = 'Append a nonempty AI Summary after the complete original article; failure or invalid summary exports the original article unchanged. Stored Content.rawText and Notion exports are unaffected.';
+schemas.CreateContentRequest.properties.ticktickOptions.properties.tags.description = 'Manual TickTick tags, safely merged with generated tags when AI Tags is selected. Separate from Notion tags and primary Knowvia tags.';

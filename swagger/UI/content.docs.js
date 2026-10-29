@@ -556,3 +556,14 @@ contentDocs['/api/v1/content/{contentId}/sync-status'].get.responses[200].conten
         }
     }
 };
+for (const example of Object.values(contentDocs['/api/v1/content'].post.requestBody.content['application/json'].examples))
+{
+    if (example.value.destinations.notion.enabled)
+    {
+        example.value.notionOptions = { tags: ['reference', 'oauth'] };
+    }
+    if (example.value.ticktickOptions)
+    {
+        delete example.value.ticktickOptions.mergeSummaryWithContent;
+    }
+}

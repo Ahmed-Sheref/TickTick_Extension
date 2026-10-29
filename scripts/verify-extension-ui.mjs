@@ -3,7 +3,7 @@
 // Requires Playwright and a locally installed Chrome. No live accounts are used.
 import { chromium } from "playwright";
 import assert from "node:assert/strict";
-import { mkdir } from "node:fs/promises";
+import { mkdir, readFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import path from "node:path";
 
@@ -75,6 +75,12 @@ async function popup({ signedIn = true, ticktick = true, notion = true, width = 
         Object.defineProperty(navigator, "clipboard", { value: { readText: async () => clipboard, writeText: async text => { fixture.copied.push(text); } } });
         window.fetch = async (url, options) => {
             const f = window.fixture;
+            if (String(url).startsWith("https://r2.example.test/"))
+            {
+                f.requests.push({ route: "r2-put", method: options.method, size: options.body.size });
+                if (f.imageUploadError) throw new TypeError("Image upload interrupted");
+                return new Response("", { status: 200 });
+            }
             const route = new URL(url).pathname.replace("/api/v1", "");
             const params = new URL(url).searchParams;
             const body = options.body ? JSON.parse(options.body) : null;
@@ -83,7 +89,14 @@ async function popup({ signedIn = true, ticktick = true, notion = true, width = 
             let status = 200;
             let data;
             const headers = { "Content-Type": "application/json" };
-            if (route === "/content/projects") {
+            if (route === "/images/uploads") {
+                const id = String((f.uploadCounter = (f.uploadCounter || 0) + 1)).padStart(24,"0");
+                data = { status:"success", data:{uploadId:id,uploadUrl:`https://r2.example.test/${id}`,headers:{"Content-Type":body.mimeType}} };
+            } else if (/^\/images\/[a-f0-9]{24}\/complete$/.test(route)) {
+                data = { status:"success", data:{status:"uploaded"} };
+            } else if (route.startsWith("/images/") && options.method === "DELETE") {
+                data = {status:"success",data:{deleted:true}};
+            } else if (route === "/content/projects") {
                 if (f.ticktickMode === "offline") throw new TypeError("Failed to fetch");
                 if (f.ticktickMode === "disconnected") { status = 401; data = { status: "error", message: "TickTick account is not connected" }; }
                 else data = { status: "success", data: options.method === "POST" ? { id: "new-list", name: body.name }
@@ -119,6 +132,8 @@ async function popup({ signedIn = true, ticktick = true, notion = true, width = 
                 else data = { status: "success", data: { status: "synced", pageId: "99999999-9999-9999-9999-999999999999",
                     pageUrl: f.notionSyncMode === "unsafe-url" ? "javascript:alert(1)" : "https://www.notion.so/provider-confirmed-capture", alreadySynced: true } };
             } else if (/^\/content\/[a-f0-9]{24}\/sync-status$/.test(route)) {
+                if (f.syncReadDelay) await new Promise(resolve => setTimeout(resolve, f.syncReadDelay));
+                if (f.syncReadError) throw new TypeError("Failed to fetch");
                 const states = f.syncStates || Object.fromEntries(["ticktick", "notion"].map(provider => [provider, { requested: Boolean(f.lastIntent[provider]?.enabled),
                     status: f.lastIntent[provider]?.enabled ? "synced" : "not_requested", retryable: false, errorCode: null,
                     ...(provider === "notion" ? { pageId: "99999999-9999-9999-9999-999999999999", pageUrl: "https://www.notion.so/provider-confirmed-capture" } : { taskId: "real-task", aiStatus: "not_requested" }) }]));
@@ -132,7 +147,7 @@ async function popup({ signedIn = true, ticktick = true, notion = true, width = 
                 f.lastIntent = body.destinations || {};
                 status = f.saveMode === "expired" ? 401 : f.saveMode === "error" ? 500 : 201;
                 data = f.saveMode === "expired" ? { status: "error", message: "Invalid or expired token" } : f.saveMode === "error" ? { status: "error", message: "Save unavailable. Please try again." }
-                    : { status: "success", data: { content: f.saveMode === "malformed" ? {} : { _id: "aaaaaaaaaaaaaaaaaaaaaaaa" } } };
+                    : { status: "success", data: { content: f.saveMode === "malformed" ? {} : { _id: "aaaaaaaaaaaaaaaaaaaaaaaa", imageRetention: body.images?.retain, images: body.images?.uploadIds } } };
             } else if (["/User/email", "/User/quiz-preferences"].includes(route)) {
                 status = f.preferenceError ? 500 : 200;
                 data = { status: f.preferenceError ? "error" : "success", message: f.preferenceError ? "Could not save preferences." : "Updated" };
@@ -151,19 +166,16 @@ async function popup({ signedIn = true, ticktick = true, notion = true, width = 
 
 try {
     const { page, errors } = await popup();
-    await check("capture-first preview, real source metadata and loaded cover", async () => {
-        await page.waitForFunction(() => {
-            const image = document.getElementById("previewImage");
-            return !image.hidden && image.complete && image.naturalWidth > 0;
-        });
+    await check("single-column capture, editable content and official loaded logo", async () => {
+        assert.equal(await page.locator("#articlePreview, #previewImage, #editCaptureBtn, #refreshPageBtn").count(), 0);
         assert.equal(await page.locator("#captureEditor").isVisible(), true);
         assert.equal(await page.locator("#panelSettings").isVisible(), false);
-        assert.match(await page.locator("#previewTitle").textContent(), /calmer reading workflow/);
-        assert.match(await page.locator("#previewExcerpt").textContent(), /Give useful ideas/);
-        assert.equal(await page.locator("#previewDomain").textContent(), "example.com");
+        assert.match(await page.locator("#title").inputValue(), /calmer reading workflow/);
+        assert.match(await page.locator("#rawText").inputValue(), /Give useful ideas/);
+        assert.equal(await page.locator("#sourceHost").textContent(), "example.com");
         assert.equal(await page.locator("#ticktickStatusSecondary").textContent(), "Connected");
         assert.equal(await page.locator("#captureCount").textContent(), "131 characters");
-        assert.equal(await page.locator("#saveButtonLabel").textContent(), "Save to Knowvia");
+        assert.equal(await page.locator("#saveButtonLabel").textContent(), "Save capture");
         assert.equal(await page.locator(".v2-wordmark").evaluateAll(images => images.every(image => image.complete && image.naturalWidth > 0)), true);
     });
     await check("connected providers remain unselected until explicitly enabled", async () => {
@@ -201,19 +213,15 @@ try {
         assert.doesNotMatch(await page.locator("#selectedTagsContainer").textContent(), /reading/);
         assert.ok(layout.clientHeight > 0);
     });
-    await check("edit controls stay secondary and update the displayed preview", async () => {
-        await page.locator("#articlePreview").hover();
-        await page.locator("#title").focus();
-        assert.equal(await page.locator("#captureEditor").isVisible(), true);
+    await check("editing updates field counts without a duplicate preview", async () => {
         const original = await page.locator("#title").inputValue();
         await page.locator("#title").fill("A more thoughtful reading workflow");
-        assert.equal(await page.locator("#previewTitle").textContent(), "A more thoughtful reading workflow");
+        assert.equal(await page.locator("#titleCount").textContent(), "34/500");
+        assert.equal(await page.locator("#articlePreview").count(), 0);
         await page.locator("#title").fill(original);
-        await page.locator("#title").focus();
-        assert.equal(await page.locator("#captureEditor").isVisible(), true);
-        assert.equal(await page.locator("#editCaptureBtn").getAttribute("aria-expanded"), "false");
     });
     await check("list creation uses the existing endpoint and selects the returned list", async () => {
+        await page.keyboard.press("Escape");
         await page.locator("#openCreateProjectBtn").click();
         await page.locator("#projectNameInput").fill("Research");
         await page.locator("#confirmCreateProjectBtn").click();
@@ -239,12 +247,11 @@ try {
     await check("approved layout removes global modes and scopes AI to TickTick", async () => {
         assert.equal(await page.locator(".save-options-section").isVisible(), false);
         assert.equal(await page.locator("#captureOptionsBtn").isVisible(), false);
-        await page.locator(".v2-ticktick-ai summary").click();
-        await page.locator("#useSummaryAi").check();
-        await page.locator("#mergeSummaryWithContent").check();
-        assert.equal(await page.locator("#useSummaryAi").evaluate(node => node.closest(".v2-destination-row")?.dataset.provider === "ticktick"), true);
-        assert.equal(await page.locator("#notionConfiguration input[type=checkbox]").count(), 0);
-        await page.locator(".v2-ticktick-ai summary").click();
+        assert.equal(await page.locator(".v2-ticktick-ai").count(), 0);
+        assert.equal(await page.locator("#useSummaryAi").isVisible(), false);
+        await page.evaluate(() => { document.getElementById("useSummaryAi").checked = true; });
+        assert.equal(await page.locator("#mergeSummaryWithContent").count(), 0);
+        assert.equal(await page.locator("#notionConfiguration input[type=checkbox]:not(#includeNotionImages)").count(), 0);
     });
     await check("save failures retain the draft and malformed success is rejected", async () => {
         await page.evaluate(() => { fixture.saveMode = "error"; });
@@ -262,7 +269,7 @@ try {
         await page.waitForFunction(() => document.getElementById("saveArticleBtn").getAttribute("aria-busy") === "true");
         assert.equal(await page.locator("#saveArticleBtn").isDisabled(), true);
         assert.equal(await page.locator("#saveArticleBtn").evaluate(element => getComputedStyle(element).opacity), "1");
-        assert.equal(await page.locator(".v2-save-progress").isVisible(), true);
+        assert.equal(await page.locator(".v2-save-progress").isVisible(), false);
         assert.doesNotMatch(await page.locator("#statusBar").textContent(), /\d+%/);
         assert.equal(await page.locator("#statusBar [aria-valuenow]").count(), 0);
         await page.screenshot({ path: path.join(output, "saving.png") });
@@ -273,11 +280,15 @@ try {
         assert.equal(requests[0].body.destinations.ticktick.projectId, "reading");
         assert.deepEqual(requests[0].body.ticktickOptions.tags, ["focus"]);
         assert.equal(requests[0].body.ticktickOptions.useAiSummary, true);
-        assert.equal(requests[0].body.ticktickOptions.mergeSummaryWithContent, true);
+        assert.equal(requests[0].body.ticktickOptions.mergeSummaryWithContent, undefined);
         assert.equal(Object.hasOwn(requests[0].body, "userId"), false);
         assert.equal(Object.hasOwn(requests[0].body, "previewImage"), false);
-        assert.match(await page.locator("#statusText").textContent(), /confirmed separately/);
+        assert.equal(await page.locator("#statusText").textContent(), "Saved to Knowvia.");
         assert.equal(await page.locator("#title").inputValue(), "");
+        assert.equal(await page.evaluate(() => scrollY), 0, "Field focus must scroll the content area, not the outer document");
+        assert.ok((await page.locator(".popup-header").boundingBox()).y >= 0);
+        const footer = await page.locator("#appFooter").boundingBox();
+        assert.ok(footer.y + footer.height <= 600);
         await page.locator(".main-scroll").evaluate(element => { element.scrollTop = 0; });
         await page.waitForTimeout(200);
         await page.screenshot({ path: path.join(output, "saved.png") });
@@ -352,10 +363,10 @@ try {
             assert.equal(await compact.page.locator("#projectField").isVisible(), true);
             assert.equal(await compact.page.locator("#libraryDestination").isVisible(), false);
             assert.equal(await compact.page.locator("#previewCover").isVisible(), false);
-            assert.equal(await compact.page.locator("#saveButtonLabel").textContent(), "Save to Knowvia");
+            assert.equal(await compact.page.locator("#saveButtonLabel").textContent(), "Save capture");
             await compact.page.screenshot({ path: path.join(output, `capture-${width}-${theme}.png`) });
             await compact.page.locator("#title").focus();
-            assert.equal(await compact.page.locator("#captureOptions").evaluate(element => getComputedStyle(element).transitionDuration), "0s");
+            assert.equal(await compact.page.locator("#title").evaluate(element => getComputedStyle(element).transitionDuration), "0s");
             await compact.page.locator("#title").focus();
             await compact.page.locator("#saveArticleBtn").click();
             await compact.page.waitForFunction(() => document.getElementById("statusText").textContent.startsWith("Saved to Knowvia."));
@@ -370,7 +381,8 @@ try {
         await check(`unsafe preview image is rejected (${unsafe.startsWith("javascript") ? "script URL" : "URL credentials"})`, async () => {
             assert.equal(await invalid.page.locator("#previewImage").isVisible(), false);
             assert.equal(await invalid.page.locator("#previewCover").isVisible(), false);
-            assert.equal(await invalid.page.locator("#previewImage").getAttribute("src"), null);
+            assert.equal(await invalid.page.locator("#previewImage").count(), 0);
+            assert.equal(await invalid.page.locator("#panelSave img").count(), 0);
             assert.deepEqual(invalid.errors, []);
         });
         await invalid.page.close();
@@ -378,8 +390,8 @@ try {
     const clipboard = await popup({ clipboard: "An unrelated copied note." });
     await check("clipboard capture never borrows the current page cover", async () => {
         assert.equal(await clipboard.page.locator("#previewImage").isVisible(), false);
-        assert.match(await clipboard.page.locator("#previewExcerpt").textContent(), /unrelated copied note/);
-        assert.match(await clipboard.page.locator("#captureSource").textContent(), /clipboard/i);
+        assert.match(await clipboard.page.locator("#rawText").inputValue(), /unrelated copied note/);
+        assert.equal(await clipboard.page.locator("#imageGrid img").count(), 0);
         assert.deepEqual(clipboard.errors, []);
     });
     await clipboard.page.close();
@@ -387,7 +399,7 @@ try {
     const linked = await popup({ notionSelected: true });
     const n = linked.page;
     await check("Notion reads the explicit default, hydrates its title and never auto-selects a search result", async () => {
-        assert.equal(await n.locator("#notionCaptureHint").textContent(), "Not selected");
+        assert.equal(await n.locator("#notionCaptureHint").textContent(), "Connected · off");
         assert.equal(await n.locator("#notionDestination").evaluate(node => node.classList.contains("selected")), false);
         await n.locator("#notionDestination").click();
         assert.equal(await n.evaluate(() => fixture.requests.filter(request => request.method === "PUT").length), 0);
@@ -407,7 +419,7 @@ try {
         assert.equal(await n.locator("#notionDestinationDialog").isVisible(), false);
         assert.equal(await n.evaluate(() => document.activeElement.id), "chooseNotionSaveDestinationBtn");
         assert.equal(await n.evaluate(() => fixture.requests.filter(request => request.method === "PUT").length), 0);
-        assert.equal(await n.locator("#notionCaptureHint").textContent(), "Reading notes");
+        assert.equal(await n.locator("#notionSaveDestinationName").textContent(), "Reading notes");
     });
     await check("Notion default confirmation sends only the verified choice and blocks duplicate writes/Escape while pending", async () => {
         await n.locator("#chooseNotionSaveDestinationBtn").click();
@@ -423,7 +435,7 @@ try {
         assert.equal(writes.length, 1);
         assert.deepEqual(writes[0].body, { destinationId: "22222222-2222-2222-2222-222222222222", destinationType: "data_source" });
         assert.equal(writes[0].authorization, "Bearer fixture-app-session");
-        assert.equal(await n.locator("#notionCaptureHint").textContent(), "Knowledge library");
+        assert.equal(await n.locator("#notionSaveDestinationName").textContent(), "Knowledge library");
         await n.evaluate(() => { fixture.notionWriteDelay = 0; });
     });
     await check("failed Notion selection stays in the dialog and preserves the current default", async () => {
@@ -433,7 +445,7 @@ try {
         await n.locator("#confirmNotionDestinationBtn").click();
         await n.waitForFunction(() => !document.getElementById("notionDestinationError").hidden);
         assert.match(await n.locator("#notionDestinationError").textContent(), /could not be saved/);
-        assert.equal(await n.locator("#notionCaptureHint").textContent(), "Knowledge library");
+        assert.equal(await n.locator("#notionSaveDestinationName").textContent(), "Knowledge library");
         assert.equal(await n.locator("#confirmNotionDestinationBtn").isEnabled(), true);
         await n.screenshot({ path: path.join(output, "notion-selection-error.png") });
         await n.evaluate(() => { fixture.notionSelectionError = false; });
@@ -443,7 +455,7 @@ try {
         await n.locator("#chooseNotionSaveDestinationBtn").click();
         await n.locator("#clearNotionDestinationBtn").click();
         await n.waitForFunction(() => !document.getElementById("notionDestinationDialog").open);
-        assert.match(await n.locator("#notionCaptureHint").textContent(), /choose/i);
+        assert.match(await n.locator("#notionSaveDestinationName").textContent(), /choose/i);
         assert.equal(await n.locator("#notionStatus").textContent(), "Connected");
         const clear = await n.evaluate(() => fixture.requests.findLast(request => request.method === "DELETE"));
         assert.equal(clear.route, "/integrations/notion/destination");
@@ -517,10 +529,11 @@ try {
             assert.equal(request.body.destinations.ticktick.enabled, tick);
             assert.equal(request.body.destinations.notion.enabled, notion);
             assert.equal(Object.hasOwn(request.body, "ticktickOptions"), tick);
-            assert.equal(await p.locator("#ticktickSyncState").textContent(), tick ? "Synchronized" : "Not requested");
-            assert.equal(await p.locator("#notionSyncState").textContent(), notion ? "Synchronized" : "Not requested");
+            assert.equal(await p.locator("#ticktickSyncState").textContent(), tick ? "TickTick ✓" : "Not requested");
+            assert.equal(await p.locator("#notionSyncState").textContent(), notion ? "Notion ✓" : "Not requested");
             assert.equal(await p.evaluate(() => fixture.requests.filter(request => request.method === "POST" && request.route.includes("/sync/")).length), 0);
             if (notion) {
+                await p.locator("#savedContentActions summary").click();
                 await p.locator("#openConfirmedNotionBtn").click();
                 assert.deepEqual(await p.evaluate(() => fixture.openedTabs), ["https://www.notion.so/provider-confirmed-capture"]);
             }
@@ -537,11 +550,11 @@ try {
         await p.locator("#notionDestination").click();
         await p.evaluate(() => { fixture.syncStates = { ticktick: { requested: false, status: "not_requested", retryable: false }, notion: { requested: true, status: "pending", retryable: false } }; });
         await p.locator("#saveArticleBtn").click();
-        await p.waitForFunction(() => document.getElementById("notionSyncState").textContent === "In progress");
+        await p.waitForFunction(() => document.getElementById("notionSyncState").textContent === "Notion · Saving…");
         assert.equal(await p.locator("#notionSyncRetry").isVisible(), false);
         await p.evaluate(() => { fixture.syncStates.notion = { requested: true, status: "uncertain", retryable: false }; });
         await p.locator("#refreshSyncStatusBtn").click();
-        await p.waitForFunction(() => document.getElementById("notionSyncState").textContent === "Needs review");
+        await p.waitForFunction(() => document.getElementById("notionSyncState").textContent === "Couldn't confirm status");
         assert.equal(await p.locator("#notionSyncRetry").isVisible(), false);
         assert.equal(await p.evaluate(() => fixture.requests.filter(r => r.method === "POST" && r.route.includes("/sync/")).length), 0);
         await p.evaluate(() => { fixture.syncStates.notion = { requested: true, status: "failed", retryable: true }; });
@@ -556,7 +569,14 @@ try {
     for (const userId of ["fixture-user", "another-user"]) {
         const sample = await popup({ storedReceipt: { userId, contentId: "aaaaaaaaaaaaaaaaaaaaaaaa" } });
         await check(`read-only receipt restore excludes other owners: ${userId}`, async () => {
-            assert.equal(await sample.page.locator("#syncReceipt").isVisible(), userId === "fixture-user");
+            assert.equal(await sample.page.locator("#syncReceipt").isVisible(), false);
+            assert.equal(await sample.page.locator("#previousSave").isVisible(), userId === "fixture-user");
+            assert.equal(await sample.page.locator("#statusTitle").textContent(), "Ready to save");
+            if (userId === "fixture-user") {
+                await sample.page.locator("#previousSave > summary").click();
+                await sample.page.locator("#syncReceipt").waitFor({ state: "visible" });
+                assert.equal(await sample.page.locator("#previousSave #syncReceipt").count(), 1);
+            }
             assert.equal(await sample.page.evaluate(() => fixture.requests.filter(r => r.method === "POST").length), 0);
         });
         await sample.page.close();
@@ -595,7 +615,7 @@ try {
         const p = noList.page;
         await p.locator("#connectTickTickFromSaveBtn").click();
         await p.locator("#saveArticleBtn").click();
-        await p.waitForFunction(() => document.getElementById("statusText").textContent.includes("Choose a TickTick list"));
+        await p.waitForFunction(() => document.getElementById("projectLoadError").textContent.includes("Choose a TickTick list"));
         assert.equal(await p.evaluate(() => fixture.requests.filter(r => r.route === "/content").length), 0);
         assert.equal(await p.locator('.picker-option[data-project-id=""]').isDisabled(), true);
         await p.locator("#projectSearchInput").press("ArrowDown");
@@ -640,13 +660,15 @@ try {
     });
     await restoredLayout.page.close();
     const wide = await popup({ width: 1440, height: 1046 });
-    await check("approved V2 wide composition and honest unsupported attachments", async () => {
+    await check("single-column wide composition and working local attachment controls", async () => {
         const p = wide.page;
-        await p.locator(".main-scroll").evaluate(node => { node.scrollTop = 0; });
-        const editor = await p.locator(".v2-editor").boundingBox(), preview = await p.locator("#articlePreview").boundingBox();
-        assert.ok(preview.x >= editor.x + editor.width);
-        assert.equal(await p.locator(".v2-upload").isDisabled(), true);
-        assert.equal(await p.locator(".save-options-section").isVisible(), false);
+        const editor = await p.locator(".v2-editor").boundingBox();
+        const destinations = await p.locator(".v2-destinations").boundingBox();
+        assert.equal(await p.locator("#articlePreview").count(), 0);
+        assert.ok(Math.abs(editor.x - destinations.x) < 1 && Math.abs(editor.width - destinations.width) < 1);
+        assert.ok(destinations.y >= editor.y + editor.height);
+        assert.equal(await p.locator("#chooseImagesBtn").isEnabled(), true);
+        assert.equal(await p.locator("#imageFileInput").getAttribute("multiple"), "");
         await p.screenshot({ path: path.join(output, "v2-approved-wide.png") });
         assert.deepEqual(wide.errors, []);
     });
@@ -725,7 +747,7 @@ try {
             const action = await p.locator("#saveArticleBtn").boundingBox();
             assert.ok(action.y >= 0 && action.y + action.height <= height);
             if (hasTouch) {
-                for (const selector of ["#tabSettings", "#closePopupBtn", "#refreshPageBtn"]) {
+                for (const selector of ["#tabSettings", "#closePopupBtn", "#chooseImagesBtn"]) {
                     const bounds = await p.locator(selector).boundingBox();
                     assert.ok(bounds.width >= 44 && bounds.height >= 44, `${selector} needs a touch target`);
                 }
@@ -775,7 +797,7 @@ try {
             await p.screenshot({ path: path.join(output, `settings-top-${name}.png`) });
             assert.equal(await p.locator("#email").isVisible(), false);
             assert.equal(await p.locator("#telegramQuizToggle").isVisible(), false);
-            await p.locator("#settingsManagePlatformsBtn").scrollIntoViewIfNeeded();
+            await p.locator("#platformVisibilitySettings").scrollIntoViewIfNeeded();
             await p.screenshot({ path: path.join(output, `settings-bottom-${name}.png`) });
             await p.locator("#tabSave").click();
             assert.equal(await p.evaluate(() => document.activeElement.id), "tabSettings");
@@ -802,6 +824,571 @@ try {
         });
         await sample.page.close();
     }
+    const providerSample = await popup({ notionSelected: true, width: 1270, height: 889 });
+    await check("provider tag draft restores separately and linking loaders belong to one provider", async () => {
+        const p = providerSample.page;
+        await p.locator("#notionTagInput").fill("Reference");
+        await p.locator("#notionTagInput").press("Enter");
+        await p.locator("#addTagBtn").click();
+        await p.locator("#tagInput").fill("TickOnly");
+        await p.locator("#tagInput").press("Enter");
+        await p.keyboard.press("Escape");
+        await p.waitForFunction(() => fixture.values.knowvia_capture_draft?.notionTags?.includes("reference"));
+        const draft = await p.evaluate(() => fixture.values.knowvia_capture_draft);
+        assert.deepEqual(draft.notionTags, ["reference"]);
+        assert.ok(draft.ticktickTags.includes("tickonly"));
+        if (await p.locator("#connectTickTickFromSaveBtn").getAttribute("aria-pressed") !== "true") await p.locator("#connectTickTickFromSaveBtn").click();
+        assert.equal(await p.locator(".v2-ticktick-ai").count(), 0);
+        await p.screenshot({ path: path.join(output, 'provider-simplified.png') });
+        for (const provider of ["TickTick", "Notion", "Google"]) {
+            await p.evaluate(provider => renderAuthUI({ provider, status: "pending" }), provider);
+            for (const [id, owner] of [["connectTickTickBtn","TickTick"],["connectNotionBtn","Notion"],["reauthGoogleBtn","Google"]])
+                assert.equal(await p.locator(`#${id}`).getAttribute("aria-busy"), String(provider === owner));
+            await p.locator("#tabSettings").click();
+            await p.screenshot({ path: path.join(output, `provider-loading-${provider}.png`) });
+            await p.evaluate(provider => renderAuthUI({ provider, status: "error", message: "Cancelled" }), provider);
+            await p.locator("#tabSave").click();
+        }
+        const restored = await popup({ seedDraft: draft, width:1270, height:889 });
+        assert.match(await restored.page.locator("#notionTagChips").textContent(), /reference/);
+        assert.match(await restored.page.locator("#selectedTagsContainer").textContent(), /tickonly/);
+        await restored.page.close();
+        assert.deepEqual(providerSample.errors, []);
+    });
+    await providerSample.page.close();
+    const finalSample = await popup({ width:1270, height:889 });
+    await check("balanced Settings, RTL long capture and independent sync refresh failure", async () => {
+        const p = finalSample.page;
+        await p.locator("#tabSettings").click();
+        const boxes = await Promise.all(["account", "notion", "destination"].map(name => p.locator(`.settings-card--${name}`).boundingBox()));
+        assert.ok(boxes.every(box => Math.abs(box.y - boxes[0].y) < 1));
+        assert.ok(boxes.every(box => Math.abs(box.width - boxes[0].width) < 1));
+        await p.evaluate(() => renderAuthUI({ provider:"Notion", status:"error", message:"Notion connection cancelled. Try again." }));
+        await p.screenshot({ path:path.join(output,"final-settings-error.png") });
+        await p.evaluate(() => renderAuthUI(null));
+        assert.equal(await p.locator("#notionAuthFeedback").isVisible(), false);
+        await p.locator("#tabSave").click();
+        await p.locator("#title").fill("مقال عربي عن تنظيم المعرفة");
+        await p.locator("#rawText").fill("محتوى عربي طويل ومفيد ".repeat(4000));
+        assert.equal(await p.locator("#title").evaluate(node => getComputedStyle(node).direction), "rtl");
+        assert.equal(await p.locator("#rawText").inputValue(), "محتوى عربي طويل ومفيد ".repeat(4000));
+        assert.ok(await p.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        await p.screenshot({ path:path.join(output,"final-arabic-long-capture.png") });
+        await p.evaluate(async () => { fixture.syncReadError=true; setStatus("Saved to Knowvia.","success"); await syncUI.saved("aaaaaaaaaaaaaaaaaaaaaaaa"); });
+        await p.waitForFunction(() => document.getElementById("syncReceiptDetail").textContent.includes("Sync status unavailable"));
+        assert.equal(await p.locator("#statusText").textContent(), "Saved to Knowvia.");
+        assert.ok(!/Saved|Cannot reach Knowvia/.test(await p.locator("#syncReceiptDetail").textContent()));
+        await p.locator("#syncReceipt").scrollIntoViewIfNeeded();
+        await p.screenshot({ path:path.join(output,"final-sync-refresh-error.png") });
+        await p.evaluate(() => { fixture.syncReadError=false; });
+        await p.locator("#refreshSyncStatusBtn").click();
+        await p.waitForFunction(() => document.getElementById("syncReceiptDetail").textContent === "Export status");
+        assert.deepEqual(finalSample.errors, []);
+    });
+    await finalSample.page.close();
+    const editSample = await popup({ width:1270, height:889, notionSelected:true });
+    await check("real Edit/source buttons update the payload; primary confirmation ignores slow polling", async () => {
+        const p = editSample.page;
+        await p.locator("#title").focus();
+        assert.equal(await p.evaluate(() => document.activeElement.id), "title");
+        await p.locator("#title").fill("Edited title");
+        await p.locator("#rawText").fill("Complete edited original article.");
+        assert.equal(await p.locator("#titleCount").textContent(), "12/500");
+        await p.locator(".v2-source summary").click();
+        assert.equal(await p.evaluate(() => document.activeElement.id), "url");
+        await p.locator("#url").fill("https://example.com/edited");
+        await p.screenshot({path:path.join(output,"ux-edit-source.png")});
+        await p.locator("#notionDestination").click();
+        await p.evaluate(() => { fixture.syncReadDelay=2000; });
+        await p.locator("#saveArticleBtn").click();
+        await p.waitForFunction(() => document.getElementById("statusText").textContent === "Saved to Knowvia.");
+        await p.waitForFunction(() => document.getElementById("saveArticleBtn").getAttribute("aria-busy") !== "true", {timeout:1000});
+        const saved = await p.evaluate(() => fixture.requests.filter(r=>r.route==="/content").at(-1).body);
+        assert.equal(saved.title,"Edited title");assert.equal(saved.rawText,"Complete edited original article.");
+        assert.equal(saved.url,"https://example.com/edited");
+        await p.screenshot({path:path.join(output,"ux-primary-confirmed-polling.png")});
+        await p.locator("#tabSettings").click();await p.locator("#themeToggleBtn").click();await p.locator("#tabSave").click();
+        assert.equal(await p.locator("#appView .brand-lockup .logo-dark").isVisible(),true);
+        assert.equal(await p.locator("#appView .brand-lockup .logo-light").isVisible(),false);
+        const svg = await readFile(path.resolve("extension/assets/knowvia-wordmark-dark.svg"), "utf8");
+        const alpha=await p.evaluate(async svg=>{const image=new Image();image.src="data:image/svg+xml;base64,"+btoa(svg);await image.decode();const canvas=document.createElement("canvas");canvas.width=843;canvas.height=195;const ctx=canvas.getContext("2d");ctx.drawImage(image,0,0,843,195);return ctx.getImageData(0,0,1,1).data[3];},svg);
+        assert.equal(alpha,0);
+        await p.screenshot({path:path.join(output,"ux-dark-transparent-logo.png")});
+        for (const [tick,notion] of [["pending","not_requested"],["not_requested","pending"],["pending","pending"],["synced","failed"],["synced","pending"],["synced","synced"]]) {
+            await p.evaluate(async ({tick,notion})=>{
+                fixture.syncReadDelay=0;fixture.syncReadError=false;
+                fixture.syncStates={ticktick:{requested:tick!=="not_requested",status:tick,retryable:false},notion:{requested:notion!=="not_requested",status:notion,retryable:notion==="failed",pageId:"99999999-9999-9999-9999-999999999999",pageUrl:"https://www.notion.so/test"}};
+                await syncUI.saved("aaaaaaaaaaaaaaaaaaaaaaaa");
+            },{tick,notion});
+            await p.waitForFunction(({tick,notion})=>document.getElementById("ticktickSyncRow").dataset.state===tick&&document.getElementById("notionSyncRow").dataset.state===notion,{tick,notion});
+            assert.equal(await p.locator("#ticktickSyncRow").isVisible(),tick!=="not_requested");
+            assert.equal(await p.locator("#notionSyncRow").isVisible(),notion!=="not_requested");
+            await p.screenshot({path:path.join(output,`ux-result-${tick}-${notion}.png`)});
+            if(tick==="synced"&&notion==="pending") {
+                await p.evaluate(()=>{fixture.syncReadError=true;});
+                await p.locator("#refreshSyncStatusBtn").click();
+                await p.waitForFunction(()=>document.getElementById("syncReceiptDetail").textContent.includes("Sync status unavailable"));
+                assert.equal(await p.locator("#ticktickSyncRow").getAttribute("data-state"),"synced");
+                assert.equal(await p.locator("#notionSyncRow").getAttribute("data-state"),"pending");
+                await p.screenshot({path:path.join(output,"ux-preserved-result-status-unavailable.png")});
+            }
+        }
+
+        await p.evaluate(async()=>{chrome.tabs.query=async()=>[{id:1,title:"Extensions",url:"chrome://extensions/"}];chrome.tabs.sendMessage=(_id,_message,callback)=>callback(null);await refreshPageData();});
+        assert.equal(await p.locator("#captureRecovery").isVisible(),true);
+        assert.equal(await p.locator("#appFooter #syncReceipt").count(),0);
+        assert.equal(await p.locator("#syncReceipt").isVisible(),false);
+        assert.notEqual(await p.locator("#saveArticleBtn").getAttribute("data-state"),"success");
+        assert.equal(await p.locator("#statusBar").getAttribute("class"),"status-bar status-bar--info");
+        await p.screenshot({path:path.join(output,"ux-restricted-capture.png")});
+        await p.locator("#rawText").fill("A manually entered note.");
+        assert.equal(await p.locator("#captureRecovery").isVisible(),false);
+        assert.equal(await p.locator("#rawText").inputValue(),"A manually entered note.");
+        await p.screenshot({path:path.join(output,"ux-manual-note-recovered.png")});
+        assert.deepEqual(editSample.errors,[]);
+    });
+    await editSample.page.close();
+    const attachments = await popup({ width:1270, height:700 });
+    const ap = attachments.page;
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII=','base64');
+    const file = name => ({ name, mimeType:'image/png', buffer:png });
+    await ap.evaluate(() => {
+        const create = URL.createObjectURL.bind(URL), revoke = URL.revokeObjectURL.bind(URL);
+        window.imageResources = { created:[], revoked:[] };
+        URL.createObjectURL = blob => { const url = create(blob); imageResources.created.push(url); return url; };
+        URL.revokeObjectURL = url => { imageResources.revoked.push(url); revoke(url); };
+    });
+    await check("device file chooser supports multiple local thumbnails and individual removal", async () => {
+        const chooser = ap.waitForEvent('filechooser');
+        await ap.locator('#chooseImagesBtn').click();
+        await (await chooser).setFiles([file('One.png'),file('Two.png')]);
+        await ap.waitForFunction(() => document.querySelectorAll('#imageGrid img').length===2);
+        assert.equal(await ap.locator('#imageCount').textContent(),'(2)');
+        assert.equal(await ap.locator('#retainImages').count(),0);
+        await ap.screenshot({path:path.join(output,'images-device-multiple.png')});
+        await ap.getByRole('button',{name:'Remove image One.png',exact:true}).click();
+        assert.equal(await ap.locator('#imageGrid img').count(),1);
+        assert.equal(await ap.evaluate(()=>imageResources.revoked.length),1);
+    });
+    await check("clipboard event adds images; ordinary text keeps native paste behavior", async () => {
+        await ap.locator('#imageAttachments').evaluate((area,bytes)=>{
+            const data=new DataTransfer();data.items.add(new File([new Uint8Array(bytes)],'Clipboard.png',{type:'image/png'}));
+            area.dispatchEvent(new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true}));
+        },[...png]);
+        await ap.waitForFunction(()=>document.querySelectorAll('#imageGrid img').length===2);
+        const prevented=await ap.locator('#rawText').evaluate(field=>{
+            const data=new DataTransfer();data.setData('text/plain','Ordinary text');
+            const event=new ClipboardEvent('paste',{clipboardData:data,bubbles:true,cancelable:true});
+            field.dispatchEvent(event);return event.defaultPrevented;
+        });
+        assert.equal(prevented,false);
+        assert.equal(await ap.locator('#imageGrid img').count(),2);
+        await ap.screenshot({path:path.join(output,'images-clipboard.png')});
+        assert.equal(await ap.locator('#pasteImageBtn').count(),0);
+    });
+    await check("invalid, corrupt, and oversized images preserve text and earlier selections", async () => {
+        const title=await ap.locator('#title').inputValue(), text=await ap.locator('#rawText').inputValue();
+        for(const [invalid,message] of [
+            [{name:'Invalid.txt',mimeType:'text/plain',buffer:Buffer.from('not an image')},/use PNG/],
+            [{name:'Corrupt.png',mimeType:'image/png',buffer:Buffer.from('invalid PNG')},/could not read/],
+            [{name:'Large.png',mimeType:'image/png',buffer:Buffer.alloc(5*1024*1024+1)},/up to 5 MB/]
+        ]) {
+            await ap.locator('#imageFileInput').setInputFiles(invalid);
+            await ap.waitForFunction(()=>!document.getElementById('imageError').hidden);
+            assert.match(await ap.locator('#imageError').textContent(),message);
+            assert.equal(await ap.locator('#imageGrid img').count(),2);
+            assert.equal(await ap.locator('#title').inputValue(),title);
+            assert.equal(await ap.locator('#rawText').inputValue(),text);
+            assert.equal(await ap.locator('#statusBar').getAttribute('class'),'status-bar status-bar--info');
+        }
+        await ap.locator('#imageError').scrollIntoViewIfNeeded();
+        await ap.screenshot({path:path.join(output,'images-validation.png')});
+    });
+    await check("six-image limit accepts valid files within a mixed batch without losing previews", async () => {
+        await ap.locator('#imageFileInput').setInputFiles([file('3.png'),{name:'No.svg',mimeType:'image/svg+xml',buffer:Buffer.from('<svg/>')},file('4.png'),file('5.png'),file('6.png'),file('7.png')]);
+        await ap.waitForFunction(()=>document.getElementById('imageCount').textContent==='(6)');
+        assert.match(await ap.locator('#imageError').textContent(),/up to 6 images/);
+        await ap.locator('#title').fill('Images stay while editing');
+        await ap.locator('#rawText').fill('Mixed English and عربي notes.');
+        assert.equal(await ap.locator('#imageGrid img').count(),6);
+        await ap.locator('#imageGrid').scrollIntoViewIfNeeded();
+        await ap.screenshot({path:path.join(output,'images-six-thumbnails.png')});
+    });
+    await check("save sends verified image IDs with retention; draft reset revokes every temporary URL", async () => {
+        assert.equal(await ap.evaluate(()=>fixture.requests.filter(r=>r.method==='POST').length),0);
+        await ap.locator('#saveArticleBtn').click();
+        await ap.waitForFunction(()=>document.getElementById('statusText').textContent==='Saved to Knowvia.');
+        const payload=await ap.evaluate(()=>fixture.requests.filter(r=>r.route==='/content').at(-1).body);
+        assert.equal(payload.title,'Images stay while editing');
+        assert.equal(payload.rawText,'Mixed English and عربي notes.');
+        assert.deepEqual(Object.keys(payload).sort(),['title','url','rawText','destinations','user_input','use_summaryAi','use_tagsAi','use_quiz','mergeSummaryWithContent','images'].sort());
+        assert.equal(await ap.locator('#imageGrid img').count(),0);
+        assert.equal(await ap.evaluate(()=>imageResources.created.every(url=>imageResources.revoked.includes(url))),true);
+        assert.equal(payload.images.retain,true);
+        assert.equal(payload.images.uploadIds.length,6);
+        assert.equal(await ap.evaluate(()=>fixture.requests.filter(r=>r.route==="r2-put").length),6);
+        assert.equal(await ap.locator(".image-save-result").count(),0);
+        assert.equal(await ap.evaluate(()=>JSON.stringify(fixture.values).includes('data:image/')),false);
+        await ap.screenshot({path:path.join(output,'images-text-only-save-confirmed.png')});
+        await ap.locator('#title').fill('A fresh draft');
+        assert.equal(await ap.locator('#appFooter #syncReceipt').count(),0);
+        assert.equal(await ap.locator('#previousSave').isVisible(),true);
+        assert.equal(await ap.locator('#syncReceipt').isVisible(),false);
+        assert.equal(await ap.locator('#statusTitle').textContent(),'Ready to save');
+        await ap.screenshot({path:path.join(output,'fresh-draft-no-stale-result.png')});
+        assert.deepEqual(attachments.errors,[]);
+    });
+    await ap.close();
+
+    const lifecycle = await popup({ width:1270, height:700, notionSelected:true });
+    const lp = lifecycle.page;
+    await check("empty description validates beside editor and leaves the title intact", async () => {
+        await lp.locator('#rawText').fill('');
+        await lp.locator('#saveArticleBtn').click();
+        assert.equal(await lp.locator('#rawTextError').textContent(),'Description is required.');
+        assert.equal(await lp.locator('#rawTextError').isVisible(),true);
+        assert.equal(await lp.locator('#rawText').getAttribute('aria-invalid'),'true');
+        assert.match(await lp.locator('#title').inputValue(),/calmer/);
+        assert.equal(await lp.evaluate(()=>fixture.requests.filter(r=>r.route==='/content').length),0);
+        await lp.screenshot({path:path.join(output,'empty-description-validation.png')});
+        await lp.locator('#rawText').fill('English with العربية and a URL https://example.com.');
+        assert.equal(await lp.locator('#rawTextError').isVisible(),false);
+        assert.equal(await lp.locator('#rawText').getAttribute('aria-invalid'),null);
+    });
+    await check("concurrent status refreshes issue one read and never duplicate provider writes", async () => {
+        await lp.evaluate(async () => {
+            fixture.syncStates={ticktick:{requested:false,status:'not_requested',retryable:false},notion:{requested:true,status:'pending',retryable:false}};
+            await syncUI.saved('aaaaaaaaaaaaaaaaaaaaaaaa',{ticktick:{enabled:false},notion:{enabled:true}});
+        });
+        await lp.waitForFunction(()=>document.getElementById('notionSyncState').textContent==='Notion · Saving…');
+        const before=await lp.evaluate(()=>fixture.requests.filter(r=>r.route.endsWith('/sync-status')).length);
+        await lp.evaluate(()=>{
+            fixture.syncReadDelay=300;
+            document.getElementById('refreshSyncStatusBtn').click();
+            document.getElementById('refreshSyncStatusBtn').click();
+        });
+        await lp.waitForFunction(()=>!document.getElementById('refreshSyncStatusBtn').disabled);
+        assert.equal(await lp.evaluate(()=>fixture.requests.filter(r=>r.route.endsWith('/sync-status')).length),before+1);
+        assert.equal(await lp.evaluate(()=>fixture.requests.filter(r=>r.method==='POST').length),0);
+    });
+    await check("uncertain provider writes stay unrepeatable even if a stale retry flag is present", async () => {
+        await lp.evaluate(()=>{fixture.syncStates.notion={requested:true,status:'uncertain',retryable:true};fixture.syncReadDelay=0;});
+        await lp.locator('#refreshSyncStatusBtn').click();
+        await lp.waitForFunction(()=>document.getElementById('notionSyncState').textContent==="Couldn't confirm status");
+        assert.equal(await lp.locator('#notionSyncRetry').isVisible(),false);
+        await lp.evaluate(()=>document.getElementById('notionSyncRetry').click());
+        assert.equal(await lp.evaluate(()=>fixture.requests.filter(r=>r.method==='POST').length),0);
+        await lp.locator('#title').fill('Fresh content with previous receipt');
+        assert.equal(await lp.locator('#syncReceipt').isVisible(),false);
+        assert.equal(await lp.locator('#statusTitle').textContent(),'Ready to save');
+        assert.deepEqual(lifecycle.errors,[]);
+    });
+    await lp.close();
+
+
+    for (const [width,height] of [[320,700],[400,800],[780,800],[900,800],[1000,800],[1270,889]]) {
+        const sample=await popup({width,height,notionSelected:true});
+        const p=sample.page;
+        await check(`${width}x${height}: independent configuration, visible tags and readable receipts`, async()=>{
+            assert.equal(await p.locator('#connectTickTickFromSaveBtn').getAttribute('aria-pressed'),'false');
+            assert.equal(await p.locator('#projectSearchInput').isEnabled(),true);
+            assert.equal(await p.locator('#openCreateProjectBtn').isEnabled(),true);
+            await p.locator('#projectSearchInput').fill('Read');
+            await p.locator('#projectSearchInput').press('ArrowDown');await p.locator('#projectSearchInput').press('Enter');
+            assert.equal(await p.locator('#projectSelect').inputValue(),'reading');
+            await p.locator('#connectTickTickFromSaveBtn').click();await p.locator('#connectTickTickFromSaveBtn').click();
+            assert.equal(await p.locator('#projectSelect').inputValue(),'reading');
+            assert.equal(await p.locator('#notionDestination').getAttribute('aria-pressed'),'false');
+            assert.equal(await p.locator('#tagInput').isVisible(),true);
+            await p.locator('#tagInput').fill('LongTagNameForAReadingWorkflow');await p.locator('#tagInput').press('Enter');
+            assert.match(await p.locator('#selectedTagsContainer').textContent(),/longtagname/);
+            await p.locator('#notionTagInput').fill('Reading');await p.locator('#notionTagInput').press('Enter');
+            await p.locator('#notionTagInput').fill('Reading');await p.locator('#notionTagInput').press('Enter');
+            assert.equal(await p.locator('#notionTagChips .tag-chip').count(),1);
+            await p.locator('#tagInput').scrollIntoViewIfNeeded();
+            await p.screenshot({path:path.join(output,`repair-config-${width}.png`)});
+            await p.evaluate(async()=>{fixture.syncReadError=true;await syncUI.saved('aaaaaaaaaaaaaaaaaaaaaaaa',{ticktick:{enabled:true},notion:{enabled:false}});});
+            await p.waitForFunction(()=>document.getElementById('syncReceiptDetail').textContent.includes('unavailable'));
+            const confirmation=await p.locator('.primary-save-result').boundingBox(),footer=await p.locator('#appFooter').boundingBox();
+            assert.ok(confirmation.x>=0 && confirmation.x+confirmation.width<=width);
+            assert.ok(confirmation.y>=footer.y && confirmation.y+confirmation.height<=footer.y+footer.height);
+            assert.ok(footer.y+footer.height<=height);
+            assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+            assert.equal(await p.locator('#ticktickSyncRetry').isVisible(),false);
+            await p.screenshot({path:path.join(output,`repair-status-${width}.png`)});
+            assert.deepEqual(sample.errors,[]);
+        });
+        await p.close();
+    }
+
+
+    const preservedAi=await popup({width:1270,height:889,seedDraft:{userId:'fixture-user',title:'Preserved draft',rawText:'Original content',useAiSummary:true,useAiTags:true,ticktickTags:[],notionTags:[]}});
+    await check("single connected tag entry and retired AI values retain the existing contract",async()=>{
+        const p=preservedAi.page;
+        assert.equal(await p.locator('.v2-ticktick-ai').count(),0);
+        assert.equal(await p.locator('.tag-entry input').count(),1);
+        assert.equal(await p.locator('.tag-entry button').count(),1);
+        await p.locator('#tagInput').fill('Focus');await p.locator('#addTagBtn').click();
+        await p.locator('#tagInput').fill('Focus');await p.locator('#tagInput').press('Enter');
+        assert.equal(await p.locator('#selectedTagsContainer .tag-chip').count(),1);
+        await p.locator('#selectedTagsContainer button').click();
+        assert.equal(await p.locator('#selectedTagsContainer .tag-chip').count(),0);
+        await p.locator('#projectSearchInput').fill('Read');await p.locator('#projectSearchInput').press('ArrowDown');await p.locator('#projectSearchInput').press('Enter');
+        await p.locator('#connectTickTickFromSaveBtn').click();
+        await p.locator('#saveArticleBtn').click();
+        await p.waitForFunction(()=>fixture.requests.some(r=>r.route==='/content'));
+        const body=await p.evaluate(()=>fixture.requests.find(r=>r.route==='/content').body);
+        assert.equal(body.ticktickOptions.useAiSummary,true);assert.equal(body.ticktickOptions.useAiTags,true);
+        assert.equal(body.rawText,'Original content');
+        assert.deepEqual(preservedAi.errors,[]);
+    });
+    await preservedAi.page.close();
+
+
+    const tickFeedback=await popup({width:400,height:800});
+    await check("TickTick feedback separates confirmed saving, failure, uncertainty and failed lookup",async()=>{
+        const p=tickFeedback.page;
+        for(const [status,retryable,expected] of [['pending',false,'TickTick · Saving…'],['synced',false,'TickTick ✓'],['failed',true,"Couldn't save"],['uncertain',false,"Couldn't confirm status"]]){
+            await p.evaluate(async({status,retryable})=>{
+                fixture.syncStates={ticktick:{requested:true,status,retryable},notion:{requested:false,status:'not_requested',retryable:false}};
+                await syncUI.saved('aaaaaaaaaaaaaaaaaaaaaaaa',{ticktick:{enabled:true},notion:{enabled:false}});
+            },{status,retryable});
+            await p.waitForFunction(expected=>document.getElementById('ticktickSyncState').textContent===expected,expected);
+            assert.equal(await p.locator('.primary-save-result').textContent(),'Knowvia ✓');
+            assert.equal(await p.locator('#notionSyncRow').isVisible(),false);
+            assert.equal(await p.locator('#ticktickSyncRetry').isVisible(),retryable);
+            if(retryable) assert.equal(await p.locator('#refreshSyncStatusBtn').isVisible(),false);
+            await p.screenshot({path:path.join(output,`final-ticktick-${status}.png`)});
+        }
+        await p.evaluate(async()=>{fixture.syncReadError=true;await syncUI.saved('aaaaaaaaaaaaaaaaaaaaaaaa',{ticktick:{enabled:true},notion:{enabled:false}});});
+        await p.waitForFunction(()=>document.getElementById('ticktickSyncState').textContent==='TickTick · Saving…');
+        assert.equal(await p.locator('#syncReceiptDetail').isVisible(),true);
+        assert.equal(await p.locator('#ticktickSyncRetry').isVisible(),false);
+        assert.equal(await p.locator('#refreshSyncStatusBtn').isVisible(),true);
+        await p.screenshot({path:path.join(output,'final-ticktick-status-unavailable.png')});
+        assert.deepEqual(tickFeedback.errors,[]);
+    });
+    await tickFeedback.page.close();
+
+    const confirmedThenOffline = await popup({width:1000,height:800});
+    await check("initial confirmed provider status survives a failed first lookup; partial images stay separate", async()=>{
+        const p=confirmedThenOffline.page;
+        await p.evaluate(async()=>{
+            fixture.syncReadError=true;
+            await syncUI.saved('aaaaaaaaaaaaaaaaaaaaaaaa',{ticktick:{enabled:true},notion:{enabled:true}},true,{
+                contentId:'aaaaaaaaaaaaaaaaaaaaaaaa',ticktick:{requested:true,status:'synced',retryable:false,taskId:'confirmed-task'},
+                notion:{requested:true,status:'partial',retryable:true,textStatus:'synced',imageStatus:'failed'}
+            });
+        });
+        await p.waitForFunction(()=>document.getElementById('syncReceiptDetail').textContent.includes('unavailable'));
+        assert.equal(await p.locator('#ticktickSyncState').textContent(),'TickTick ✓');
+        assert.equal(await p.locator('#notionSyncState').textContent(),'Text saved · images need attention');
+        assert.equal(await p.locator('.image-save-result').count(),0);
+        assert.equal(await p.locator('#notionSyncRetry').isVisible(),false);
+        await p.evaluate(()=>{
+            fixture.syncReadError=false;
+            fixture.syncStates={ticktick:{requested:true,status:'synced',retryable:false},
+                notion:{requested:true,status:'synced',retryable:false,textStatus:'synced',imageStatus:'synced'}};
+        });
+        await p.locator('#refreshSyncStatusBtn').click();
+        await p.waitForFunction(()=>document.getElementById('notionSyncState').textContent==='Notion ✓');
+        assert.deepEqual(confirmedThenOffline.errors,[]);
+    });
+    await confirmedThenOffline.page.close();
+
+    const sourceClipboard = await popup({clipboard:'Copied page source:\n<!DOCTYPE html><html><script>unwanted_source()</script></html>'});
+    await check("automatic clipboard page source requires intentional paste instead of silently saving markup", async()=>{
+        const p=sourceClipboard.page;
+        assert.equal(await p.locator('#rawText').inputValue(),'');
+        assert.match(await p.locator('#captureRecovery').textContent(),/page source/);
+        assert.equal(await p.evaluate(()=>fixture.requests.some(r=>r.route==='/content')),false);
+        await p.locator('#rawText').fill('<script>const intentional = true;</script>');
+        assert.match(await p.locator('#rawText').inputValue(),/const intentional/);
+    });
+    await sourceClipboard.page.close();
+
+    const unreadablePage = await popup();
+    await check("an inaccessible page cannot fall back to HTML or JavaScript",async()=>{
+        const p=unreadablePage.page;
+        await p.evaluate(async()=>{
+            chrome.tabs.sendMessage=(_id,_message,callback)=>callback({ok:false,error:'Page access denied'});
+            await refreshPageData();
+        });
+        assert.equal(await p.locator('#rawText').inputValue(),'');
+        assert.match(await p.locator('#captureRecovery').textContent(),/cannot be captured/);
+        assert.equal(await p.evaluate(()=>fixture.requests.some(r=>r.route==='/content')),false);
+    });
+    await unreadablePage.page.close();
+
+
+    const pendingNotionTag=await popup({width:1000,height:800,notionSelected:true});
+    await check("Save includes an uncommitted Notion tag without borrowing TickTick tags",async()=>{
+        const p=pendingNotionTag.page;
+        await p.locator('#notionDestination').click();
+        await p.locator('#notionTagInput').fill('Notion Pending');
+        await p.locator('#tagInput').fill('Tick only');await p.locator('#tagInput').press('Enter');
+        await p.locator('#saveArticleBtn').click();
+        await p.waitForFunction(()=>fixture.requests.some(r=>r.route==='/content'));
+        const body=await p.evaluate(()=>fixture.requests.find(r=>r.route==='/content').body);
+        assert.deepEqual(body.notionOptions.tags,['notionpending']);
+        assert.equal(body.destinations.ticktick.enabled,false);
+        assert.equal(Object.hasOwn(body,'ticktickOptions'),false);
+        assert.equal(body.rawText.includes('Give useful ideas'),true);
+        await p.waitForFunction(()=>document.getElementById('statusText').textContent==='Saved to Knowvia.');
+        assert.equal(await p.locator('#notionTagInput').inputValue(),'');
+        assert.deepEqual(pendingNotionTag.errors,[]);
+    });
+    await pendingNotionTag.page.close();
+
+    const recoveringReceipt=await popup({width:1000,height:800});
+    await check("queued receipt recovers to independently confirmed providers after a status GET failure",async()=>{
+        const p=recoveringReceipt.page;
+        await p.evaluate(async()=>{
+            fixture.syncReadError=true;
+            await syncUI.saved('aaaaaaaaaaaaaaaaaaaaaaaa',{ticktick:{enabled:true},notion:{enabled:true}},false,{
+                contentId:'aaaaaaaaaaaaaaaaaaaaaaaa',ticktick:{requested:true,status:'queued',retryable:false},notion:{requested:true,status:'queued',retryable:false}
+            });
+        });
+        await p.waitForFunction(()=>document.getElementById('syncReceiptDetail').textContent.includes('unavailable'));
+        assert.equal(await p.locator('#ticktickSyncState').textContent(),'TickTick · Saving…');
+        assert.equal(await p.locator('#notionSyncState').textContent(),'Notion · Saving…');
+        await p.evaluate(()=>{
+            fixture.syncReadError=false;
+            fixture.syncStates={ticktick:{requested:true,status:'synced',retryable:false},notion:{requested:true,status:'failed',retryable:true}};
+        });
+        await p.locator('#refreshSyncStatusBtn').click();
+        await p.waitForFunction(()=>document.getElementById('ticktickSyncState').textContent==='TickTick ✓');
+        assert.equal(await p.locator('#notionSyncState').textContent(),"Couldn't save");
+        assert.equal(await p.locator('#notionSyncRetry').isVisible(),true);
+        await p.evaluate(()=>{fixture.syncStates.notion={requested:true,status:'synced',retryable:false};});
+        await p.locator('#refreshSyncStatusBtn').click();
+        await p.waitForFunction(()=>document.getElementById('notionSyncState').textContent==='Notion ✓');
+        assert.equal(await p.locator('#refreshSyncStatusBtn').isVisible(),false);
+        assert.equal(await p.locator('#ticktickSyncRow > span').first().isVisible(),false);
+        assert.equal(await p.locator('#notionSyncRow > span').first().isVisible(),false);
+        assert.equal(await p.evaluate(()=>fixture.requests.some(r=>r.route.includes('/sync/') && r.method==='POST')),false);
+        assert.deepEqual(recoveringReceipt.errors,[]);
+    });
+    await recoveringReceipt.page.close();
+
+    const independentImages=await popup({width:1000,height:800,notionSelected:true});
+    await check("global images retain independently when Notion image inclusion is disabled",async()=>{
+        const p=independentImages.page;
+        await p.locator('#imageFileInput').setInputFiles({name:'Independent.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII=','base64')});
+        await p.waitForFunction(()=>document.querySelectorAll('#imageGrid img').length===1);
+        const parent=await p.locator('#imageAttachments').evaluate(node=>node.parentElement.className);
+        await p.locator('#notionDestination').click();
+        assert.equal(await p.locator('#notionImageOptions').isVisible(),true);
+        await p.locator('#includeNotionImages').uncheck();
+        await p.locator('#notionDestination').click();await p.locator('#notionDestination').click();
+        assert.equal(await p.locator('#includeNotionImages').isChecked(),false);
+        assert.equal(await p.locator('#imageAttachments').evaluate(node=>node.parentElement.className),parent);
+        assert.equal(await p.locator('#retainImages').count(),0);
+        await p.locator('#saveArticleBtn').click();
+        await p.waitForFunction(()=>document.getElementById('statusText').textContent==='Saved to Knowvia.');
+        const body=await p.evaluate(()=>fixture.requests.find(r=>r.route==='/content').body);
+        assert.equal(body.images.notion,false);assert.equal(body.images.retain,true);
+        assert.equal(body.destinations.notion.enabled,true);
+        assert.equal(await p.locator('#saveArticleBtn').isDisabled(),true);
+        assert.deepEqual(independentImages.errors,[]);
+    });
+    await independentImages.page.close();
+
+    const stagedProgress=await popup({width:400,height:800});
+    await check("progress remains contextual through provider completion and exposes only confirmed provider actions",async()=>{
+        const p=stagedProgress.page;
+        await p.evaluate(async()=>{
+            fixture.syncStates={ticktick:{requested:true,status:'pending',retryable:false},notion:{requested:true,status:'pending',retryable:false,textStatus:'synced',imageStatus:'pending'}};
+            await syncUI.saved('aaaaaaaaaaaaaaaaaaaaaaaa',{ticktick:{enabled:true},notion:{enabled:true}});
+        });
+        await p.waitForFunction(()=>document.getElementById('notionSyncState').textContent.includes('sending images'));
+        assert.match(await p.locator('#syncProgressHeading').textContent(),/Syncing/);
+        assert.equal(await p.locator('#openConfirmedTickTickBtn').isVisible(),false);
+        assert.equal(await p.locator('#openConfirmedNotionBtn').isVisible(),false);
+        await p.evaluate(()=>{fixture.syncStates.notion={requested:true,status:'synced',retryable:false,imageStatus:'synced',pageUrl:'https://www.notion.so/provider-confirmed-capture'};});
+        await p.locator('#refreshSyncStatusBtn').click();
+        await p.waitForFunction(()=>!document.getElementById('openConfirmedNotionBtn').hidden);
+        assert.match(await p.locator('#syncProgressHeading').textContent(),/Syncing/);
+        await p.evaluate(()=>{fixture.syncStates.ticktick={requested:true,status:'synced',retryable:false,taskId:'confirmed-task'};});
+        await p.locator('#refreshSyncStatusBtn').click();
+        await p.waitForFunction(()=>document.getElementById('syncProgressHeading').textContent==='Saved successfully');
+        await p.locator('#savedContentActions summary').click();
+        await p.locator('#openConfirmedTickTickBtn').click();
+        assert.ok((await p.evaluate(()=>fixture.openedTabs)).includes('https://ticktick.com/webapp/'));
+        await p.screenshot({path:path.join(output,'integrated-destination-menu.png')});
+        await p.locator('#savedContentActions').press('Escape');
+        assert.equal(await p.locator('#savedContentActions').getAttribute('open'),null);
+        assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+        await p.screenshot({path:path.join(output,'final-progress-complete.png')});
+        assert.deepEqual(stagedProgress.errors,[]);
+    });
+    await stagedProgress.page.close();
+
+    const imageFlow=await popup({width:1270,height:889,notionSelected:true});
+    const ip=imageFlow.page;
+    const imageFile={name:'Retained.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/lXcAAAAASUVORK5CYII=','base64')};
+    await check("automatic retention survives an image upload error without losing the capture",async()=>{
+        await ip.locator('#imageFileInput').setInputFiles(imageFile);
+        await ip.waitForFunction(()=>document.querySelectorAll('#imageGrid img').length===1);
+        assert.equal(await ip.evaluate(()=>fixture.requests.some(r=>r.route==='/images/uploads')),false);
+        assert.equal(await ip.locator('#imageGrid img').count(),1);
+        assert.equal(await ip.locator('#saveArticleBtn').getAttribute('aria-busy'),null);
+        await ip.evaluate(()=>{fixture.imageUploadError=true;});
+        await ip.locator('#saveArticleBtn').click();
+        await ip.waitForFunction(()=>!document.getElementById('imageError').hidden && document.getElementById('saveArticleBtn').getAttribute('aria-busy')!=='true');
+        assert.equal(await ip.locator('#imageGrid img').count(),1);
+        assert.match(await ip.locator('#title').inputValue(),/calmer/);
+        assert.equal(await ip.evaluate(()=>fixture.requests.filter(r=>r.route==='/content').length),0);
+    });
+    await check("failed text save reuses verified uploads; global image controls remain fixed",async()=>{
+        await ip.evaluate(()=>{fixture.imageUploadError=false;fixture.saveMode='error';});
+        await ip.locator('#notionDestination').click();
+        assert.equal(await ip.locator('.capture-extras #imageAttachments').count(),1);
+        await ip.locator('#saveArticleBtn').click();
+        await ip.waitForFunction(()=>document.getElementById('statusText').textContent.includes('Save unavailable'));
+        const puts=await ip.evaluate(()=>fixture.requests.filter(r=>r.route==='r2-put').length);
+        assert.equal(await ip.locator('#imageGrid img').count(),1);
+        await ip.evaluate(()=>{fixture.saveMode='success';});
+        await ip.locator('#saveArticleBtn').click();
+        await ip.waitForFunction(()=>document.getElementById('statusText').textContent==='Saved to Knowvia.');
+        assert.equal(await ip.evaluate(()=>fixture.requests.filter(r=>r.route==='r2-put').length),puts);
+        const payload=await ip.evaluate(()=>fixture.requests.filter(r=>r.route==='/content').at(-1).body);
+        assert.equal(payload.images.retain,true);assert.equal(payload.images.uploadIds.length,1);
+        assert.equal(payload.destinations.notion.enabled,true);
+        assert.equal(Object.hasOwn(payload,'ticktickOptions'),false);
+        assert.equal(await ip.locator('#imageGrid img').count(),0);
+        await ip.screenshot({path:path.join(output,'retained-images-confirmed.png')});
+        assert.deepEqual(imageFlow.errors,[]);
+    });
+    await ip.close();
+
+
+    const tempImageFlow=await popup({width:1000,height:800,notionSelected:true});
+    await check("Notion-only images retain explicit temporary intent and survive destination changes",async()=>{
+        const p=tempImageFlow.page;
+        await p.locator('#imageFileInput').setInputFiles(imageFile);
+        await p.waitForFunction(()=>document.querySelectorAll('#imageGrid img').length===1);
+        await p.locator('#notionDestination').click();
+        assert.equal(await p.locator('.capture-extras #imageAttachments').count(),1);
+        await p.locator('#notionDestination').click();
+        assert.equal(await p.locator('#imageGrid img').count(),1);
+        assert.equal(await p.evaluate(()=>fixture.requests.some(r=>r.route==='/images/uploads')),false);
+        await p.locator('#notionDestination').click();
+        assert.equal(await p.locator('#retainImages').count(),0);
+        await p.locator('#imageAttachments').scrollIntoViewIfNeeded();
+        await p.screenshot({path:path.join(output,'notion-images-without-retention.png')});
+        await p.locator('#saveArticleBtn').click();
+        await p.waitForFunction(()=>document.getElementById('statusText').textContent==='Saved to Knowvia.');
+        const payload=await p.evaluate(()=>fixture.requests.filter(r=>r.route==='/content').at(-1).body);
+        assert.equal(payload.images.retain,true);assert.equal(payload.images.uploadIds.length,1);
+        assert.equal(payload.images.notion,true);
+        assert.equal(payload.destinations.notion.enabled,true);
+        assert.equal(payload.destinations.ticktick.enabled,false);
+        assert.equal(await p.locator('.image-save-result').isVisible(),false);
+        assert.deepEqual(tempImageFlow.errors,[]);
+    });
+    await tempImageFlow.page.close();
+
 } finally { await browser.close(); }
 console.log(`${checks} checks passed; ${failures.length} failed. Screenshots: ${output}`);
 if (failures.length) process.exitCode = 1;

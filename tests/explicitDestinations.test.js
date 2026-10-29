@@ -8,7 +8,7 @@ import { fixture as notionFixture, ids } from "./helpers/notionContentFixture.js
 
 const contentId = "a".repeat(24);
 const get = (doc, path) => path.split(".").reduce((value, key) => value?.[key], doc);
-function worker({ failure, aiFailure = false } = {})
+function worker({ failure, aiFailure = false, summary = "Provider recap" } = {})
 {
     const doc = { _id: contentId, userId: "owner", title: "Original article", rawText: "Original text", tags: ["original"],
         destinations: { ticktick: { enabled: true, projectId: "reading", options: { useAiSummary: true, useAiTags: true, mergeSummaryWithContent: true, tags: ["manual"] } } },
@@ -29,7 +29,7 @@ function worker({ failure, aiFailure = false } = {})
         } })
     };
     const service = createTickTickContentService({ ContentModel: model, getToken: async () => "server-only-token", getProjects: async () => [{ id: "reading" }],
-        analyze: async () => { if (aiFailure) throw new Error("AI unavailable"); return { summary: "Provider recap", ai_tags: ["generated"] }; },
+        analyze: async () => { if (aiFailure) throw new Error("AI unavailable"); return { summary, ai_tags: ["generated"] }; },
         createTask: async (token, payload) => {
             requests.push({ token, payload });
             if (gate) await gate;
@@ -62,7 +62,7 @@ test("TickTick exports its own AI data, preserves original content and Notion me
     const originalNotion = structuredClone(f.doc.integrations.notion);
     await f.sync();
     assert.equal(f.requests.length, 1);
-    assert.equal(f.requests[0].payload.rawText, "Original text\n\nSummary:\nProvider recap");
+    assert.equal(f.requests[0].payload.rawText, "Original text\n\nAI Summary\nProvider recap");
     assert.deepEqual(f.requests[0].payload.tags, ["manual", "generated"]);
     assert.equal(f.requests[0].payload.projectId, "reading");
     assert.equal(f.doc.rawText, "Original text");
@@ -203,3 +203,65 @@ test("initial TickTick AI status depends only on its persisted export options", 
         assert.equal(state.ticktick.aiStatus, summary || tags ? "pending" : "not_requested");
     }
 });
+
+import { buildTickTickNoteContent } from "../services/ticktickContentService.js";
+for (const summary of [null, "", "   ", {}, "A recap"])
+{
+    test(`NOTE composition preserves all original text: ${JSON.stringify(summary)}`, () =>
+    {
+        const original = "Complete article\n" + "x".repeat(100000);
+        assert.equal(buildTickTickNoteContent(original, summary),
+            typeof summary === "string" && summary.trim() ? `${original}\n\nAI Summary\n${summary.trim()}` : original);
+    });
+}
+
+test("exact appended AI Summary block is not duplicated", () =>
+{
+    const original = "Article\n\nAI Summary\nRecap";
+    assert.equal(buildTickTickNoteContent(original, " Recap "), original);
+});
+
+for (const merge of [undefined, false, true])
+{
+    test(`TickTick always appends with legacy merge option ${merge}`, async () =>
+    {
+        const f = worker();
+        f.doc.destinations.ticktick.options.mergeSummaryWithContent = merge;
+        await f.sync();
+        assert.equal(f.requests[0].payload.rawText, "Original text\n\nAI Summary\nProvider recap");
+        assert.equal(f.doc.integrations.ticktick.summary, "Provider recap");
+        assert.equal(f.doc.rawText, "Original text");
+    });
+}
+
+test("AI Summary off exports the complete original even when AI Tags are enabled", async () =>
+{
+    const f = worker();
+    f.doc.destinations.ticktick.options.useAiSummary = false;
+    await f.sync();
+    assert.equal(f.requests[0].payload.rawText, "Original text");
+});
+
+for (const tags of [["reference", "OAuth", "o-auth"], [], [null], [" "]])
+{
+    test(`Notion tag options validated independently: ${JSON.stringify(tags)}`, () =>
+    {
+        const payload = { destinations: { notion: { enabled: true } }, notionOptions: { tags } };
+        if (tags.some(tag => typeof tag !== "string" || !tag.trim()))
+            assert.throws(() => contentDestinations(payload), { statusCode: 400 });
+        else
+            assert.deepEqual(contentDestinations(payload).notion.options.tags, tags.length ? ["reference", "oauth"] : []);
+        assert.throws(() => contentDestinations({ ...payload, destinations: {} }), { statusCode: 400 });
+    });
+}
+
+for (const summary of ["", null, {}])
+{
+    test(`invalid AI summary exports the original and records failure: ${JSON.stringify(summary)}`, async () =>
+    {
+        const f = worker({ summary });
+        await f.sync();
+        assert.equal(f.requests[0].payload.rawText, "Original text");
+        assert.equal(f.doc.integrations.ticktick.aiStatus, "failed");
+    });
+}

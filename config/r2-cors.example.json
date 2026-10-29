@@ -1,0 +1,9 @@
+[
+    {
+        "AllowedOrigins": ["chrome-extension://REPLACE_WITH_ACTUAL_EXTENSION_ID", "http://localhost:3000"],
+        "AllowedMethods": ["PUT", "GET", "HEAD"],
+        "AllowedHeaders": ["Content-Type"],
+        "ExposeHeaders": ["ETag"],
+        "MaxAgeSeconds": 300
+    }
+]

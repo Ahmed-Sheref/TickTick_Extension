@@ -300,6 +300,7 @@ test("an already-open popup reloads TickTick lists after confirmed reconnect", a
         resolveAuthState: () => ({ userId: "google-user", isSignedIn: true, isTickTickConnected: true }),
         renderAuthUI() {}, setConnectedUI() {}, switchTab() {}, fillTelegramCommand() {}, setUserIdDisplay() {},
         refreshPageData() {}, loadUserPreferences() {}, loadTags() {}, loadNotionStatus() {},
+        el: { appView: { style: { display: "flex" } }, title: { value: "Unsaved title" }, rawText: { value: "Unsaved content" } },
         draftOwnerId: "google-user", syncUI: { restore() {}, reset() {} },
         notionUI: { reset() {} }, ticktickSelected: false, notionSelected: false,
         selectedTags: [], renderSelectedTags() {},

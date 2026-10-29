@@ -11,23 +11,14 @@
     };
     const panel = byId("panelSave");
     panel.classList.add("v2-capture");
-    const intro = make("div", "v2-intro", '<h1>Save to platforms</h1><p>Review your content and choose where to save it.</p>');
+    const intro = make("div", "v2-intro", '<h1 id="captureHeading">Save your content</h1><p>Add or adjust the details, then choose where to save.</p>');
     const composition = make("div", "v2-composition");
     panel.prepend(composition);
     const editor = make("div", "v2-editor");
     composition.append(editor);
-    editor.append(intro, byId("captureEditor"));
-    const metadata = make("div", "v2-metadata");
-    const attachments = make("section", "v2-attachments", '<h2>Attached images</h2><button class="v2-upload" type="button" disabled aria-describedby="attachmentSupport"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8" cy="8" r="1.5"/><path d="m3 17 6-6 4 4 3-3 5 5"/></svg><span><strong>Add images</strong><small>For your note or task</small></span><span class="v2-upload-plus" aria-hidden="true">+</span></button><p id="attachmentSupport">Uploads unavailable: this server does not accept attachments.</p>');
-    metadata.append(attachments, byId("tagsField"));
-    editor.append(metadata);
-    const preview = byId("articlePreview");
-    preview.prepend(make("div", "v2-preview-head", '<strong>Article preview</strong><span id="previewContentType">Web article</span>'));
-    const previewTags = make("div", "v2-preview-tags");
-    previewTags.id = "previewTags";
-    preview.append(previewTags);
-    composition.append(editor, preview);
-    const destinations = make("section", "v2-destinations", '<div class="v2-dest-heading"><div><h2>Save to destinations</h2><p>Choose where to send a copy. Drag to reorder, or use the arrows.</p></div><button id="managePlatformsBtn" class="btn btn-secondary btn-sm" type="button" aria-haspopup="dialog" aria-controls="platformVisibilityDialog"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-settings"/></svg>Manage platforms</button></div>');
+    composition.before(intro);
+    editor.append(byId("captureEditor"));
+    const destinations = make("section", "v2-destinations", '<div class="v2-dest-heading"><div><h2>Save to destinations</h2></div><button id="managePlatformsBtn" class="btn btn-secondary btn-sm" type="button" aria-haspopup="dialog" aria-controls="platformVisibilityDialog"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-settings"/></svg>Manage platforms</button></div>');
     const list = make("div", "v2-destination-list");
     list.id = "destinationRows";
     destinations.append(list);
@@ -58,7 +49,12 @@
             choose.setAttribute("aria-controls", "notionDestinationDialog");
             choose.replaceChildren(name);
             choose.insertAdjacentHTML("beforeend", '<svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-chevron-down"/></svg>');
-            destination.append(choose);
+            const error = make("p", "v2-field-error");
+            error.id = "notionSelectionError";
+            error.hidden = true;
+            error.setAttribute("role", "status");
+            choose.setAttribute("aria-describedby", error.id);
+            destination.append(choose, error);
             fields.append(workspace, destination, make("div", "v2-field", '<label for="notionPageType">Page type</label><input id="notionPageType" class="v2-static-field" value="Standard page" readonly aria-describedby="notionFieldsHelp"/>'));
             configuration.append(fields, make("p", "sr-only", 'Workspace is set by your Notion connection. The server creates standard pages; custom page types are not supported.'));
             configuration.lastChild.id = "notionFieldsHelp";
@@ -77,30 +73,46 @@
             configuration.lastChild.id = "ticktickFieldsHelp";
             configuration.lastChild.className = "sr-only";
             for (const field of fields.querySelectorAll("select:disabled")) field.title = "This server does not support saving due dates or priorities.";
-            const ai = make("details", "v2-ticktick-ai", '<summary>TickTick task content / AI</summary><p>These options affect only the TickTick copy.</p>');
-            for (const id of ["useSummaryAi", "useTagsAi", "mergeSummaryWithContent"]) ai.append(byId(id).closest("label"));
+            // Preserve restored draft options without exposing the retired AI controls.
+            for (const id of ["useSummaryAi", "useTagsAi"])
+            {
+                const input = document.createElement("input");
+                input.type = "checkbox";
+                input.id = id;
+                input.hidden = true;
+                editor.append(input);
+            }
             const identity = make("div", "v2-provider-identity");
             const toggle = row.querySelector(".destination-card");
             toggle.before(identity);
-            identity.append(toggle, ai);
+            identity.append(toggle);
+            const tagField = byId("tagsField");
+            configuration.append(tagField);
+        }
+        if (provider === "notion")
+        {
+            configuration.append(make("div", "provider-tags", '<label for="notionTagInput">Notion tags</label><div id="notionTagChips"></div><input id="notionTagInput" placeholder="Add Notion tag" maxlength="60" aria-label="Notion manual tags"/>'));
+            const imageOptions = make("div", "notion-image-options", '<label class="image-inclusion"><input type="checkbox" id="includeNotionImages" checked/> Include images</label>');
+            imageOptions.id = "notionImageOptions";
+            imageOptions.hidden = true;
+            configuration.append(imageOptions);
         }
         row.append(configuration);
         list.append(row);
     }
     destinations.append(list);
-    panel.prepend(composition, destinations);
-    byId("destinationHeading").closest("section").hidden = true;
-    byId("destinationHeading").closest("section").setAttribute("aria-hidden", "true");
-    byId("saveOptionsHeading").closest("section").hidden = true;
-    const quiz = byId("useQuiz").closest("label");
-    const inclusion = make("div", "v2-inclusion");
-    inclusion.append(quiz);
-    inclusion.hidden = true;
-    editor.append(inclusion);
-    byId("captureOptionsBtn").hidden = true;
-    byId("captureOptions").hidden = true;
-    byId("doneEditingBtn").hidden = true;
-    byId("editCaptureBtn").hidden = true;
+    panel.prepend(intro, composition, destinations);
+    const projectFeedback = make("p", "v2-field-error");
+    projectFeedback.id = "projectLoadError";
+    projectFeedback.hidden = true;
+    projectFeedback.setAttribute("role", "status");
+    const retryProjects = make("button", "text-button", "Retry loading lists");
+    retryProjects.id = "retryProjectsBtn";
+    retryProjects.type = "button";
+    retryProjects.hidden = true;
+    retryProjects.addEventListener("click", () => void loadTickTickProjects());
+    byId("projectField").append(projectFeedback, retryProjects);
+    byId("destinationHeading").closest("section").remove();
     byId("captureEditor").hidden = false;
     byId("rawText").previousElementSibling.querySelector("label").textContent = "Summary / description";
     byId("rawText").setAttribute("aria-describedby", "rawTextError");
@@ -113,10 +125,15 @@
         error.setAttribute("role", "alert");
         byId(field).after(error);
     }
-    const source = make("details", "v2-source", '<summary>Source · <bdi id="sourceHost">Add URL</bdi><span> Edit</span></summary>');
+    const source = make("details", "v2-source", '<summary>Source · <bdi id="sourceHost">Add URL</bdi></summary>');
     const url = byId("url");
     source.append(url.previousElementSibling, url);
-    preview.append(source);
+    source.addEventListener("toggle", () => { if (source.open) url.focus(); });
+    const sourceRow = make("div", "source-edit-row");
+    sourceRow.append(source);
+    const extras = make("div", "capture-extras");
+    extras.append(sourceRow, byId("imageAttachments"));
+    byId("captureEditor").append(extras);
     const refreshSource = () =>
     {
         try
@@ -138,7 +155,12 @@
         logo.src = "assets/knowvia-approved-wordmark.png";
         logo.alt = "Knowvia";
         logo.className = "v2-wordmark";
-        brand.append(logo);
+        logo.classList.add("logo-light");
+        const darkLogo = logo.cloneNode();
+        darkLogo.src = "assets/knowvia-wordmark-dark.svg";
+        darkLogo.classList.remove("logo-light");
+        darkLogo.classList.add("logo-dark");
+        brand.append(logo, darkLogo);
     }
     // Native dialog gives the approved overlay a focus trap, Escape and inert backdrop.
     const dialog = make("dialog", "v2-platform-dialog", '<header><div><span class="v2-eyebrow">KNOWVIA SETTINGS</span><h2 id="platformDialogTitle">Your platforms</h2></div><button id="closePlatformsBtn" class="icon-button" aria-label="Close platform settings" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-close"/></svg></button></header><p id="platformDialogDescription">Decide what appears on your save page. You can bring a platform back any time.</p><section class="v2-platform-options"><div class="v2-options-heading"><strong>Show on save page</strong><span id="visiblePlatformCount">2 of 2 visible</span></div><div id="platformOptions"></div><p class="v2-platform-hint">Hiding a platform removes it from the main form, not your account. To temporarily skip saving to a visible platform, use its switch on the save page.</p></section><footer><button id="resetPlatformsBtn" class="btn btn-secondary btn-sm" type="button">Reset defaults</button><button id="donePlatformsBtn" class="btn btn-primary" type="button">Done</button></footer>');
@@ -151,57 +173,95 @@
             ["ticktick", "TickTick", "showTicktickPlatform", "Tasks and reminders"]
         ])
         byId("platformOptions").append(make("label", "v2-platform-option", `<span class="platform-logo ${provider}-logo"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#icon-${provider}"/></svg></span><span class="v2-platform-copy"><strong>${label}</strong><small>${description}</small></span><input id="${inputId}" aria-label="Show ${label} on save page" type="checkbox" checked/><span class="v2-visibility-switch" aria-hidden="true"></span>`));
-    const settings = make("article", "settings-card v2-platform-settings", '<h3>Your platforms</h3><p>Choose what appears on your save page. Your connections stay available.</p><button id="settingsManagePlatformsBtn" class="btn btn-secondary btn-sm" type="button" aria-haspopup="dialog" aria-controls="platformVisibilityDialog">Manage platforms</button>');
+    const settings = make("article", "settings-card v2-platform-settings", '<h3>Your platforms</h3><p>Choose what appears on your save page. Your connections stay available.</p>');
     settings.id = "platformVisibilitySettings";
     byId("panelSettings").append(settings);
-    const progress = make("div", "v2-save-progress", '<progress id="destinationProgress" value="0" max="1" aria-label="Confirmed destinations"></progress><span id="destinationProgressCount">—</span>');
-    byId("appFooter").append(progress);
+    const platformControls = dialog.querySelector(".v2-platform-options");
+    const resetControl = byId("resetPlatformsBtn");
+    settings.append(platformControls, resetControl);
+    dialog.addEventListener("close", () => settings.append(platformControls, resetControl));
+    byId("appFooter").append(byId("syncReceipt"));
+    const previous = make("details", "previous-save", '<summary>Previous save · check status</summary>');
+    previous.id = "previousSave";
+    previous.hidden = true;
+    panel.append(previous);
+    byId("preferencesStatus").remove();
+    byId("panelSettings").querySelector(".settings-card--account").append(make("p", "inline-feedback"));
+    const preferencesStatus = byId("panelSettings").querySelector(".settings-card--account .inline-feedback");
+    preferencesStatus.id = "preferencesStatus";
+    preferencesStatus.hidden = true;
+    preferencesStatus.setAttribute("role", "status");
+    let notionTags = [];
+    const renderNotionTags = () =>
+    {
+        const chips = byId("notionTagChips");
+        chips.replaceChildren();
+        for (const tag of notionTags)
+        {
+            const chip = make("button", "tag-chip");
+            chip.type = "button";
+            chip.textContent = `${tag} ×`;
+            chip.setAttribute("aria-label", `Remove Notion tag ${tag}`);
+            chip.addEventListener("click", () =>
+            {
+                notionTags = notionTags.filter(value => value !== tag);
+                renderNotionTags();
+                byId("notionTagInput").dispatchEvent(new Event("input", { bubbles: true }));
+            });
+            chips.append(chip);
+        }
+    };
+    window.KnowviaProviderTags = {
+        // Save also includes text that has not yet been committed with Enter.
+        get: () => [...new Set([...notionTags, byId("notionTagInput").value.trim().toLowerCase().replace(/[\s\-_\.]/g, "")].filter(Boolean))],
+        restore: tags =>
+        {
+            notionTags = [...new Set(tags.filter(value => typeof value === "string").map(value => value.toLowerCase().replace(/[\s\-_\.]/g, "")).filter(Boolean))].slice(0,30);
+            byId("notionTagInput").value = "";
+            renderNotionTags();
+        }
+    };
+    byId("notionTagInput").addEventListener("keydown", event =>
+    {
+        if (event.key !== "Enter") return;
+        event.preventDefault();
+        const value = event.target.value.trim();
+        if (!value || notionTags.length >= 30) return;
+        window.KnowviaProviderTags.restore([...notionTags, value]);
+        event.target.value = "";
+        event.target.dispatchEvent(new Event("input", { bubbles: true }));
+    });
     const tagsValue = document.querySelector(".tags-picker-value");
-    const addTag = make("button", "v2-add-tag", "+ Add tag");
+    const addTag = make("button", "v2-add-tag", "Add");
     addTag.type = "button";
     addTag.id = "addTagBtn";
     addTag.setAttribute("aria-controls", "tagInput");
     addTag.setAttribute("aria-expanded", "false");
-    tagsValue.append(addTag);
+    const tagsHeading = make("div", "tags-heading");
+    const tagsLabel = byId("tagsFieldLabel");
+    tagsLabel.before(tagsHeading);
+    const tagEntry = make("div", "tag-entry");
+    tagEntry.append(byId("tagInput"), addTag);
+    tagsHeading.append(tagsLabel, tagEntry);
     const titleCount = make("span", "v2-title-count");
     titleCount.id = "titleCount";
     const titleWrap = make("div", "v2-title-wrap");
     byId("title").before(titleWrap);
     titleWrap.append(byId("title"), titleCount);
-    let syncData = null;
     const refresh = () =>
     {
         refreshSource();
+        window.KnowviaImages?.refresh(notionSelected);
+        byId("retryProjectsBtn").hidden = !ticktickSelected || ticktickAccess !== "error";
+        byId("retryProjectsBtn").disabled = projectsPending;
         const count = Number(ticktickSelected) + Number(notionSelected);
         titleCount.textContent = `${byId("title").value.length}/500`;
-        byId("previewContentType").textContent = /^https?:\/\//.test(byId("url").value) ? "Web article" : "Note";
         if (byId("statusBar").classList.contains("status-bar--info"))
         {
-            byId("statusTitle").textContent = "Ready to save";
             byId("statusText").textContent = count ? `${count} destination${count === 1 ? "" : "s"} selected` : "Knowvia collection only";
         }
-        const states = syncData ? [syncData.ticktick, syncData.notion].filter(value => value && value.status !== "not_requested") : [];
-        const confirmed = states.filter(value => value.status === "synced").length;
-        const total = syncData ? states.length : count;
-        byId("destinationProgress").max = Math.max(1, total);
-        byId("destinationProgress").value = confirmed;
-        byId("destinationProgressCount").textContent = total ? `${confirmed}/${total}` : "—";
-        progress.title = syncData ? "Confirmed external destinations for the last saved capture" : "Destinations selected for this capture";
-        byId("destinationProgress").setAttribute("aria-label", progress.title);
     };
-    window.KnowviaV2 = {
-        refresh,
-        sync: data =>
-        {
-            syncData = data;
-            refresh();
-        },
-        reset: () =>
-        {
-            syncData = null;
-            refresh();
-        }
-    };
+    window.KnowviaV2 = { refresh, sync: refresh, reset: refresh };
     document.addEventListener("DOMContentLoaded", async () =>
     {
         const defaults = () => (
@@ -243,13 +303,20 @@
             if (!preferences.visible.ticktick) ticktickSelected = false;
             if (!preferences.visible.notion) notionSelected = false;
             renderDestinationSelection();
-            document.querySelector(".v2-ticktick-ai").hidden = !ticktickSelected;
-            notionUI.setBlocked(authPending);
+                notionUI.setBlocked(authPending);
         };
+        const platformError = make("p", "v2-field-error");
+        platformError.hidden = true;
+        platformError.setAttribute("role", "status");
+        platformControls.append(platformError);
         const persist = () => chrome.storage.local.set(
         {
             [key]: preferences
-        }).catch(() => setStatus("Could not store platform preferences. Try again.", "warning"));
+        }).then(() => { platformError.hidden = true; }).catch(() =>
+        {
+            platformError.textContent = "Could not store platform preferences. Change an option to retry.";
+            platformError.hidden = false;
+        });
         const move = (provider, offset) =>
         {
             const current = preferences.order.indexOf(provider),
@@ -319,13 +386,15 @@
             void persist();
         });
         let platformOpener;
-        for (const id of ["managePlatformsBtn", "settingsManagePlatformsBtn"])
+        for (const id of ["managePlatformsBtn"])
             byId(id).addEventListener("click", event =>
             {
                 if (savePending) return;
                 platformOpener = event.currentTarget;
                 hideProjectMenu();
                 hideTagSuggestions();
+                dialog.insertBefore(platformControls, dialog.querySelector("footer"));
+                dialog.querySelector("footer").prepend(resetControl);
                 dialog.showModal();
             });
         for (const id of ["closePlatformsBtn", "donePlatformsBtn"]) byId(id).addEventListener("click", () => dialog.close());
@@ -340,6 +409,8 @@
         });
         addTag.addEventListener("click", () =>
         {
+            if (byId("tagInput").value.trim())
+                byId("tagInput").dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true }));
             tagsValue.classList.add("is-editing");
             addTag.setAttribute("aria-expanded", "true");
             byId("tagInput").focus();
@@ -358,24 +429,6 @@
             byId(id).removeAttribute("aria-invalid");
             window.KnowviaV2.reset();
         });
-        const renderPreview = () =>
-        {
-            previewTags.replaceChildren();
-            for (const chip of byId("selectedTagsContainer").children)
-            {
-                const tag = document.createElement("span");
-                tag.className = "v2-preview-tag";
-                tag.textContent = chip.querySelector(".tag-chip-label")?.textContent || chip.firstChild?.textContent || "";
-                previewTags.append(tag);
-            }
-            document.querySelector(".v2-ticktick-ai").hidden = !ticktickSelected;
-        };
-        new MutationObserver(renderPreview).observe(byId("selectedTagsContainer"),
-        {
-            childList: true,
-            subtree: true
-        });
-        byId("connectTickTickFromSaveBtn").addEventListener("click", renderPreview);
         chrome.storage.onChanged.addListener(async (changes, area) =>
         {
             if (area !== "local" || !changes.sk_userId) return;
@@ -396,6 +449,6 @@
             update();
         });
         update();
-        renderPreview();
+
     });
 })();

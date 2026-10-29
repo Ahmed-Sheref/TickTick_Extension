@@ -1,3 +1,4 @@
+import imageRouter from "./Routes/imageRoute.js";
 import express from "express";
 import contentRouter from "./Routes/contentRoute.js";
 import ticktickRouter from "./Routes/ticktickRoute.js";
@@ -30,6 +31,7 @@ app.use('/api/v1/auth/google', googleAuthRouter);
 app.use('/api/v1/integrations/ticktick', ticktickLinkRouter);
 app.use('/api/v1/integrations/notion', notionLinkRouter);
 app.use('/api/v1/integrations/notion', notionContentRouter);
+app.use("/api/v1/images", imageRouter);
 app.use('/api/v1/User', requireAuth, settingsRouter);
 app.use("/api/v1/content", requireAuth, contentRouter);
 app.use('/api/v1/telegram', telegramRouter);

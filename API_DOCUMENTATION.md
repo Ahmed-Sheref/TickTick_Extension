@@ -26,3 +26,9 @@ POST `/api/v1/telegram/webhook` is server-to-server and uses `X-Telegram-Bot-Api
 
 ## Limits
 No attachment upload, TickTick due-date/priority override, arbitrary Notion property mapping, or durable export queue is promised. Live provider acceptance requires configured accounts. `api-docs.js` is an unmounted legacy reference, not the public contract.
+
+## Provider-specific options (current extension)
+
+Manual tags now belong to each export: `ticktickOptions.tags` and `notionOptions.tags`. Both accept up to 30 nonempty strings of at most 60 characters. Notion options require an enabled Notion destination and are stored under `Content.destinations.notion.options`; its mapper emits Tags paragraphs, without custom database properties. When Notion options are absent, historical Content.tags fallback is retained. An explicit empty list suppresses that fallback. Primary Knowvia tags remain supported through `user_input`; the current extension leaves it empty rather than mixing export tags into primary metadata.
+
+Destination-aware TickTick exports always begin with the complete original article. Successful nonempty AI Summary adds `\n\nAI Summary\n` and the generated summary; failure/invalid summary exports the original. An exact identical ending block is not duplicated. `ticktickOptions.mergeSummaryWithContent` is deprecated and accepted for compatibility but cannot cause summary-only replacement. Modern clients omit it. Existing primary legacy merge preferences and older no-destinations request handling remain supported; they do not activate a provider. Provider summary metadata never changes Content.rawText or the Notion export.

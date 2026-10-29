@@ -53,7 +53,34 @@
       document.querySelector("main")    ||
       document.body;
 
-    return (target?.textContent || "").trim().slice(0, 15000);
+    const excluded = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEMPLATE", "NAV", "FOOTER", "ASIDE", "FORM", "IFRAME", "OBJECT", "EMBED", "SVG", "CANVAS"]);
+    const blocks = new Set(["ARTICLE", "MAIN", "SECTION", "DIV", "P", "H1", "H2", "H3", "H4", "H5", "H6", "BLOCKQUOTE", "UL", "OL", "TABLE", "TR"]);
+    const codeBlocks = [];
+    const read = node => {
+      if (node.nodeType === Node.TEXT_NODE) return node.nodeValue.replace(/[\t\n\r ]+/g, " ");
+      if (node.nodeType !== Node.ELEMENT_NODE || excluded.has(node.tagName) || node.hidden || node.getAttribute("aria-hidden") === "true") return "";
+      const style = getComputedStyle(node);
+      if (style.display === "none" || ["hidden", "collapse"].includes(style.visibility) || style.contentVisibility === "hidden") return "";
+      if (node.tagName === "BR") return "\n";
+      // Rendered code is intentional article content, including literal HTML/JS.
+      if (node.tagName === "PRE") {
+        codeBlocks.push(node.innerText);
+        return `\n\n\u0000PRE${codeBlocks.length - 1}\u0000\n\n`;
+      }
+      let text = [...node.childNodes].map(read).join("");
+      if (node.tagName === "A" && text.trim()) {
+        try {
+          const url = new URL(node.getAttribute("href"), location.href);
+          if (["http:", "https:"].includes(url.protocol) && !url.username && !url.password && text.trim() !== url.href)
+            text += ` (${url.href})`;
+        } catch { /* Keep the visible label for invalid links. */ }
+      }
+      if (node.tagName === "LI") return `\n• ${text.trim()}\n`;
+      return blocks.has(node.tagName) ? `\n\n${text.trim()}\n\n` : text;
+    };
+    return read(target || document.documentElement).replace(/ *\n */g, "\n").replace(/\n{3,}/g, "\n\n").trim()
+      .replace(/\u0000PRE(\d+)\u0000/g, (_, index) => codeBlocks[Number(index)] ?? "")
+      .slice(0, 15000).toWellFormed();
   }
 
   // Optional, display-only cover. It never changes captured text or save payloads.
@@ -139,13 +166,19 @@
       if (message?.type !== "GET_PAGE_CONTEXT") return;
 
       try {
+        const selectedText = getSelectedText();
+        const pageText = getReadableText();
+        if (!selectedText && !pageText) {
+          sendResponse({ ok: false, error: "No readable content was found. Select visible text or paste a note." });
+          return true;
+        }
         sendResponse({
           ok:   true,
           data: {
             title:        extractBestTitle(),
             url:          window.location.href,
-            selectedText: getSelectedText(),
-            pageText:     getReadableText(),
+            selectedText,
+            pageText,
             previewImage: extractPreviewImage(),
           },
         });

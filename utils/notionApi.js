@@ -1,3 +1,4 @@
+import { imageLimits } from "../services/imageConfig.js";
 import notionCredentials from "../services/notionCredentials.js";
 import
 {
@@ -20,8 +21,8 @@ export const NOTION_REQUEST_BYTES = 480000; // Headroom below the documented 500
 const RESPONSE_BYTES = 2 * 1024 * 1024;
 const uuidPath = "[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}";
 const routes = {
-    GET: new RegExp(`^/(pages|data_sources|databases)/${uuidPath}$`),
-    POST: /^\/(search|pages)$/,
+    GET: new RegExp(`^/(pages|data_sources|databases|file_uploads)/${uuidPath}$`),
+    POST: new RegExp(`^/(search|pages|file_uploads|file_uploads/${uuidPath}/send)$`),
     PATCH: new RegExp(`^/blocks/${uuidPath}/children$`)
 };
 
@@ -85,9 +86,12 @@ export const createNotionApiClient = (
     } = {}) =>
     {
         if (!routes[method]?.test(path || "")) throw notionFailure("INVALID_NOTION_INPUT");
-        const mutating = method === "PATCH" || (method === "POST" && path === "/pages");
-        const serialized = body === undefined ? undefined : JSON.stringify(body);
-        if (serialized && Buffer.byteLength(serialized) > NOTION_REQUEST_BYTES) throw notionFailure("NOTION_CONTENT_LIMIT");
+        const mutating = method === "PATCH" || (method === "POST" && path !== "/search");
+        const multipart = body instanceof FormData;
+        if (multipart && (!path.endsWith("/send") || !(body.get("file") instanceof Blob) || body.get("file").size > imageLimits.sizeLimit || body.getAll("file").length !== 1 || [...body.keys()].some(key => key !== "file")))
+            throw notionFailure("INVALID_NOTION_INPUT");
+        const serialized = multipart ? body : body === undefined ? undefined : JSON.stringify(body);
+        if (!multipart && serialized && Buffer.byteLength(serialized) > NOTION_REQUEST_BYTES) throw notionFailure("NOTION_CONTENT_LIMIT");
         const config = getConfig();
         let snapshot = await credentials.getForUser(
         {
@@ -113,7 +117,7 @@ export const createNotionApiClient = (
                         Authorization: `Bearer ${current.accessToken}`,
                         "Notion-Version": config.apiVersion,
                         Accept: "application/json",
-                        ...(serialized === undefined ?
+                        ...(serialized === undefined || multipart ?
                         {} :
                         {
                             "Content-Type": "application/json"

@@ -1,3 +1,4 @@
+import { startImageCleanupCron } from "./utils/imageCleanup.js";
 import 'dotenv/config';
 import mongoose from 'mongoose';
 import app from './index.js';
@@ -31,6 +32,7 @@ mongoose.connect(DB).then(async (con) =>
 
     await startTelegramBot();
 
+    startImageCleanupCron();
     startWeeklyEmailCron();
     startWeeklyQuizCron();
     app.listen(

@@ -1,3 +1,4 @@
+import imageAssets from "../services/imageAssetService.js";
 import test from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
@@ -255,7 +256,7 @@ test("legacy AI response remains compatible while original text and library-only
         useSummaryAi: true, useTagsAi: true, useQuiz: true,
         mergeSummaryWithContent: true, includeInWeeklyEmail: true, includeInTelegramQuiz: true
     });
-    assert.deepEqual(Object.keys(res.body.data).sort(), ["ai", "content"]);
+    assert.deepEqual(Object.keys(res.body.data).sort(), ["ai", "content", "syncStatus"]);
 
 });
 
@@ -495,4 +496,122 @@ test("primary HTTP response does not wait for TickTick list verification network
     assert.equal(typeof release, "function");
     release(); await settle();
     assert.equal(f.task.mock.callCount(), 1);
+});
+
+test("Notion tags persist independently without replacing original Knowvia metadata", async t =>
+{
+    const f = fixture(t);
+    t.mock.method(notionContentService, "syncIfSelected", async () => ({ status: "skipped" }));
+    const result = await contentService.createContent({ ...validPayload, destinations: notionIntent, notionOptions: { tags: ["reference", "OAuth"] } });
+    assert.deepEqual(result.content.destinations.notion.options.tags.toObject(), ["reference", "oauth"]);
+    assert.deepEqual(result.content.tags.toObject(), ["nodejs", "express"]);
+    assert.equal(result.content.rawText, validPayload.rawText);
+});
+
+for (const notion of [false, true])
+{
+    test(`image association uses the content transaction, retention and saved Notion intent: ${notion}`, async t =>
+    {
+        const f = fixture(t, { connected: true, syncFails: true });
+        const imageId = new mongoose.Types.ObjectId();
+        t.mock.method(Content.prototype, "save", async function(options)
+        {
+            assert.ok(options.session.inTransaction());
+            return this;
+        });
+        t.mock.method(notionContentService, "syncIfSelected", async () => { throw new Error("isolated provider failure"); });
+        const attach = t.mock.method(imageAssets, "attach", async input =>
+        {
+            assert.equal(input.userId, ownerId);
+            assert.equal(input.notion, notion);
+            assert.equal(input.intent.retain, true);
+            assert.ok(input.session.inTransaction());
+            return [imageId];
+        });
+        const result = await contentService.createContent({ ...validPayload,
+            destinations: notion ? bothIntent : tickIntent, images: { uploadIds: [String(imageId)], retain: true } });
+        await settle();
+        assert.equal(attach.mock.callCount(), 1);
+        const saved = f.persisted.get(String(result.content._id));
+        assert.equal(saved.imageRetention, true);
+        assert.equal(String(saved.images[0]), String(imageId));
+        assert.equal(saved.rawText, validPayload.rawText);
+        assert.equal(f.task.mock.callCount(), 1);
+        const taskPayload = f.task.mock.calls[0].arguments[1];
+        assert.equal(Object.hasOwn(taskPayload, "images"), false);
+        assert.equal(Object.hasOwn(taskPayload, "uploadIds"), false);
+    });
+}
+
+test("image routes derive ownership from authentication and expose only focused image operations", async t =>
+{
+    fixture(t);
+    const token = authenticatedToken(t);
+    const id = "a".repeat(24);
+    const initiate = t.mock.method(imageAssets, "initiate", async (userId, body) =>
+    {
+        assert.equal(userId, ownerId);
+        assert.equal(body.filename, "photo.png");
+        return { uploadId: id, uploadUrl: "https://r2.example.test/signed", headers: { "Content-Type": "image/png" } };
+    });
+    t.mock.method(imageAssets, "complete", async (userId, imageId) => { assert.equal(userId, ownerId); assert.equal(imageId, id); return { id, status: "uploaded" }; });
+    t.mock.method(imageAssets, "list", async (userId, contentId) => { assert.equal(userId, ownerId); assert.equal(contentId, id); return []; });
+    t.mock.method(imageAssets, "remove", async (userId, imageId) => { assert.equal(userId, ownerId); assert.equal(imageId, id); });
+    const unauthorized = await invokeApp({ path: "/api/v1/images/uploads", body: {} });
+    assert.equal(unauthorized.statusCode, 401);
+    assert.equal(initiate.mock.callCount(), 0);
+    const started = await invokeApp({ path: "/api/v1/images/uploads", body: { filename: "photo.png", mimeType: "image/png", size: 100 }, token });
+    assert.equal(started.statusCode, 201);
+    assert.equal(started.body.data.uploadId, id);
+    const completed = await invokeApp({ path: `/api/v1/images/${id}/complete`, token });
+    assert.equal(completed.statusCode, 200);
+    const listed = await invokeApp({ method: "GET", path: `/api/v1/images/content/${id}`, token });
+    assert.equal(listed.statusCode, 200);
+    const deleted = await invokeApp({ method: "DELETE", path: `/api/v1/images/${id}`, token });
+    assert.equal(deleted.body.data.deleted, true);
+});
+
+test("invalid image association aborts the existing content transaction before dispatch", async t =>
+{
+    const f = fixture(t, { connected: true });
+    t.mock.method(imageAssets, "attach", async () => { throw Object.assign(new Error("Image already used"), { statusCode: 409 }); });
+    await assert.rejects(contentService.createContent({ ...validPayload, destinations: tickIntent,
+        images: { uploadIds: ["a".repeat(24)], retain: true } }), error => error.statusCode === 409);
+    assert.equal(f.persisted.size, 0);
+    assert.equal(f.task.mock.callCount(), 0);
+    assert.ok(f.events.includes("abort"));
+    assert.ok(!f.events.includes("commit"));
+});
+
+test("committed save returns an additive provider snapshot before asynchronous work completes", async t =>
+{
+    const f = fixture(t, { connected: true });
+    t.mock.method(notionContentService, "syncIfSelected", async () => ({ status: "skipped" }));
+    const result = await contentService.createContent({ ...validPayload, destinations: bothIntent });
+    assert.equal(result.syncStatus.contentId, String(result.content._id));
+    assert.equal(result.syncStatus.ticktick.status, "queued");
+    assert.equal(result.syncStatus.notion.status, "queued");
+    assert.equal(result.content.rawText, validPayload.rawText);
+    await settle();
+    assert.equal(f.task.mock.callCount(), 1);
+});
+
+test("retained images can accompany Notion text without requesting Notion image insertion", async t =>
+{
+    const f = fixture(t);
+    const imageId = new mongoose.Types.ObjectId();
+    t.mock.method(notionContentService, "syncIfSelected", async () => ({ status: "skipped" }));
+    t.mock.method(Content.prototype, "save", async function() { return this; });
+    t.mock.method(imageAssets, "attach", async input =>
+    {
+        assert.equal(input.notion, false);
+        assert.equal(input.intent.retain, true);
+        return [imageId];
+    });
+    const result = await contentService.createContent({ ...validPayload, destinations: notionIntent,
+        images: { uploadIds: [String(imageId)], retain: true, notion: false } });
+    const saved = f.persisted.get(String(result.content._id));
+    assert.equal(saved.imageNotionIncluded, false);
+    assert.equal(saved.imageRetention, true);
+    assert.equal(result.syncStatus.notion.imageStatus, undefined);
 });

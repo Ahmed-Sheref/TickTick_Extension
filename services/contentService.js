@@ -1,3 +1,5 @@
+import imageAssets, { imageIntent } from "./imageAssetService.js";
+import { contentSyncStatus } from "./contentSyncStatusService.js";
 import { buildInitialIntegrationStates } from "./contentIntegrationState.js";
 import
 {
@@ -294,6 +296,7 @@ const createContent = async (payload) =>
             mergeSummaryWithContent
         });
 
+        const images = imageIntent(payload);
         session.startTransaction();
 
         const content = await createContentDocument(
@@ -312,12 +315,21 @@ const createContent = async (payload) =>
             integrations: buildInitialIntegrationStates(destinations)
         });
 
+        if (images)
+        {
+            content.imageRetention = images.retain;
+            content.imageNotionIncluded = images.notion;
+            content.images = await imageAssets.attach({ userId, contentId: content._id, intent: images,
+                notion: images.notion, session });
+            await content.save({ session });
+        }
         await session.commitTransaction();
 
         postContentCreationService.runPostCreationTasks({ content });
 
         return {
             content,
+            syncStatus: contentSyncStatus(content),
             ai:
             {
                 summary,

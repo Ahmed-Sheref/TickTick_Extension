@@ -105,8 +105,8 @@
                 NOTION_SCHEMA_INVALID: "This data source needs a title field. Choose another destination or update it in Notion.",
                 NOTION_CONNECTION_CHANGED: "Your Notion connection changed. Refresh and choose the destination again.",
                 NOTION_RATE_LIMITED: "Notion needs a moment. Wait before trying again.",
-                NOTION_PROVIDER_UNAVAILABLE: "Notion is temporarily unavailable. Your Knowvia copy is safe.",
-                NOTION_LINK_UNAVAILABLE: "Notion is not available on the server yet. Your Knowvia copy is safe.",
+                NOTION_PROVIDER_UNAVAILABLE: "Notion is temporarily unavailable. Try again later.",
+                NOTION_LINK_UNAVAILABLE: "Notion is not available on the server yet.",
                 NOTION_DESTINATION_REQUIRED: "Choose a default Notion destination first.",
                 NOTION_INVALID_RESPONSE: "The Notion response could not be confirmed. Refresh before trying again."
             };
@@ -127,7 +127,7 @@
                 connected ? selectionReady ? "Choose a destination" : "Check destination" : reconnect ? "Reconnect workspace" :
                 access === "error" ? "Check connection" : "Connect your workspace";
             el.notionDestination.setAttribute("aria-pressed", String(deps.isSelected()));
-            el.notionCaptureHint.textContent = deps.isSelected() ? selected ? label(destination) : "Choose destination" : connected ? "Not selected" : el.notionCaptureHint.textContent;
+            el.notionCaptureHint.textContent = connected ? deps.isSelected() ? "Connected · enabled" : "Connected · off" : el.notionCaptureHint.textContent;
             el.notionDestination.setAttribute("aria-label", deps.isSelected() ? "Disable Notion for this capture" : "Enable Notion for this capture");
             document.getElementById("notionSaveConfig").hidden = false;
             document.getElementById("notionSaveDestinationName").textContent = selected ? label(destination) : "Choose a destination";
@@ -139,6 +139,13 @@
             el.notionDefaultName.textContent = selectionReady ? label(destination) : "Destination unavailable";
             el.manageNotionDestinationBtn.textContent = destination ? "Change" : "Choose";
             el.manageNotionDestinationBtn.disabled = mutation || blocked();
+            const selectionFeedback = document.getElementById("notionSelectionError");
+            if (selectionFeedback)
+            {
+                selectionFeedback.hidden = !selectionError;
+                selectionFeedback.textContent = selectionError;
+            }
+            el.notionCapabilityNote.hidden = !selectionError;
             el.notionCapabilityNote.textContent = selectionError || (selected ? "This default is used only when you enable Notion for a capture." :
                 connected ? "Choose a default, then enable Notion for the captures you want to send." : "Connect a workspace, then choose where your captures go.");
             el.confirmNotionDestinationBtn.disabled = !draft || mutation || blocked();
@@ -460,6 +467,11 @@
                 el.connectNotionBtn.setAttribute("aria-label", `${el.connectNotionBtn.textContent} Notion`);
                 if (access === "connected")
                 {
+                    for (const id of ["notionAuthFeedback", "notionCaptureAuthFeedback"])
+                    {
+                        const feedback = document.getElementById(id);
+                        if (feedback && feedback.dataset.state !== "pending") feedback.hidden = true;
+                    }
                     try
                     {
                         const selection = await request("/integrations/notion/destination",

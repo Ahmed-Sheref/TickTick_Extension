@@ -58,22 +58,8 @@ const el =
     preferencesStatus: document.getElementById("preferencesStatus"),
     googleStatus: document.getElementById("googleStatusSecondary"),
     tagsLoadStatus: document.getElementById("tagsLoadStatus"),
-    captureSource: document.getElementById("captureSource"),
     captureCount: document.getElementById("captureCount"),
-    captureOptionsBtn: document.getElementById("captureOptionsBtn"),
-    captureOptions: document.getElementById("captureOptions"),
-    previewTitle: document.getElementById("previewTitle"),
-    previewExcerpt: document.getElementById("previewExcerpt"),
-    previewDomain: document.getElementById("previewDomain"),
-    previewImage: document.getElementById("previewImage"),
-    previewCoverFallback: document.getElementById("previewCoverFallback"),
     captureEditor: document.getElementById("captureEditor"),
-    editCaptureBtn: document.getElementById("editCaptureBtn"),
-    doneEditingBtn: document.getElementById("doneEditingBtn"),
-    advancedOptionsBtn: document.getElementById("advancedOptionsBtn"),
-    articleOption: document.getElementById("articleOption"),
-    summaryOption: document.getElementById("summaryOption"),
-    customOption: document.getElementById("customOption"),
     libraryDestination: document.getElementById("libraryDestination"),
     closePopupBtn: document.getElementById("closePopupBtn"),
     saveButtonLabel: document.getElementById("saveButtonLabel"),
@@ -113,10 +99,7 @@ const el =
 
     useSummaryAi: document.getElementById("useSummaryAi"),
     useTagsAi: document.getElementById("useTagsAi"),
-    useQuiz: document.getElementById("useQuiz"),
-    mergeSummaryWithContent: document.getElementById("mergeSummaryWithContent"),
 
-    refreshPageBtn: document.getElementById("refreshPageBtn"),
     saveArticleBtn: document.getElementById("saveArticleBtn"),
 
     userId: document.getElementById("userId"),
@@ -158,12 +141,12 @@ let emailPending = false;
 let quizPending = false;
 let notionSelectionPending = false;
 let projectsRefreshQueued = false;
-let captureFormat = "article";
 let lastKnownProjectId = "";
 
 let ticktickSelected = false;
 let notionSelected = false;
 let draftOwnerId = null;
+let draftTimer;
 const syncUI = KnowviaSync.create({
     apiFetch,
     getOwner: async () => {
@@ -177,17 +160,18 @@ const syncUI = KnowviaSync.create({
 function renderDestinationSelection()
 {
     const selected = ticktickSelected;
+    const projectFeedback = document.getElementById("projectLoadError");
+    if (projectFeedback && !selected) projectFeedback.hidden = true;
     el.projectField.hidden = false;
-    setProjectPickerDisabled(!selected || ticktickAccess !== "connected" || authPending || savePending);
-    el.openCreateProjectBtn.disabled = !selected || ticktickAccess !== "connected" || authPending || savePending;
+    setProjectPickerDisabled(ticktickAccess !== "connected" || authPending || savePending);
+    el.openCreateProjectBtn.disabled = ticktickAccess !== "connected" || authPending || savePending;
     el.libraryDestination.hidden = false;
     el.tagsField.hidden = false;
-    document.querySelector(".save-options-section").hidden = true;
-    for (const input of [el.useSummaryAi, el.useTagsAi, el.mergeSummaryWithContent]) input.closest("label").hidden = !selected;
     el.connectTickTickFromSaveBtn.classList.toggle("selected", selected);
     el.connectTickTickFromSaveBtn.setAttribute("aria-pressed", String(selected));
     el.connectTickTickFromSaveBtn.setAttribute("aria-label", selected ? "Disable TickTick for this capture" : "Enable TickTick for this capture");
-    el.ticktickCaptureHint.textContent = selected ? ticktickAccess === "connected" ? "Save as a task with link" : "Connect account" : "Not selected";
+    el.ticktickCaptureHint.textContent = ticktickAccess === "connected" ? selected ? "Connected · enabled" : "Connected · off"
+        : ticktickAccess === "checking" ? "Checking connection…" : ticktickAccess === "error" ? "Connection unavailable" : "Not connected";
     document.getElementById("notionSaveConfig").hidden = false;
     if (!selected) { hideProjectMenu(); hideTagSuggestions(); hideProjectCreatePanel(); }
     updateSaveAvailability();
@@ -207,9 +191,20 @@ const notionUI = KnowviaNotion.create({
     isBlocked: () => savePending || authPending,
     onMutation: pending => { notionSelectionPending = pending; updateSaveAvailability(); },
     onChange: () => updateSaveAvailability(),
-    notify: (message, type, title) => {
-        setStatus(message, type);
-        if (title) el.statusTitle.textContent = title;
+    notify: (message, type, title) =>
+    {
+        let feedback = document.getElementById("notionSelectionFeedback");
+        if (!feedback)
+        {
+            feedback = document.createElement("p");
+            feedback.id = "notionSelectionFeedback";
+            feedback.className = "v2-integration-feedback";
+            feedback.setAttribute("role", "status");
+            el.connectNotionBtn.closest(".settings-card").append(feedback);
+        }
+        feedback.textContent = title || message;
+        feedback.hidden = false;
+        feedback.dataset.state = type;
     }
 });
 
@@ -223,80 +218,38 @@ function defaultSaveLabel()
 {
     if (ticktickSelected && (ticktickAccess !== "connected" || !el.projectSelect.value) || notionSelected && !notionUI.hasDestination())
         return "Choose destinations";
-    if (ticktickSelected && notionSelected) return "Save to 2 platforms";
-    if (ticktickSelected) return "Save to TickTick";
-    if (notionSelected) return "Save to Notion";
-    return "Save to Knowvia";
+    return "Save capture";
 }
 
 function updateSaveAvailability()
 {
-    if (el.saveArticleBtn) el.saveArticleBtn.disabled = savePending || capturePending || authPending || notionSelectionPending || (ticktickSelected && ticktickAccess === "checking");
+    if (el.saveArticleBtn) el.saveArticleBtn.disabled = savePending || capturePending || authPending || notionSelectionPending || (ticktickSelected && ticktickAccess === "checking") ||
+        (el.saveArticleBtn.dataset.committed === "true" && !el.title.value.trim() && !el.rawText.value.trim());
     if (el.saveButtonLabel && !savePending && el.saveArticleBtn.dataset.state !== "success") setSaveButtonLabel(defaultSaveLabel());
     window.KnowviaV2?.refresh();
 }
 
-function updateCapturePreview(source)
+function updateCaptureFields()
 {
-    if (source && el.captureSource)
-    {
-        const sources = { "CURRENT PAGE": "Web page", "SELECTED TEXT": "Selection", "FROM YOUR CLIPBOARD": "Clipboard", "MANUAL CAPTURE": "Note", "READY FOR YOUR NEXT CAPTURE": "New capture" };
-        el.captureSource.textContent = sources[source] || source;
-    }
-    if (el.captureCount) el.captureCount.textContent = `${(el.rawText?.value.length || 0).toLocaleString()} characters`;
-    el.previewTitle.textContent = el.title.value.trim() || "Untitled capture";
-    el.previewTitle.title = el.title.value.trim();
-    el.previewExcerpt.textContent = el.rawText.value.trim().replace(/\s+/g, " ").slice(0, 240) || "Capture a page, select a passage, or add a note of your own.";
-    try
-    {
-        const url = new URL(el.url.value);
-        el.previewDomain.textContent = ["https:", "http:"].includes(url.protocol) ? url.hostname.replace(/^www\./, "") : "Personal note";
-    }
-    catch { el.previewDomain.textContent = "Personal note"; }
+    el.captureCount.textContent = `${el.rawText.value.length.toLocaleString()} characters`;
+    const hint = document.getElementById("captureRecovery");
+    if (hint && el.rawText.value.trim()) hint.hidden = true;
     window.KnowviaV2?.refresh();
 }
 
-function setPreviewImage(value)
+function setCaptureRecovery(message)
 {
-    // Presentation only: no image URL or asset is included in the save payload.
-    el.previewImage.hidden = true;
-    el.previewImage.removeAttribute("src");
-    el.previewCoverFallback.hidden = false;
-    try
+    let hint = document.getElementById("captureRecovery");
+    if (!hint)
     {
-        const url = new URL(value);
-        if (!["http:", "https:"].includes(url.protocol) || url.username || url.password) return;
-        el.previewImage.src = url.href;
+        hint = document.createElement("p");
+        hint.id = "captureRecovery";
+        hint.className = "capture-recovery";
+        hint.setAttribute("role", "status");
+        el.rawText.after(hint);
     }
-    catch { /* Pages without a safe cover keep the neutral document artwork. */ }
-}
-
-function setCaptureEditor(open, focus = true)
-{
-    el.captureEditor.hidden = false;
-    el.editCaptureBtn.setAttribute("aria-expanded", String(open));
-    if (open && focus) el.title.focus();
-    if (!open && focus) el.editCaptureBtn.focus();
-}
-
-function selectCaptureFormat(format, focusEditor = true)
-{
-    captureFormat = format;
-    for (const [value, button] of [["article", el.articleOption], ["summary", el.summaryOption], ["custom", el.customOption]])
-    {
-        const selected = value === format;
-        button.classList.toggle("selected", selected);
-        button.setAttribute("aria-checked", String(selected));
-        button.tabIndex = selected ? 0 : -1;
-    }
-    if (format !== "custom")
-    {
-        el.useSummaryAi.checked = format === "summary";
-        el.mergeSummaryWithContent.checked = format === "summary";
-        el.mergeSummaryWithContent.disabled = format !== "summary";
-        setCaptureEditor(false, false);
-    }
-    else setCaptureEditor(true, focusEditor);
+    hint.textContent = message;
+    hint.hidden = !message;
 }
 
 function renderTickTickState(state, message)
@@ -306,6 +259,20 @@ function renderTickTickState(state, message)
     const connected = state === "connected";
     const checking = state === "checking";
     const error = state === "error";
+    const projectFeedback = document.getElementById("projectLoadError");
+    if (projectFeedback)
+    {
+        projectFeedback.textContent = error ? "Could not load TickTick lists." : "";
+        projectFeedback.hidden = !error || !ticktickSelected;
+    }
+    if (connected && !authPending)
+    {
+        for (const id of ["ticktickAuthFeedback", "ticktickCaptureAuthFeedback"])
+        {
+            const feedback = document.getElementById(id);
+            if (feedback) { feedback.textContent = ""; feedback.hidden = true; }
+        }
+    }
     const label = connected ? "Connected" : checking ? "Checking…" : error ? "Check connection" : "Not connected";
     if (el.ticktickStatusSecondary)
     {
@@ -317,7 +284,7 @@ function renderTickTickState(state, message)
     if (el.ticktickConnectHint) el.ticktickConnectHint.hidden = connected || checking;
 
     if (el.ticktickConnectionHint) el.ticktickConnectionHint.textContent = message || (connected
-        ? "Access verified. Enable TickTick on the captures you want to send."
+        ? "Your TickTick account is connected."
         : checking ? "Checking access to your lists…" : "Connect to choose TickTick as an optional destination.");
     if (el.connectTickTickBtn)
     {
@@ -460,10 +427,11 @@ function setStatus(message, type = "info")
     el.statusBar.querySelector(".status-icon use")?.setAttribute("href", `#icon-${statusGlyph}`);
     el.statusBar.title =
         normalizedMessage;
-    if (el.statusTitle) el.statusTitle.textContent = type === "loading"
-        ? (savePending ? "Saving your capture…" : authPending ? "Connecting your account…" : "Getting things ready…")
-        : type === "danger" ? "Let's try that again" : type === "warning" ? "A little attention needed"
-        : type === "success" ? normalizedMessage.startsWith("Saved to Knowvia") ? "Saved in Knowvia" : "Completed" : "Ready when you are";
+    if (el.statusTitle)
+    {
+        el.statusTitle.textContent = type === "info" ? "Ready to save" : "";
+        el.statusTitle.hidden = type !== "info";
+    }
     window.KnowviaV2?.refresh();
 }
 
@@ -924,6 +892,16 @@ function positionPickerMenu(menu, control)
     const opensUp = below < Math.min(menu.scrollHeight, 150) && above > below;
     menu.classList.toggle("opens-up", opensUp);
     menu.style.maxHeight = `${Math.max(36, Math.min(150, opensUp ? above : below))}px`;
+    if (menu === el.tagSuggestions)
+    {
+        const width = Math.min(260, viewport.width - 16);
+        menu.style.position = "fixed";
+        menu.style.width = `${width}px`;
+        menu.style.left = `${Math.max(viewport.left + 8, Math.min(anchor.left, viewport.right - width - 8))}px`;
+        menu.style.bottom = "auto";
+        const height = menu.getBoundingClientRect().height;
+        menu.style.top = `${Math.max(viewport.top + 4, Math.min(opensUp ? anchor.top - height - 6 : anchor.bottom + 6, viewport.bottom - height - 4))}px`;
+    }
 }
 
 function showProjectMenu(query = "")
@@ -1094,6 +1072,7 @@ function showProjectCreatePanel()
 
 function setSelectedProject(projectId, shouldSave = true)
 {
+    if (ticktickAccess === "connected") document.getElementById("projectLoadError").hidden = true;
     if (!el.projectSelect)
     {
         return;
@@ -1367,6 +1346,22 @@ function renderProjects(projects, selectedProjectId = "")
     });
 }
 
+function setProjectFeedback(message, type = "info")
+{
+    let feedback = document.getElementById("projectCreateFeedback");
+    if (!feedback)
+    {
+        feedback = document.createElement("p");
+        feedback.id = "projectCreateFeedback";
+        feedback.className = "v2-field-error";
+        feedback.setAttribute("role", "status");
+        el.projectField.append(feedback);
+    }
+    feedback.textContent = message;
+    feedback.style.color = ["danger", "warning"].includes(type) ? "var(--red)" : "var(--ink-3)";
+    feedback.hidden = !message;
+}
+
 async function createTickTickProject()
 {
     if (el.confirmCreateProjectBtn?.disabled || ticktickAccess !== "connected" || savePending) return;
@@ -1375,7 +1370,7 @@ async function createTickTickProject()
 
     if (!projectName)
     {
-        setStatus(
+        setProjectFeedback(
             "List name is required.",
             "danger"
         );
@@ -1395,7 +1390,7 @@ async function createTickTickProject()
 
     if (duplicateExists)
     {
-        setStatus(
+        setProjectFeedback(
             "A list with this name already exists.",
             "warning"
         );
@@ -1424,7 +1419,7 @@ async function createTickTickProject()
             el.projectNameInput.disabled = true;
         }
 
-        setStatus(
+        setProjectFeedback(
             "Creating TickTick list...",
             "info"
         );
@@ -1476,14 +1471,14 @@ async function createTickTickProject()
 
         hideProjectCreatePanel();
 
-        setStatus(
+        setProjectFeedback(
             `${projectName} was created and selected.`,
             "success"
         );
     }
     catch (error)
     {
-        setStatus(
+        setProjectFeedback(
             error.message ||
             "Failed to create list.",
             "danger"
@@ -1686,6 +1681,7 @@ function renderSelectedTags()
 
         el.selectedTagsContainer.appendChild(chip);
     }
+    el.tagInput?.dispatchEvent(new Event("knowvia-tags", { bubbles: true }));
 }
 
 function addTag(tag)
@@ -1907,7 +1903,7 @@ function renderTagSuggestions()
     }
 
     el.tagSuggestions.style.display = "block";
-    positionPickerMenu(el.tagSuggestions, el.tagsInputBox);
+    positionPickerMenu(el.tagSuggestions, el.tagInput);
 
     el.tagInput.setAttribute(
         "aria-expanded",
@@ -2190,11 +2186,26 @@ function openTelegramBot()
 
 // ─── Clipboard ───────────────────────────────────────────────────────────────
 
+function setCopyFeedback(message, type)
+{
+    let feedback = document.getElementById("copyAccountFeedback");
+    if (!feedback)
+    {
+        feedback = document.createElement("p");
+        feedback.id = "copyAccountFeedback";
+        feedback.className = "v2-integration-feedback";
+        feedback.setAttribute("role", "status");
+        el.copyUserIdBtn.closest(".settings-card").append(feedback);
+    }
+    feedback.textContent = message;
+    feedback.dataset.state = type;
+}
+
 async function copyToClipboardWithFeedback(text, button)
 {
     if (!text)
     {
-        setStatus(
+        setCopyFeedback(
             "Nothing to copy.",
             "danger"
         );
@@ -2234,14 +2245,14 @@ async function copyToClipboardWithFeedback(text, button)
             button.style.borderColor = originalBorderColor;
         }, 2000);
 
-        setStatus(
+        setCopyFeedback(
             "Copied to clipboard.",
             "success"
         );
     }
     catch
     {
-        setStatus(
+        setCopyFeedback(
             "Failed to copy.",
             "danger"
         );
@@ -2302,6 +2313,14 @@ function showCurrentEmail(email, isEnabled)
 // Only presentation state is stored here; OAuth exchanges remain unchanged.
 function renderAuthUI(state)
 {
+    if (!state)
+    {
+        for (const feedback of document.querySelectorAll(".v2-integration-feedback"))
+        {
+            feedback.textContent = "";
+            feedback.hidden = true;
+        }
+    }
     const pending = state?.status === "pending";
     authPending = pending;
     notionUI.setBlocked(pending);
@@ -2309,13 +2328,15 @@ function renderAuthUI(state)
     const provider = state?.provider || "Google";
     const message = pending
         ? `Continue in the ${provider} window. This popup will reopen when you're done.`
-        : failed ? state.message : state?.status === "success" ? `${provider} connected successfully.` : "";
+        : failed ? state.message : "";
 
     for (const button of [el.connectGoogleBtn, el.reauthGoogleBtn, el.connectTickTickBtn, el.connectTickTickFromSaveBtn, el.reconnectTickTickBtn, el.connectNotionBtn])
     {
         if (!button) continue;
         button.disabled = pending;
-        button.setAttribute("aria-busy", String(pending));
+        const owner = button.id.toLowerCase().includes("notion") ? "Notion"
+            : /ticktick/i.test(button.id) ? "TickTick" : "Google";
+        button.setAttribute("aria-busy", String(pending && owner === provider));
     }
     updateSaveAvailability();
     if (el.refreshConnectionsBtn) el.refreshConnectionsBtn.disabled = pending || connectionsPending;
@@ -2338,11 +2359,11 @@ function renderAuthUI(state)
         feedback.className = "v2-integration-feedback"; feedback.setAttribute("role", "status");
         anchor.closest(".settings-card")?.append(feedback);
     }
-    if (feedback) { feedback.textContent = message; feedback.hidden = !message; feedback.dataset.state = state?.status || ""; }
+    if (feedback) { feedback.textContent = message; feedback.hidden = !message; feedback.dataset.state = failed && /cancel|closed|not completed/i.test(message) ? "cancelled" : state?.status || ""; }
     const row = document.querySelector(`.v2-destination-row[data-provider="${key}"] .v2-provider-config`);
     let inline = document.getElementById(`${key}CaptureAuthFeedback`);
     if (!inline && row) { inline = document.createElement("p"); inline.id = `${key}CaptureAuthFeedback`; inline.className = "v2-integration-feedback"; inline.setAttribute("role", "status"); row.append(inline); }
-    if (inline) { inline.textContent = message; inline.hidden = !message; inline.dataset.state = state?.status || ""; }
+    if (inline) { inline.textContent = message; inline.hidden = !message; inline.dataset.state = failed && /cancel|closed|not completed/i.test(message) ? "cancelled" : state?.status || ""; }
 }
 
 function startConnection(provider, action)
@@ -2386,14 +2407,14 @@ async function saveArticle()
     try
     {
         const saveIdentity = await storageGet([STORAGE_KEYS.userId, STORAGE_KEYS.token, STORAGE_KEYS.legacyUserId, STORAGE_KEYS.legacyToken]);
-        if (ticktickSelected && ticktickAccess !== "connected") throw new Error("Connect TickTick or deselect it before saving.");
+        if (ticktickSelected && ticktickAccess !== "connected") throw Object.assign(new Error("Connect TickTick or switch it off to save to Knowvia only."), { providerValidation: "project" });
         if (ticktickSelected && !el.projectSelect.value)
         {
             el.projectSearchInput.focus();
             showProjectMenu("");
-            throw new Error("Choose a TickTick list before saving, or deselect TickTick.");
+            throw Object.assign(new Error("Choose a TickTick list, or switch TickTick off."), { providerValidation: "project" });
         }
-        if (notionSelected && !notionUI.hasDestination()) throw new Error("Choose a verified Notion destination or deselect Notion before saving.");
+        if (notionSelected && !notionUI.hasDestination()) throw Object.assign(new Error("Choose a Notion destination, or switch Notion off."), { providerValidation: "notion" });
         const payload = {
             title: el.title.value.trim(),
             url: el.url.value.trim(),
@@ -2423,12 +2444,12 @@ async function saveArticle()
                 {
                     useAiSummary: Boolean(el.useSummaryAi.checked),
                     useAiTags: Boolean(el.useTagsAi.checked),
-                    mergeSummaryWithContent: Boolean(el.mergeSummaryWithContent.checked),
                     tags: getTagsForSave()
                 }
             } :
             {}),
-            user_input: getTagsForSave().map(tag => `#${tag}`).join(" "),
+            ...(notionSelected ? { notionOptions: { tags: window.KnowviaProviderTags.get() } } : {}),
+            user_input: "",
             use_summaryAi: false,
             use_tagsAi: false,
             use_quiz: false,
@@ -2436,34 +2457,50 @@ async function saveArticle()
         };
         for (const [key, label, limit] of [
                 ["title", "Title", 500],
-                ["rawText", "Content", 100000]
+                ["rawText", "Description", 100000]
             ])
         {
             if (!payload[key] || payload[key].length > limit)
             {
                 el[key].setAttribute("aria-invalid", "true");
-                setCaptureEditor(true, false);
                 el[key].focus();
-                const message = !payload[key] ? `${label} is required${key === "rawText" ? " by this server, including URL captures" : ""}.` : `${label} must be at most ${limit.toLocaleString()} characters.`;
+                const message = !payload[key] ? `${label} is required.` : `${label} must be at most ${limit.toLocaleString()} characters.`;
                 const error = document.getElementById(`${key}Error`);
                 error.textContent = message;
                 error.hidden = false;
-                throw new Error(message);
+                throw Object.assign(new Error(message), { fieldValidation: true });
             }
         }
+        clearTimeout(draftTimer);
         button.disabled = true;
         setSaveButtonLabel("Saving your capture…");
         button.setAttribute("aria-busy", "true");
         delete button.dataset.state;
-        el.refreshPageBtn.disabled = true;
         controls.forEach(control =>
         {
             control.disabled = true;
         });
         hideTagSuggestions();
         hideProjectMenu();
-        setStatus("Saving to your knowledge collection…", "loading");
+        setStatus("Saving to Knowvia…", "loading");
+        syncUI.previous();
         window.KnowviaV2?.reset();
+        const verifyIdentity = async () =>
+        {
+            const current = await storageGet(Object.keys(saveIdentity));
+            if (Object.keys(saveIdentity).some(key => current[key] !== saveIdentity[key]))
+                throw new Error("Your account changed. Check the image selection before saving again.");
+        };
+        if (window.KnowviaImages.count())
+        {
+            setSaveButtonLabel("Uploading images…");
+            setStatus("Uploading images…", "loading");
+        }
+        const images = await window.KnowviaImages.prepare({ request: apiFetch, identity: JSON.stringify(saveIdentity), verifyIdentity, notion: notionSelected });
+        if (images) payload.images = images;
+        setSaveButtonLabel("Saving to Knowvia…");
+        setStatus("Saving to Knowvia…", "loading");
+        await verifyIdentity();
         const result = await apiFetch("/content",
         {
             method: "POST",
@@ -2475,28 +2512,37 @@ async function saveArticle()
         if (result?.status !== "success" || !/^[a-f0-9]{24}$/i.test(String(result.data?.content?._id || "")))
             throw new Error("The save could not be confirmed. Check your content before retrying.");
         saved = true;
+        button.dataset.committed = "true";
         setSaveButtonLabel("Capture saved");
         button.dataset.state = "success";
-        setStatus("Saved to Knowvia. External copies are confirmed separately below.", "success");
-        await syncUI.saved(String(result.data.content._id));
-        await storageSet(
-        {
-            knowvia_capture_draft: null
-        });
+        setStatus("Saved to Knowvia.", "success");
+        // Local receipt persistence and provider GETs must not own the Save spinner.
+        void syncUI.saved(String(result.data.content._id), payload.destinations,
+            result.data.content.imageRetention === true && result.data.content.images?.length > 0, result.data.syncStatus).catch(() => {});
+        void storageSet({ knowvia_capture_draft: null }).catch(() => {});
+        document.querySelector(".v2-source").open = false;
         el.title.value = "";
         el.url.value = "";
         el.rawText.value = "";
         selectedTags = [];
+        window.KnowviaProviderTags.restore([]);
         renderSelectedTags();
         el.tagInput.value = "";
-        updateCapturePreview("READY FOR YOUR NEXT CAPTURE");
-        setPreviewImage(null);
-        setCaptureEditor(false, false);
+        updateCaptureFields();
+        window.KnowviaImages.reset();
+        document.getElementById("draftStorageError").hidden = true;
         void loadTags();
     }
     catch (error)
     {
-        setStatus(error.message, "danger");
+        if (error.providerValidation)
+        {
+            const field = document.getElementById(error.providerValidation === "project" ? "projectLoadError" : "notionSelectionError");
+            field.textContent = error.message;
+            field.hidden = false;
+        }
+        else if (!error.fieldValidation) setStatus(error.message, "danger");
+        else if (el.statusBar.classList.contains("status-bar--loading")) setStatus("Ready to save", "info");
         delete button.dataset.state;
         setSaveButtonLabel(defaultSaveLabel());
     }
@@ -2510,7 +2556,6 @@ async function saveArticle()
         updateSaveAvailability();
         notionUI.setBlocked(authPending);
         button.removeAttribute("aria-busy");
-        el.refreshPageBtn.disabled = false;
         if (saved) setTimeout(() =>
         {
             if (!savePending)
@@ -2528,17 +2573,18 @@ async function refreshPageData()
 {
     if (capturePending || savePending) return;
     capturePending = true;
+    syncUI.previous();
+    delete el.saveArticleBtn.dataset.state;
     updateSaveAvailability();
-    el.refreshPageBtn.disabled = true;
-    el.refreshPageBtn.setAttribute("aria-busy", "true");
     setStatus("Reading your capture…", "loading");
-    const showCapture = (title, url, text, source, previewImage = null) => {
+    const showCapture = (title, url, text) => {
+        document.querySelector(".v2-source").open = false;
         el.title.value = title || "";
         el.url.value = url || "";
         el.rawText.value = text || "";
-        updateCapturePreview(source);
-        setPreviewImage(previewImage);
-        setStatus(text ? "Capture ready. Make any edits before saving." : "Add content or a note to save this page.", text ? "info" : "warning");
+        updateCaptureFields();
+        setStatus("Ready to save", "info");
+        setCaptureRecovery(text ? "" : "Add a title and description to save a note.");
     };
     try
     {
@@ -2551,7 +2597,7 @@ async function refreshPageData()
         // Preserve the existing capture order: cached selection, clipboard, page.
         if (cached?.text)
         {
-            showCapture(cached.title || currentTab?.title, cached.url || currentTab?.url, cached.text, "SELECTED TEXT", cached.previewImage);
+            showCapture(cached.title || currentTab?.title, cached.url || currentTab?.url, cached.text);
             await storageRemove(STORAGE_KEYS.contextData);
             return;
         }
@@ -2559,34 +2605,37 @@ async function refreshPageData()
         try { clipboardText = await navigator.clipboard.readText(); } catch { /* Clipboard is optional. */ }
         if (clipboardText.trim())
         {
-            showCapture(currentTab?.title || "Copied text", currentTab?.url, clipboardText, "FROM YOUR CLIPBOARD");
+            if (/(?:<!doctype\s+html\b|<html(?:\s|>))/i.test(clipboardText))
+            {
+                showCapture(currentTab?.title, currentTab?.url, "");
+                setCaptureRecovery("Copied text looks like page source. Open a readable article, or paste intended code into the description.");
+                return;
+            }
+            showCapture(currentTab?.title || "Copied text", currentTab?.url, clipboardText);
             return;
         }
         if (!currentTab?.id)
         {
-            showCapture("", "", "", "MANUAL CAPTURE");
+            showCapture("", "", "");
             return;
         }
         const response = await new Promise(resolve => chrome.tabs.sendMessage(currentTab.id,
             { type: "GET_PAGE_CONTEXT" }, result => resolve(chrome.runtime.lastError ? null : result)));
         if (!response?.ok)
         {
-            showCapture(currentTab.title, currentTab.url, "", "MANUAL CAPTURE");
-            setStatus("This page cannot be read. Paste text, or refresh the page and recapture.", "warning");
+            showCapture(currentTab.title, currentTab.url, "");
+            setCaptureRecovery("This page cannot be captured. Add a title and description to save a note.");
             return;
         }
         const data = response.data;
-        showCapture(data.selectedText ? data.title : currentTab.title,
-            data.url || currentTab.url, data.selectedText || data.pageText,
-            data.selectedText ? "SELECTED TEXT" : "CURRENT PAGE", data.previewImage);
+        showCapture(data.title || currentTab.title,
+            data.url || currentTab.url, data.selectedText || data.pageText);
     }
-    catch { setStatus("Could not read this page. Paste your content or try Recapture.", "danger"); }
+    catch { setCaptureRecovery("This page cannot be captured. Add a title and description to save a note."); setStatus("Ready to save", "info"); }
     finally
     {
         capturePending = false;
         updateSaveAvailability();
-        el.refreshPageBtn.disabled = false;
-        el.refreshPageBtn.removeAttribute("aria-busy");
     }
 }
 
@@ -2733,6 +2782,11 @@ async function loadUserPreferences()
                 }
             }
         }
+        for (const id of ["googleAuthFeedback"])
+        {
+            const feedback = document.getElementById(id);
+            if (feedback) feedback.hidden = true;
+        }
         preferencesLoaded = true;
         el.googleStatus.textContent = "Signed in";
         el.googleStatus.className = "status-pill status-pill--success";
@@ -2748,7 +2802,7 @@ async function loadUserPreferences()
             el.googleStatus.className = "status-pill status-pill--warning";
         }
         el.preferencesStatus.hidden = false;
-        el.preferencesStatus.textContent = `${error.message} Use Refresh to retry, or sign in again if your session expired.`;
+        el.preferencesStatus.textContent = error.status === 401 ? "Your session expired. Sign in again." : "Could not load account details. Use Refresh to retry.";
         el.telegramStatusText.textContent = "Unavailable";
         el.telegramStatusPill.className = "status-pill status-pill--warning";
     }
@@ -2947,47 +3001,46 @@ function bindEvents()
     el.mainScroll.addEventListener("scroll", () => {
         updateScrollState();
         if (el.projectMenu.style.display === "block") positionPickerMenu(el.projectMenu, el.projectPickerBtn);
-        if (el.tagSuggestions.style.display === "block") positionPickerMenu(el.tagSuggestions, el.tagsInputBox);
+        if (el.tagSuggestions.style.display === "block") positionPickerMenu(el.tagSuggestions, el.tagInput);
     }, { passive: true });
     const scrollObserver = new ResizeObserver(updateScrollState);
     for (const node of [el.mainScroll, el.panelSave, el.panelSettings]) scrollObserver.observe(node);
     updateScrollState();
     renderDestinationSelection();
-    let draftTimer;
-    for (const input of [el.title, el.url, el.rawText]) input.addEventListener("input", () => {
+    const saveDraft = () => {
         clearTimeout(draftTimer);
-        const draft = { userId: draftOwnerId, title: el.title.value, url: el.url.value, rawText: el.rawText.value };
+        syncUI.previous();
+        if (!savePending)
+        {
+            delete el.saveArticleBtn.dataset.state;
+            setStatus("Ready to save", "info");
+            updateSaveAvailability();
+        }
+        const draft = { userId: draftOwnerId, title: el.title.value, url: el.url.value, rawText: el.rawText.value, ticktickTags: getTagsForSave(), notionTags: window.KnowviaProviderTags.get(), useAiSummary: el.useSummaryAi.checked, useAiTags: el.useTagsAi.checked };
         draftTimer = setTimeout(() => {
             void storageGet([STORAGE_KEYS.userId, STORAGE_KEYS.legacyUserId]).then(stored => {
                 if (!savePending && draft.userId && draft.userId === (stored[STORAGE_KEYS.userId] || stored[STORAGE_KEYS.legacyUserId]))
-                    return storageSet({ knowvia_capture_draft: draft });
-            }).catch(() => setStatus("Your edits are available in this popup, but the local draft could not be stored.", "warning"));
+                    return storageSet({ knowvia_capture_draft: draft }).then(() => { document.getElementById("draftStorageError").hidden = true; });
+            }).catch(() =>
+            {
+                const error = document.getElementById("draftStorageError");
+                error.textContent = "Your edits are available here, but the local draft could not be stored. Edit a field to retry.";
+                error.hidden = false;
+            });
         }, 150);
+    };
+
+    for (const input of [el.title, el.url, el.rawText, el.useSummaryAi, el.useTagsAi, document.getElementById("notionTagInput"), el.tagInput]) input.addEventListener("input", saveDraft);
+    el.tagInput.addEventListener("knowvia-tags", saveDraft);
+    document.addEventListener("keydown", event =>
+    {
+        if (event.key === "Escape")
+        {
+            hideTagSuggestions();
+            hideProjectMenu();
+        }
     });
     el.closePopupBtn.addEventListener("click", () => window.close());
-    el.editCaptureBtn.addEventListener("click", () => selectCaptureFormat("custom"));
-    el.doneEditingBtn.addEventListener("click", () => setCaptureEditor(false));
-    el.articleOption.addEventListener("click", () => selectCaptureFormat("article"));
-    el.summaryOption.addEventListener("click", () => selectCaptureFormat("summary"));
-    el.customOption.addEventListener("click", () => selectCaptureFormat("custom"));
-    el.advancedOptionsBtn.addEventListener("click", () => {
-        selectCaptureFormat("custom", false);
-        el.captureOptionsBtn.setAttribute("aria-expanded", "true");
-        el.captureOptions.classList.add("is-open");
-        el.captureOptions.inert = false;
-        el.captureOptionsBtn.focus();
-    });
-    document.querySelector('.save-options').addEventListener("keydown", event => {
-        if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
-        event.preventDefault();
-        const formats = ["article", "summary", "custom"];
-        const buttons = [el.articleOption, el.summaryOption, el.customOption];
-        const current = formats.indexOf(captureFormat);
-        const next = event.key === "Home" ? 0 : event.key === "End" ? 2
-            : (current + (["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : 2)) % 3;
-        selectCaptureFormat(formats[next], false);
-        buttons[next].focus();
-    });
     document.addEventListener("keydown", event => {
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s")
         {
@@ -2997,38 +3050,14 @@ function bindEvents()
         }
     });
     if (/Mac/.test(navigator.platform || "")) document.getElementById("saveShortcut").textContent = "⌘ S";
-    el.previewImage.addEventListener("load", () => {
-        el.previewImage.hidden = false;
-        el.previewCoverFallback.hidden = true;
-    });
-    el.previewImage.addEventListener("error", () => {
-        el.previewImage.hidden = true;
-        el.previewImage.removeAttribute("src");
-        el.previewCoverFallback.hidden = false;
-    });
     el.connectNotionBtn.addEventListener("click", () => startConnection("Notion", "startNotionAuth"));
     el.reauthGoogleBtn.addEventListener("click", connectGoogle);
     el.refreshConnectionsBtn.addEventListener("click", refreshConnections);
-    for (const input of [el.title, el.url, el.rawText]) input.addEventListener("input", () => updateCapturePreview());
-    el.url.addEventListener("input", () => setPreviewImage(null));
+    for (const input of [el.title, el.url, el.rawText]) input.addEventListener("input", () => updateCaptureFields());
     el.email.addEventListener("input", () => el.email.removeAttribute("aria-invalid"));
-    el.captureOptionsBtn.addEventListener("click", () => {
-        const expanded = el.captureOptionsBtn.getAttribute("aria-expanded") !== "true";
-        el.captureOptionsBtn.setAttribute("aria-expanded", String(expanded));
-        el.captureOptions.classList.toggle("is-open", expanded);
-        el.captureOptions.inert = !expanded;
-    });
-    el.useSummaryAi.addEventListener("change", () => {
-        el.mergeSummaryWithContent.disabled = !el.useSummaryAi.checked;
-        if (!el.useSummaryAi.checked) el.mergeSummaryWithContent.checked = false;
-    });
-    for (const input of [el.useSummaryAi, el.useTagsAi, el.useQuiz, el.mergeSummaryWithContent])
-        input.addEventListener("change", () => selectCaptureFormat("custom", false));
-    el.mergeSummaryWithContent.disabled = !el.useSummaryAi.checked;
     for (const input of [el.title, el.rawText])
     {
-        input?.setAttribute("aria-describedby", "statusText");
-        input?.addEventListener("input", () => input.removeAttribute("aria-invalid"));
+        input.setAttribute("aria-describedby", `${input.id}Error`);
     }
     document.querySelector('[role="tablist"]')?.addEventListener("keydown", event => {
         if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
@@ -3077,11 +3106,6 @@ function bindEvents()
         {
             switchTab(el.appView.classList.contains("settings-active") ? "save" : "settings");
         }
-    );
-
-    el.refreshPageBtn?.addEventListener(
-        "click",
-        refreshPageData
     );
 
     el.saveArticleBtn?.addEventListener(
@@ -3485,8 +3509,8 @@ async function bootstrap()
             else renderAuthUI(stored[STORAGE_KEYS.authUI]);
         });
     }
-    else if (Date.now() - (stored[STORAGE_KEYS.authUI]?.updatedAt || 0) < 300000)
-        renderAuthUI(stored[STORAGE_KEYS.authUI]);
+    else
+        renderAuthUI(null);
 
     if (isSignedIn && el.userId)
     {
@@ -3505,15 +3529,19 @@ async function bootstrap()
         await Promise.allSettled(initialTasks);
         const draftStore = await storageGet(["knowvia_capture_draft"]);
         const draft = draftStore.knowvia_capture_draft;
-        if (draft?.userId === userId && typeof draft.title === "string" && typeof draft.rawText === "string" && draft.rawText.trim()) {
+        if (draft?.userId === userId && typeof draft.title === "string" && typeof draft.rawText === "string" && (draft.title.trim() || draft.rawText.trim())) {
             el.title.value = draft.title.slice(0, 500); el.url.value = typeof draft.url === "string" ? draft.url : ""; el.rawText.value = draft.rawText.slice(0, 100000);
-            updateCapturePreview("MANUAL CAPTURE");
+            selectedTags = Array.isArray(draft.ticktickTags) ? draft.ticktickTags.filter(tag => typeof tag === "string").slice(0,30) : [];
+            renderSelectedTags();
+            window.KnowviaProviderTags.restore(draft.notionTags || []);
+            el.useSummaryAi.checked = Boolean(draft.useAiSummary);
+            el.useTagsAi.checked = Boolean(draft.useAiTags);
+            updateCaptureFields();
         }
 
         if (el.statusText?.textContent === "Loading...") setStatus("Ready", "success");
         const connectionUI = stored[STORAGE_KEYS.authUI];
-        if (connectionUI && connectionUI.status !== "pending" && Date.now() - connectionUI.updatedAt < 300000)
-            renderAuthUI(connectionUI);
+        // Transient connection errors are not restored across popup launches.
     }
 }
 
@@ -3567,7 +3595,7 @@ chrome.storage.onChanged.addListener((changes, areaName) =>
 
         if (draftOwnerId && draftOwnerId !== userId) {
             ticktickSelected = false; notionSelected = false;
-            syncUI.reset(); notionUI.reset(); selectedTags = []; renderSelectedTags();
+            syncUI.reset(); window.KnowviaImages.reset(); notionUI.reset(); selectedTags = []; window.KnowviaProviderTags.restore([]); renderSelectedTags();
         }
         draftOwnerId = userId || null;
         setConnectedUI(
@@ -3580,7 +3608,7 @@ chrome.storage.onChanged.addListener((changes, areaName) =>
             return;
         }
 
-        if (!linkedTickTick) switchTab("save");
+        if (el.appView.style.display === "none") switchTab("save");
         fillTelegramCommand(userId);
         setUserIdDisplay(userId);
 
@@ -3595,7 +3623,7 @@ chrome.storage.onChanged.addListener((changes, areaName) =>
 
         if (!linkedTickTick)
         {
-            refreshTasks.push(refreshPageData());
+            if (!el.title.value && !el.rawText.value) refreshTasks.push(refreshPageData());
         }
 
         await Promise.allSettled(refreshTasks);

@@ -15,6 +15,18 @@ const select = (f, type = "page", id = ids.page) => f.destinations.select({ user
 const paragraphs = count => Array.from({ length: count }, (_, index) => `Paragraph ${index + 1}.`).join("\n\n");
 const reject = (status, body = {}) => Response.json({ object: "error", message: "private-access private-refresh private-client-secret", ...body }, { status });
 
+test("browser-page source is plain metadata and cannot block readable text delivery", async t => {
+    const f = fixture(t, { content: { url: "chrome://extensions/", rawText: "Readable copied note.", summary: null } });
+    await f.sync();
+    const created = f.requests.find(request => request.path === "/pages");
+    const source = created.body.children[0].paragraph.rich_text[0];
+    assert.equal(source.text.content, "Source: chrome://extensions/");
+    assert.equal(source.text.link, undefined);
+    assert.ok(JSON.stringify(created.body.children).includes("Readable copied note."));
+    assert.equal(f.content.rawText, "Readable copied note.");
+    assert.equal(f.content.url, "chrome://extensions/");
+});
+
 test("access credentials are looked up by the existing Google owner with only access ciphertext selected", async t => {
     const f = fixture(t);
     const result = await f.credentials.getForUser({ userId: ids.owner });
@@ -624,4 +636,59 @@ test("an expired internal deadline prevents dispatching a write rather than clas
     await assert.rejects(f.api.request({ userId: ids.owner, method: "POST", path: "/pages", body: {}, deadline: Date.now() - 1 }),
         error => error.code === "NOTION_PROVIDER_UNAVAILABLE" && error.ambiguous === false);
     assert.equal(f.requests.length, 0);
+});
+
+test("Notion-specific tag blocks exclude TickTick and primary tags; old records retain primary tags", () =>
+{
+    const content = savedContent({ tags: ["primary"], destinations: {
+        ticktick: { enabled: true, options: { tags: ["tickonly"] } },
+        notion: { enabled: true, options: { tags: ["notiononly"] } }
+    } });
+    const blocks = JSON.stringify(mapNotionContent(content).blocks);
+    assert.ok(blocks.includes("#notiononly"));
+    assert.ok(!blocks.includes("#tickonly"));
+    assert.ok(!blocks.includes("#primary"));
+    content.destinations.notion.options.tags = [];
+    assert.ok(!JSON.stringify(mapNotionContent(content).blocks).includes("#primary"));
+    delete content.destinations.notion.options;
+    assert.ok(JSON.stringify(mapNotionContent(content).blocks).includes("#primary"));
+    const stored = new Content(content).toObject();
+    assert.equal(stored.destinations.notion.options, undefined);
+    assert.deepEqual(content.tags, ["primary"]);
+});
+
+const savedNotionTags = (type, tags) => ({ enabled: true, id: type === "page" ? ids.page : ids.source, type,
+    selectionId: ids.selection, connectionId: ids.account, connectionIdentity: `workspace:${ids.workspace}:user:${ids.person}`,
+    workspaceId: ids.workspace, options: { tags } });
+for (const destinationType of ["page", "data_source"])
+test(`selected Notion tags reach visible blocks for ${destinationType} destinations`, async t =>
+{
+    const f = fixture(t, { destinationType, content: { tags: ["libraryonly"], destinations: {
+        notion: savedNotionTags(destinationType, ["focus", "newtag"]), ticktick: { enabled: true, options: { tags: ["tickonly"] } }
+    } } });
+    if (destinationType === "data_source") f.source.properties.Tags = { id: "tags-property", type: "multi_select",
+        multi_select: { options: [{ id: "existing-focus", name: "Focus" }] } };
+    await f.sync();
+    const create = f.requests.find(request => request.path === "/pages");
+    const blocks = JSON.stringify(create.body.children);
+    assert.ok(blocks.includes("Tags: #focus #newtag"));
+    assert.ok(!blocks.includes("tickonly") && !blocks.includes("libraryonly"));
+    if (destinationType === "page") assert.deepEqual(Object.keys(create.body.properties), ["title"]);
+    else assert.deepEqual(create.body.properties["tags-property"], { multi_select: [{ id: "existing-focus" }] });
+    assert.ok(!JSON.stringify(create.body.properties).includes('"name":"newtag"'));
+    assert.ok(!f.requests.some(request => request.method === "PATCH" && /data_sources|databases/.test(request.path)));
+});
+
+for (const schema of ["absent", "wrong_type", "ambiguous", "ambiguous_options"])
+test(`data-source tag export keeps all tags visible with ${schema} schema`, async t =>
+{
+    const f = fixture(t, { destinationType: "data_source", content: { destinations: { notion: savedNotionTags("data_source", ["focus"]) } } });
+    const property = { id: "tag-id", type: "multi_select", multi_select: { options: [{ id: "one", name: "Focus" }] } };
+    if (schema === "wrong_type") f.source.properties.Tags = { id: "tag-id", type: "rich_text" };
+    if (schema === "ambiguous") Object.assign(f.source.properties, { Tag: property, Tags: { ...property, id: "other-tag-id" } });
+    if (schema === "ambiguous_options") f.source.properties.Tags = { ...property, multi_select: { options: [...property.multi_select.options, { id: "two", name: "Fo-cus" }] } };
+    await f.sync();
+    const create = f.requests.find(request => request.path === "/pages");
+    assert.ok(JSON.stringify(create.body.children).includes("#focus"));
+    assert.deepEqual(Object.keys(create.body.properties), ["title"]);
 });

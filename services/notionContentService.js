@@ -1,6 +1,8 @@
+import notionImages from "./notionImageService.js";
 import
 {
-    randomUUID
+    randomUUID,
+    createHash
 }
 from "node:crypto";
 import Content from "../Models/Content.js";
@@ -16,6 +18,7 @@ import notionApi from "../utils/notionApi.js";
 import
 {
     mapNotionContent,
+    notionTagProperties,
     nextNotionBatch
 }
 from "../utils/notionContentBlocks.js";
@@ -46,7 +49,8 @@ export const createNotionContentService = (
     ConnectedAccountModel = ConnectedAccount,
     credentials = notionCredentials,
     destinations = notionDestinationService,
-    api = notionApi
+    api = notionApi,
+    images = notionImages
 } = {}) =>
 {
     const syncContent = async (
@@ -97,12 +101,15 @@ export const createNotionContentService = (
             throw notionFailure("NOTION_SYNC_CONFLICT");
         if (state.pageId && state.status !== "partial") throw notionFailure("NOTION_SYNC_UNCERTAIN");
         const mapped = mapNotionContent(content);
+        if (content.images?.length && content.imageNotionIncluded !== false)
+            mapped.contentHash = createHash("sha256").update(mapped.contentHash).update(JSON.stringify(content.images.map(String))).digest("hex");
         if (state.pageId && (state.contentHash !== mapped.contentHash || state.destinationId !== selection.id ||
                 state.destinationType !== selection.type || state.connectionId !== connection.accountId ||
                 state.connectionIdentity !== connection.providerAccountId || state.workspaceId !== connection.workspaceId ||
                 !notionId(state.pageId) || !Number.isInteger(state.blocksWritten) || state.blocksWritten < 0 ||
                 state.blocksWritten > mapped.blocks.length)) throw notionFailure("NOTION_SYNC_CONFLICT");
 
+        if (content.images?.length && content.imageNotionIncluded !== false) await images.validate({ content });
         const deadline = Date.now() + 60000;
         const binding = {
             ...connection,
@@ -244,6 +251,7 @@ export const createNotionContentService = (
                     },
                     properties:
                     {
+                        ...(selection.type === "data_source" ? notionTagProperties(content, verified) : {}),
                         [selection.type === "page" ? "title" : verified.titleProperty]:
                         {
                             type: "title",
@@ -308,6 +316,11 @@ export const createNotionContentService = (
             {
                 ambiguous: true
             });
+            if (content.images?.length && content.imageNotionIncluded !== false)
+            {
+                await persist({ phase: "images" });
+                await images.sync({ content, pageId, connection: binding, deadline });
+            }
             await persist(
             {
                 status: "synced",

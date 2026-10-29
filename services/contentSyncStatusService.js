@@ -1,3 +1,4 @@
+import ImageAsset from "../Models/ImageAsset.js";
 import Content from "../Models/Content.js";
 import
 {
@@ -15,6 +16,12 @@ const failure = (message, statusCode) => Object.assign(new Error(message),
     statusCode
 });
 const safeId = value => typeof value === "string" && /^[a-zA-Z0-9_-]{1,100}$/.test(value) ? value : null;
+// MongoDB rejects a parent and its child in the same inclusion projection.
+// Keep claim fields available for retry safety without selecting their parent.
+export const CONTENT_SYNC_STATUS_PROJECTION = "_id userId destinations images integrations.tickTickId " +
+    "integrations.ticktick.status integrations.ticktick.errorCode integrations.ticktick.taskId integrations.ticktick.aiStatus " +
+    "integrations.notion.status integrations.notion.errorCode integrations.notion.phase integrations.notion.pageId integrations.notion.pageUrl " +
+    "+integrations.ticktick.claim +integrations.notion.claim";
 export const contentSyncStatus = content =>
 {
     const integrations = content.integrations ||
@@ -40,6 +47,12 @@ export const contentSyncStatus = content =>
     };
     const ticktick = provider(tickRequested, tick, integrations.tickTickId);
     const notionResult = provider(notionRequested, notion);
+    if (notionRequested && content.images?.length && content.imageNotionIncluded !== false)
+    {
+        notionResult.textStatus = ["images", "complete"].includes(notion?.phase) ? "synced" : "pending";
+        notionResult.imageStatus = notion?.status === "synced" ? "synced" : notion?.errorCode === "NOTION_IMAGE_FAILED" ? "failed"
+            : notion?.phase === "images" && notion?.status === "uncertain" ? "uncertain" : notion?.phase === "images" ? "pending" : "queued";
+    }
     ticktick.taskId = ticktick.status === "synced" ? safeId(tick?.taskId || integrations.tickTickId) : null;
     ticktick.aiStatus = ["not_requested", "pending", "generated", "failed"].includes(tick?.aiStatus) ? tick.aiStatus : "not_requested";
     notionResult.pageId = notionResult.status === "synced" ? notionId(notion?.pageId) : null;
@@ -54,6 +67,7 @@ export const contentSyncStatus = content =>
     {
         notionResult.status = "uncertain";
         notionResult.retryable = false;
+        if (notionResult.imageStatus) notionResult.imageStatus = "uncertain";
     }
     return {
         contentId: String(content._id),
@@ -64,7 +78,8 @@ export const contentSyncStatus = content =>
 
 export const createContentSyncStatusService = (
 {
-    ContentModel = Content
+    ContentModel = Content,
+    AssetModel = ImageAsset
 } = {}) => (
 {
     getStatus: async (
@@ -79,9 +94,20 @@ export const createContentSyncStatusService = (
                 _id: contentId,
                 userId
             })
-            .select("_id userId destinations integrations +integrations.ticktick.claim +integrations.notion.claim");
+            .select(CONTENT_SYNC_STATUS_PROJECTION + " imageNotionIncluded");
         if (!content || content.userId !== userId) throw failure("Content was not found for this account", 404);
-        return contentSyncStatus(content);
+        const result = contentSyncStatus(content);
+        if (content.images?.length && content.imageNotionIncluded !== false && result.notion.requested && result.notion.status !== "synced")
+        {
+            const assets = await AssetModel.find({ userId, contentId, _id: { $in: content.images } }).select("status retained expiresAt notionStatus");
+            if (assets.length !== content.images.length || assets.some(asset => asset.notionStatus !== "synced" &&
+                (asset.status === "deleted" || asset.status === "deleting" || !asset.retained && asset.expiresAt <= new Date())))
+            {
+                result.notion.imageStatus = "expired";
+                result.notion.retryable = false;
+            }
+        }
+        return result;
     }
 });
 export default createContentSyncStatusService();

@@ -10,7 +10,7 @@
 <link href="v2.css" rel="stylesheet"/>
 </head>
 <body>
-<div id="bootShell" role="status" aria-label="Opening Knowvia"><img src="assets/knowvia-approved-wordmark.png" alt="Knowvia"/><p>Opening your capture…</p><div class="boot-columns" aria-hidden="true"><div></div><div></div></div></div>
+<div id="bootShell" role="status" aria-label="Opening Knowvia"><img class="logo-light" src="assets/knowvia-approved-wordmark.png" alt="Knowvia"/><img class="logo-dark" src="assets/knowvia-wordmark-dark.svg" alt="Knowvia"/><p>Opening your capture…</p><div class="boot-columns" aria-hidden="true"><div></div><div></div></div></div>
 <svg class="icon-definitions" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
   <!-- Interface glyphs share a 24px grid; stroke and size inherit from the UI. -->
   <symbol id="icon-settings" viewBox="0 0 24 24"><path d="m9 3-.6 2.2-1.7 1-2.2-.6L2 9.9l1.6 1.6v2L2 15.1l2.5 4.3 2.2-.6 1.7 1L9 22h5l.6-2.2 1.7-1 2.2.6 2.5-4.3-1.6-1.6v-2L21 9.9l-2.5-4.3-2.2.6-1.7-1L14 3Z" transform="translate(.5 -1) scale(.96)"/><circle cx="12" cy="12" r="3"/></symbol>
@@ -86,61 +86,18 @@
 <main class="main-scroll">
 <!-- Save Panel -->
 <section class="panel" id="panelSave" aria-labelledby="captureHeading">
-<h1 class="sr-only" id="captureHeading">Save your capture</h1>
-<article class="article-preview" id="articlePreview">
-<div class="preview-cover" id="previewCover"><img id="previewImage" alt="" referrerpolicy="no-referrer" hidden/><span class="preview-cover-fallback" id="previewCoverFallback" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-document"/></svg></span></div>
-<div class="article-preview-copy"><h2 id="previewTitle" dir="auto">Your next good idea.</h2><p id="previewExcerpt" dir="auto">Reading this page…</p><div class="preview-source"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-globe"/></svg><span id="previewDomain">Current page</span><span class="source-divider">·</span><span id="captureSource">Web page</span></div></div>
-<div class="preview-actions"><button class="icon-button small" id="editCaptureBtn" type="button" aria-label="Edit captured content" aria-controls="captureEditor" aria-expanded="false" title="Edit capture"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-edit"/></svg></button><button class="icon-button small" id="refreshPageBtn" type="button" aria-label="Recapture current page" title="Recapture"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-refresh"/></svg></button></div>
-</article>
-<div class="capture-editor" id="captureEditor" hidden>
-<div class="editor-heading"><strong>Edit your capture</strong><button class="text-button" id="doneEditingBtn" type="button">Done <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></button></div>
+<div class="capture-editor" id="captureEditor">
 <label class="label" for="title">Title</label><input class="input" dir="auto" id="title" required maxlength="500" placeholder="Give your capture a title" type="text"/>
 <label class="label" for="url">Source URL</label><input class="input" id="url" placeholder="https://example.com/article" type="text"/>
 <div class="label-with-meta"><label class="label" for="rawText">Content / notes</label><span class="field-meta" id="captureCount">0 characters</span></div><textarea class="textarea" dir="auto" id="rawText" required maxlength="100000" placeholder="Your selected text, article content, or notes…" rows="4"></textarea>
-<div class="ai-block">
-<button class="disclosure-button" id="captureOptionsBtn" type="button" aria-expanded="false" aria-controls="captureOptions"><span>Capture options</span><span class="section-optional">OPTIONAL</span><span class="disclosure-chevron" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-chevron-down"/></svg></span></button>
-<div class="disclosure-panel" id="captureOptions" inert><div class="disclosure-inner">
-<div class="ai-options-grid">
-<label class="toggle-row" for="useSummaryAi">
-<span>TickTick AI Summary</span>
-<div class="toggle-wrap">
-<input id="useSummaryAi" type="checkbox"/>
-<span class="toggle-track">
-<span class="toggle-thumb"></span>
-</span>
-</div>
-</label>
-<label class="toggle-row" for="useTagsAi">
-<span>TickTick AI Tags</span>
-<div class="toggle-wrap">
-<input id="useTagsAi" type="checkbox"/>
-<span class="toggle-track">
-<span class="toggle-thumb"></span>
-</span>
-</div>
-</label>
-<label class="toggle-row" for="useQuiz">
-<span>Telegram quiz</span>
-<div class="toggle-wrap">
-<input id="useQuiz" type="checkbox"/>
-<span class="toggle-track">
-<span class="toggle-thumb"></span>
-</span>
-</div>
-</label>
-<label class="toggle-row" for="mergeSummaryWithContent">
-<span title="Append the summary to the TickTick copy only">Append summary</span>
-<div class="toggle-wrap">
-<input id="mergeSummaryWithContent" type="checkbox"/>
-<span class="toggle-track">
-<span class="toggle-thumb"></span>
-</span>
-</div>
-</label>
-</div>
-<p class="hint">AI summary and tags apply only to TickTick. The original article stays in Knowvia.</p>
-</div></div>
-</div>
+<section class="image-attachments" id="imageAttachments" tabindex="0" aria-labelledby="imagesHeading" aria-label="Images. Paste an image with Ctrl+V.">
+<div class="attachment-toolbar"><h2 id="imagesHeading">Images <span id="imageCount"></span></h2><button class="text-button" id="chooseImagesBtn" type="button">+ Add images</button></div>
+<input id="imageFileInput" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden/>
+<p class="v2-field-error" id="imageError" role="alert" hidden></p>
+<div class="image-grid" id="imageGrid" role="list" aria-label="Selected images" hidden></div>
+<p class="attachment-help" id="imageUploadStatus" role="status" hidden></p>
+</section>
+<p class="capture-recovery" id="draftStorageError" role="status" hidden></p>
 </div>
 <section class="destination-section" aria-labelledby="destinationHeading">
 <div class="section-heading"><h2 id="destinationHeading">Save a copy to</h2><span id="destinationHelp">Knowvia always keeps a copy</span></div>
@@ -201,7 +158,7 @@
 </div>
 </div>
 <div class="form-group" id="libraryDestination"><div class="section-heading"><h2>Your library</h2></div><div class="library-destination"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-document"/></svg><span>My Knowvia collection</span><span class="destination-included">Always included</span></div></div>
-<section class="settings-card" id="syncReceipt" hidden aria-label="Last saved capture synchronization"><strong>Last saved capture</strong><p id="syncReceiptDetail" role="status" aria-live="polite"></p><div id="ticktickSyncRow" hidden><span>TickTick: </span><span id="ticktickSyncState"></span> <button class="text-button" id="ticktickSyncRetry" type="button" hidden>Retry TickTick</button></div><div id="notionSyncRow" hidden><span>Notion: </span><span id="notionSyncState"></span> <button class="text-button" id="notionSyncRetry" type="button" hidden>Retry Notion</button></div><button id="refreshSyncStatusBtn" class="text-button" type="button">Refresh status</button> <button id="openConfirmedNotionBtn" class="text-button" type="button" hidden>Open in Notion</button></section>
+<section id="syncReceipt" hidden aria-label="Save result"><span class="primary-save-result" role="status">Saved to Knowvia</span><p id="syncReceiptDetail" role="status" aria-live="polite"></p><div id="ticktickSyncRow" hidden><span>TickTick: </span><span id="ticktickSyncState"></span> <button class="text-button" id="ticktickSyncRetry" type="button" hidden>Retry TickTick</button></div><div id="notionSyncRow" hidden><span>Notion: </span><span id="notionSyncState"></span> <button class="text-button" id="notionSyncRetry" type="button" hidden>Retry Notion</button></div><button id="refreshSyncStatusBtn" class="text-button" type="button">Refresh status</button> <button id="openConfirmedNotionBtn" class="text-button" type="button" hidden>Open in Notion</button></section>
 <!-- Tags picker -->
 <div class="form-group compact-form-group" id="tagsField">
 <label class="label" id="tagsFieldLabel">
@@ -227,12 +184,6 @@
 <p class="sr-only" id="tagInputHint">Press Enter, comma, or space to add a tag.</p>
 <p class="hint" id="tagsLoadStatus" role="status" hidden>Suggestions unavailable. You can still add your own tags.</p>
 </div>
-<section class="save-options-section" aria-labelledby="saveOptionsHeading"><div class="section-heading"><h2 id="saveOptionsHeading">TickTick export format</h2><button class="text-button" id="advancedOptionsBtn" type="button">More options</button></div>
-<div class="save-options" role="radiogroup" aria-label="TickTick export format">
-<button class="save-option selected" id="articleOption" role="radio" aria-checked="true" type="button"><span class="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-article"/></svg></span><span><strong>Article</strong><small>Captured text</small></span><span class="option-check" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></span></button>
-<button class="save-option" id="summaryOption" role="radio" aria-checked="false" aria-describedby="summaryOptionHint" title="Append an AI summary to the TickTick copy." tabindex="-1" type="button"><span class="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-summary"/></svg></span><span><strong>Summary</strong><small>Article + recap</small></span><span class="option-check" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></span></button>
-<button class="save-option" id="customOption" role="radio" aria-checked="false" tabindex="-1" type="button"><span class="option-icon" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-sliders"/></svg></span><span><strong>Custom</strong><small>Edit content</small></span><span class="option-check" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><use href="#icon-check"/></svg></span></button>
-</div><p class="sr-only" id="summaryOptionHint">Keeps original captured text in Knowvia and appends a summary only to the TickTick copy.</p></section>
 </section>
 <!-- Settings Panel -->
 <section class="panel settings-panel" id="panelSettings" aria-labelledby="settingsHeading">
@@ -380,7 +331,10 @@
 </dialog>
 <script src="v2-layout.js"></script>
 <script src="notion.js"></script>
+<script src="provider-links.js"></script>
 <script src="sync-status.js"></script>
+<script src="image-limits.js"></script>
+<script src="attachments.js"></script>
 <script src="popup.js"></script>
 </body>
 </html>

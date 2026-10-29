@@ -1,6 +1,8 @@
 // Only these fixed messages/codes may cross the Notion HTTP boundary.
 export const notionErrors = Object.freeze(
 {
+    NOTION_IMAGE_EXPIRED: [410, "Temporary images expired. Save a new capture with the original files."],
+    NOTION_IMAGE_FAILED: [503, "Notion images need attention. Retry the incomplete image work."],
     NOTION_NOT_REQUESTED: [409, "Notion was not requested for this capture"],
     INVALID_NOTION_INPUT: [400, "Invalid Notion request parameters"],
     GOOGLE_IDENTITY_REQUIRED: [403, "A Google-backed application account is required"],

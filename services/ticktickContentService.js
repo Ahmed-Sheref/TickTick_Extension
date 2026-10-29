@@ -32,6 +32,20 @@ export const ticktickFailure = (code, statusCode = 409) => Object.assign(new Err
     statusCode
 });
 
+export const buildTickTickNoteContent = (originalText, summary) =>
+{
+    if (typeof summary !== "string" || !summary.trim())
+    {
+        return originalText;
+    }
+    const block = `AI Summary\n${summary.trim()}`;
+    if (originalText.endsWith(block))
+    {
+        return originalText;
+    }
+    return `${originalText}\n\n${block}`;
+};
+
 export const createTickTickContentService = (
 {
     ContentModel = Content,
@@ -151,7 +165,7 @@ export const createTickTickContentService = (
             const task = await createTask(token,
             {
                 title: content.title,
-                rawText: summary ? options.mergeSummaryWithContent ? `${content.rawText}\n\nSummary:\n${summary}` : summary : content.rawText,
+                rawText: buildTickTickNoteContent(content.rawText, summary),
                 tags,
                 projectId: content.destinations.ticktick.projectId || undefined
             });
